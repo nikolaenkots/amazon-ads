@@ -407,7 +407,7 @@ python3 collect.py 2026-04-27 all                   # все профили
 
 ### Связь таблиц для анализа ставок
 ```
-targets_stats (keyword_id) 
+targets_stats (keyword_id)
     → JOIN targets справочник (через SP API /query/targets)
     → получаем target_id для обновления ставки
     → POST /adsApi/v1/update/targets
