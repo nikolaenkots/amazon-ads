@@ -329,12 +329,12 @@ req.onsuccess = function(e) {
       console.log("Нет товаров после указанной даты");
       return;
     }
-    // Порядок колонок соответствует актуальному формату (май 2026)
+    // Фиксированный порядок колонок как в catalogexample.csv
     const keys = [
       "asin", "brandName", "createdDate", "currencyCode", "deleteReasonType",
-      "designId", "listPrice", "listingId", "lockReasonType", "marketplace",
-      "productImageUrn", "productTitle", "productType", "searchableOnRetail",
-      "status", "updatedDate", "pm_data", "estimatedExpirationDate"
+      "designId", "estimatedExpirationDate", "listPrice", "listingId",
+      "lockReasonType", "marketplace", "productImageUrn", "productTitle",
+      "productType", "searchableOnRetail", "status", "updatedDate", "pm_data"
     ];
     const csv = [
       keys.join(","),
