@@ -327,9 +327,10 @@ def _run_campaigns_sync(account_type, marketplace, job_id):
 
         counts = dict(Counter(r["entity_type"] for r in all_rows))
 
-        emit(job_id, "step", {"key": "bq", "step": 6, "pct": 80, "msg": "Очищаем таблицу..."})
+        # ── ИСПРАВЛЕНО: DELETE по маркетплейсу вместо TRUNCATE ──
+        emit(job_id, "step", {"key": "bq", "step": 6, "pct": 80, "msg": f"Очищаем {marketplace} в таблице..."})
         client = bigquery.Client(project=PROJECT_ID)
-        client.query(f"TRUNCATE TABLE `{table_ref}`").result()
+        client.query(f"DELETE FROM `{table_ref}` WHERE marketplace = '{marketplace}'").result()
 
         total    = len(all_rows)
         uploaded = 0
