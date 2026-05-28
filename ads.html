@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Ads — Статистика</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f2ed;--surface:#fff;--surface2:#f0ece5;--border:#e4dfd7;--border2:#d4cec5;--text:#1c1a17;--muted:#7a756d;--dim:#b5b0a8;--accent:#c8440a;--accent-bg:rgba(200,68,10,.07);--accent-border:rgba(200,68,10,.2);--green:#2d7a4f;--green-bg:rgba(45,122,79,.07);--green-border:rgba(45,122,79,.2);--blue:#1a5fa8;--blue-bg:rgba(26,95,168,.07);--blue-border:rgba(26,95,168,.2);--yellow:#a07800;--yellow-bg:rgba(160,120,0,.07);--yellow-border:rgba(160,120,0,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.logo-dot{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:4px}
+nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:6px;transition:all .15s}
+nav a:hover{background:var(--surface2);color:var(--text)}
+nav a.active{background:var(--accent-bg);color:var(--accent)}
+main{flex:1;padding:40px;max-width:960px;margin:0 auto;width:100%}
+h1{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;margin-bottom:6px}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+.account-bar{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:16px;flex-wrap:wrap}
+.account-bar label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+.seg{display:flex;gap:4px}
+.seg-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.seg-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.seg-btn.active-blue{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
+.seg-btn.active-green{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.divider{width:1px;height:24px;background:var(--border);flex-shrink:0}
+.profile-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px}
+.profile-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+.create-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
+.panel-title{font-size:14px;font-weight:500;margin-bottom:14px}
+.create-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+.field input[type=date]{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
+.field input[type=date]:focus{border-color:var(--accent-border)}
+.field select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s}
+.field select:focus{border-color:var(--accent-border)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#b03a08}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
+.btn-sm:hover{border-color:var(--border2)}.btn-sm:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm.green{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.btn-sm.danger{color:var(--dim)}.btn-sm.danger:hover{color:var(--accent);border-color:var(--accent-border)}
+
+.queue-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.queue-title{font-size:13px;font-weight:500}
+.queue-list{display:flex;flex-direction:column;gap:8px;margin-bottom:36px}
+.queue-empty{font-size:12px;color:var(--dim);padding:24px 0;text-align:center;background:var(--surface);border:1px dashed var(--border2);border-radius:10px}
+
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.report-card.pending  {border-left:3px solid var(--yellow)}
+.report-card.completed{border-left:3px solid var(--green)}
+.report-card.downloaded{border-left:3px solid var(--blue)}
+.report-card.loaded   {border-left:3px solid var(--green);opacity:.65}
+.report-card.failed,.report-card.error{border-left:3px solid var(--accent)}
+.report-card.uploading{border-left:3px solid var(--blue)}
+
+.card-main{display:flex;align-items:center;gap:10px;padding:12px 16px;flex-wrap:wrap}
+.card-acct{font-size:11px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap}
+.card-type{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.card-type.targeting{background:var(--accent-bg);border:1px solid var(--accent-border);color:var(--accent)}
+.card-type.asin{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
+.card-type.search{background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--blue)}
+.card-dates{font-size:12px;font-family:'DM Mono',monospace;color:var(--text)}
+.card-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:12px;white-space:nowrap}
+.st-pending  {background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+.st-completed{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.st-downloaded{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.st-loaded   {background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.st-uploading{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.st-failed,.st-error{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.card-rows{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.card-meta{font-size:11px;color:var(--dim);font-family:'DM Mono',monospace}
+.card-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.card-extra{padding:0 16px 10px;display:flex;flex-direction:column;gap:4px}
+.prog-wrap{background:var(--border);border-radius:3px;height:4px;overflow:hidden}
+.prog-bar{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.prog-text{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.card-error{font-size:11px;color:var(--accent);font-family:'DM Mono',monospace}
+.pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.history{margin-top:8px}
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.history h2{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:'DM Mono',monospace}
+.history-list{display:flex;flex-direction:column;gap:6px}
+.history-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px}
+.history-item .date{font-family:'DM Mono',monospace;color:var(--text)}
+.history-item .acct{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
+.history-item .rows{color:var(--muted);margin-left:auto}
+.history-item .time{color:var(--dim);font-family:'DM Mono',monospace;font-size:11px}
+.btn-clear{font-size:11px;color:var(--dim);background:none;border:none;cursor:pointer}.btn-clear:hover{color:var(--accent)}
+.info-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:10px}
+.info-block.success{border-color:var(--green-border);color:var(--green);background:var(--green-bg)}
+.info-block.error{border-color:var(--accent-border);color:var(--accent);background:var(--accent-bg)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav><a href="/">Главная</a><a href="/catalog">Каталог</a><a href="/earnings">Продажи</a><a href="/ads" class="active">Реклама</a></nav>
+</header>
+
+<main>
+  <h1>Сбор статистики рекламы</h1>
+  <p class="subtitle">Создавайте несколько отчётов параллельно — они появятся в очереди ниже</p>
+
+  <!-- Выбор аккаунта -->
+  <div class="account-bar">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label>Тип аккаунта</label>
+      <div class="seg" id="typeSelector">
+        <button class="seg-btn active" onclick="setType('MERCH',event)">Merch by Amazon</button>
+        <button class="seg-btn" onclick="setType('KDP',event)">KDP</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label>Маркетплейс</label>
+      <div class="seg" id="mktSelector"></div>
+    </div>
+    <div class="profile-badge"><div class="profile-dot"></div><span id="profileBadge">Merch US · 2418854071638725</span></div>
+  </div>
+
+  <!-- Создать отчёт -->
+  <div class="create-panel">
+    <div class="panel-title">Создать отчёт</div>
+    <div class="create-row">
+      <div class="field">
+        <label>Тип отчёта</label>
+        <select id="reportType">
+          <option value="spTargeting">Targeting (ключевые слова)</option>
+          <option value="spAdvertisedProduct">Advertised Product (по ASIN)</option>
+          <option value="spSearchTerm">Search Term (поисковые запросы)</option>
+        </select>
+      </div>
+      <div class="field"><label>Дата начала</label><input type="date" id="startDate"></div>
+      <div class="field"><label>Дата конца</label><input type="date" id="endDate"></div>
+      <button class="btn btn-primary" onclick="createReport()" id="btnCreate">Создать отчёт</button>
+    </div>
+    <div id="createMsg"></div>
+  </div>
+
+  <!-- Очередь -->
+  <div class="queue-header">
+    <div class="queue-title">Очередь отчётов</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-sm" onclick="refreshAll()" id="btnRefresh">↻ Обновить статусы</button>
+      <span id="refreshMsg" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace"></span>
+    </div>
+  </div>
+  <div class="queue-list" id="queueList"><div class="queue-empty">Нет отчётов в очереди</div></div>
+
+  <!-- История -->
+  <div class="history">
+    <div class="history-header">
+      <h2>История загрузок</h2>
+      <button class="btn-clear" onclick="clearHistory()">Очистить</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</main>
+
+<script>
+const PROFILES={
+  MERCH:[
+    {id:"2418854071638725",marketplace:"US",name:"Merch US"},
+    {id:"1643110315908506",marketplace:"IT",name:"Merch IT"},
+    {id:"3571496662552642",marketplace:"ES",name:"Merch ES"},
+    {id:"180261448232436", marketplace:"UK",name:"Merch UK"},
+    {id:"2023177291219092",marketplace:"DE",name:"Merch DE"},
+    {id:"613747068444603", marketplace:"FR",name:"Merch FR"},
+  ],
+  KDP:[
+    {id:"2138688425253475",marketplace:"US",name:"KDP US"},
+    {id:"216157406396956", marketplace:"CA",name:"KDP CA"},
+    {id:"3828973734410759",marketplace:"UK",name:"KDP UK"},
+    {id:"1209740463543490",marketplace:"DE",name:"KDP DE"},
+    {id:"2062477294536113",marketplace:"FR",name:"KDP FR"},
+    {id:"2012455889033628",marketplace:"IT",name:"KDP IT"},
+    {id:"1530105280135495",marketplace:"ES",name:"KDP ES"},
+    {id:"2089815793960864",marketplace:"AU",name:"KDP AU"},
+  ]
+};
+const REPORT_LABELS={
+  spTargeting:"Targeting",
+  spAdvertisedProduct:"ASIN",
+  spSearchTerm:"Search Term",
+};
+
+let sel={type:'MERCH',marketplace:'US',profileId:'2418854071638725'};
+let queue=[];
+let pollTimers={};
+let localHistory=JSON.parse(localStorage.getItem('ads_history')||'[]');
+
+const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+document.getElementById('startDate').value=yesterday.toISOString().split('T')[0];
+document.getElementById('endDate').value=yesterday.toISOString().split('T')[0];
+renderMktSelector();renderHistory();loadLog();
+
+function setType(type,e){
+  sel.type=type;
+  document.querySelectorAll('#typeSelector .seg-btn').forEach(b=>b.classList.remove('active','active-blue'));
+  e.target.classList.add(type==='MERCH'?'active':'active-blue');
+  const f=PROFILES[type][0];sel.marketplace=f.marketplace;sel.profileId=f.id;
+  renderMktSelector();updateBadge();
+}
+function setMkt(mkt,pid){sel.marketplace=mkt;sel.profileId=pid;renderMktSelector();updateBadge();}
+function renderMktSelector(){
+  const s=document.getElementById('mktSelector');s.innerHTML='';
+  (PROFILES[sel.type]||[]).forEach(p=>{
+    const b=document.createElement('button');
+    b.className='seg-btn'+(p.marketplace===sel.marketplace?(sel.type==='MERCH'?' active':' active-blue'):'');
+    b.textContent=p.marketplace;b.onclick=()=>setMkt(p.marketplace,p.id);s.appendChild(b);
+  });
+}
+function updateBadge(){
+  const p=(PROFILES[sel.type]||[]).find(x=>x.marketplace===sel.marketplace);
+  document.getElementById('profileBadge').textContent=p?`${p.name} · ${p.id}`:sel.profileId;
+}
+
+async function loadLog(){
+  try{
+    const data=await(await fetch('/ads/reports_log')).json();
+    const jobIds={};queue.forEach(q=>{if(q.job_id)jobIds[q.entry_id]=q.job_id;});
+    const pcts={};queue.forEach(q=>{pcts[q.entry_id]={pct:q._pct,msg:q._msg};});
+    queue=data.map(e=>({
+      entry_id:e.id,report_id:e.report_id,report_type:e.report_type||'spTargeting',
+      account_type:e.account_type,marketplace:e.marketplace,
+      profile_id:e.profile_id,profile_name:e.profile_name,
+      start_date:e.start_date,end_date:e.end_date,
+      status:e.status,report_url:e.report_url,file_id:e.file_id,
+      rows:e.rows,inserted:e.inserted,created_at:e.created_at,
+      loaded_at:e.loaded_at,error:e.error,
+      job_id:jobIds[e.id]||null,
+      _pct:(pcts[e.id]||{}).pct||0,
+      _msg:(pcts[e.id]||{}).msg||'',
+      _downloading:false,
+    }));
+    renderQueue();
+  }catch(e){console.error('loadLog:',e);}
+}
+
+async function createReport(){
+  const s=document.getElementById('startDate').value;
+  const e=document.getElementById('endDate').value;
+  const rt=document.getElementById('reportType').value;
+  if(!s||!e){alert('Выберите даты');return}
+  if(s>e){alert('Дата начала позже конца');return}
+  const btn=document.getElementById('btnCreate');
+  btn.disabled=true;btn.textContent='Создаём...';
+  const msg=document.getElementById('createMsg');msg.innerHTML='';
+  try{
+    const r=await fetch('/ads/create_report',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({start_date:s,end_date:e,account_type:sel.type,marketplace:sel.marketplace,report_type:rt})});
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    msg.innerHTML=`<div class="info-block success">✓ Отчёт создан и добавлен в очередь</div>`;
+    await loadLog();
+  }catch(e){msg.innerHTML=`<div class="info-block error">Ошибка: ${e.message}</div>`;}
+  finally{btn.disabled=false;btn.textContent='Создать отчёт';}
+}
+
+async function refreshAll(){
+  const btn=document.getElementById('btnRefresh');btn.disabled=true;btn.textContent='Проверяем...';
+  const msg=document.getElementById('refreshMsg');
+  try{
+    const r=await fetch('/ads/refresh_statuses',{method:'POST'});
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    msg.textContent=data.checked?`обновлено: ${data.updated}/${data.checked}`:'нет ожидающих';
+    await loadLog();
+  }catch(e){msg.textContent='Ошибка: '+e.message;}
+  finally{btn.disabled=false;btn.textContent='↻ Обновить статусы';}
+}
+
+async function downloadEntry(entryId){
+  const item=queue.find(q=>q.entry_id===entryId);if(!item)return;
+  item._downloading=true;renderQueue();
+  try{
+    const r=await fetch('/ads/download_report',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({entry_id:entryId,url:item.report_url})});
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    item.file_id=data.file_id;item.rows=data.rows;item.status='DOWNLOADED';
+  }catch(e){item.error=e.message;}
+  item._downloading=false;renderQueue();
+}
+
+async function uploadEntry(entryId){
+  const item=queue.find(q=>q.entry_id===entryId);if(!item)return;
+  try{
+    const r=await fetch('/ads/upload_to_bq',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({entry_id:entryId,file_id:item.file_id,start_date:item.start_date,end_date:item.end_date,
+        account_type:item.account_type,marketplace:item.marketplace,profile_id:item.profile_id,
+        report_type:item.report_type})});
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    item.job_id=data.job_id;item.status='UPLOADING';item._pct=5;item._msg='Запускаем...';
+    renderQueue();pollUpload(entryId,data.job_id);
+  }catch(e){item.error=e.message;renderQueue();}
+}
+
+function pollUpload(entryId,jobId){
+  if(pollTimers[entryId])clearInterval(pollTimers[entryId]);
+  pollTimers[entryId]=setInterval(async()=>{
+    try{
+      const msgs=await(await fetch(`/ads/upload_progress/${jobId}`)).json();
+      const item=queue.find(q=>q.entry_id===entryId);if(!item)return;
+      for(const m of msgs){
+        if(m.event==='progress'){item._pct=m.data.pct;item._msg=m.data.msg;}
+        else if(m.event==='done'){
+          clearInterval(pollTimers[entryId]);
+          item.status='LOADED';item.inserted=m.data.inserted;item.rows=m.data.rows;
+          item._pct=100;item._msg='Готово!';
+          const rtLabel=REPORT_LABELS[item.report_type]||item.report_type;
+          localHistory.unshift({date:item.start_date,endDate:item.end_date,
+            acct:`${item.account_type} ${item.marketplace} · ${rtLabel}`,
+            rows:m.data.rows,inserted:m.data.inserted,
+            time:new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})});
+          localStorage.setItem('ads_history',JSON.stringify(localHistory.slice(0,50)));
+          renderHistory();
+        }else if(m.event==='error'){
+          clearInterval(pollTimers[entryId]);item.status='ERROR';item.error=m.data.msg;
+        }
+      }
+      renderQueue();
+    }catch(e){console.error('poll:',e);}
+  },2000);
+}
+
+async function deleteEntry(entryId){
+  await fetch('/ads/delete_log_entry',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({entry_id:entryId})});
+  queue=queue.filter(q=>q.entry_id!==entryId);renderQueue();
+}
+
+function renderQueue(){
+  const list=document.getElementById('queueList');
+  if(!queue.length){list.innerHTML='<div class="queue-empty">Нет отчётов в очереди</div>';return}
+  const STATUS_LABELS={PENDING:'PENDING',COMPLETED:'COMPLETED',DOWNLOADED:'Скачан',
+    LOADED:'Загружено',FAILED:'FAILED',ERROR:'Ошибка',UPLOADING:'Загружаем...'};
+  list.innerHTML=queue.map(item=>{
+    const sc=item.status.toLowerCase();
+    const label=STATUS_LABELS[item.status]||item.status;
+    const pulse=(item.status==='PENDING'||item.status==='UPLOADING')?'<span class="pulse"></span>':'';
+    const acct=item.profile_name||`${item.account_type} ${item.marketplace}`;
+    const dates=item.start_date===item.end_date?item.start_date:`${item.start_date} → ${item.end_date}`;
+    const created=item.created_at?new Date(item.created_at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'';
+    const rtClass=item.report_type==='spAdvertisedProduct'?'asin':item.report_type==='spSearchTerm'?'search':'targeting';
+    const rtLabel=REPORT_LABELS[item.report_type]||item.report_type;
+    const rows=item.rows?`<span class="card-rows">${item.rows.toLocaleString('ru')} стр${item.inserted?' · '+item.inserted.toLocaleString('ru')+' зап':''}</span>`:'';
+
+    let actions='';
+    if(item.status==='COMPLETED'&&!item._downloading)
+      actions+=`<button class="btn-sm" onclick="downloadEntry('${item.entry_id}')">⬇ Скачать</button>`;
+    if(item._downloading)
+      actions+=`<button class="btn-sm" disabled>Скачиваем...</button>`;
+    if(item.status==='DOWNLOADED')
+      actions+=`<button class="btn-sm green" onclick="uploadEntry('${item.entry_id}')">→ В BigQuery</button>`;
+    if(['LOADED','FAILED','ERROR'].includes(item.status))
+      actions+=`<button class="btn-sm danger" onclick="deleteEntry('${item.entry_id}')">✕</button>`;
+
+    let extra='';
+    if(item.status==='UPLOADING')
+      extra=`<div class="card-extra"><div class="prog-wrap"><div class="prog-bar" style="width:${item._pct||5}%"></div></div><div class="prog-text">${item._msg||'...'}</div></div>`;
+    if(item.error&&item.status!=='UPLOADING')
+      extra=`<div class="card-extra"><div class="card-error">${item.error}</div></div>`;
+
+    return `<div class="report-card ${sc}">
+      <div class="card-main">
+        <span class="card-acct">${acct}</span>
+        <span class="card-type ${rtClass}">${rtLabel}</span>
+        <span class="card-dates">${dates}</span>
+        <span class="card-status st-${sc}">${pulse}${label}</span>
+        ${rows}
+        <span class="card-meta">${created}</span>
+        <div class="card-actions">${actions}</div>
+      </div>${extra}
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const list=document.getElementById('historyList');
+  if(!localHistory.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:10px 0;">Нет загрузок</div>';return}
+  list.innerHTML=localHistory.map(h=>`
+    <div class="history-item">
+      <span class="date">${h.date}${h.endDate&&h.endDate!==h.date?' → '+h.endDate:''}</span>
+      <span class="acct">${h.acct||'MERCH US'}</span>
+      <span class="rows">${(h.rows||0).toLocaleString('ru')} строк · ${(h.inserted||0).toLocaleString('ru')} записано</span>
+      <span class="time">${h.time}</span>
+    </div>`).join('');
+}
+function clearHistory(){localHistory=[];localStorage.removeItem('ads_history');renderHistory();}
+</script>
+</body>
+</html>

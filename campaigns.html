@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Ads — Каталог кампаний</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f2ed;--surface:#fff;--surface2:#f0ece5;--border:#e4dfd7;--border2:#d4cec5;--text:#1c1a17;--muted:#7a756d;--dim:#b5b0a8;--accent:#c8440a;--accent-bg:rgba(200,68,10,.07);--accent-border:rgba(200,68,10,.2);--green:#2d7a4f;--green-bg:rgba(45,122,79,.07);--green-border:rgba(45,122,79,.2);--blue:#1a5fa8;--blue-bg:rgba(26,95,168,.07);--blue-border:rgba(26,95,168,.2);--yellow:#a07800;--yellow-bg:rgba(160,120,0,.07);--yellow-border:rgba(160,120,0,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.logo-dot{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:4px}
+nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:6px;transition:all .15s}
+nav a:hover{background:var(--surface2);color:var(--text)}
+nav a.active{background:var(--accent-bg);color:var(--accent)}
+main{flex:1;padding:40px;max-width:860px;margin:0 auto;width:100%}
+h1{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;margin-bottom:6px}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* Account bar */
+.account-bar{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;flex-wrap:wrap}
+.account-bar label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
+.seg{display:flex;gap:4px}
+.seg-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.seg-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.seg-btn.active-blue{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
+.divider{width:1px;height:24px;background:var(--border);flex-shrink:0}
+.profile-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px}
+.profile-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* Sync panel */
+.sync-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
+.panel-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.panel-desc{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.sync-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:#b03a08}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+
+.last-sync{font-size:11px;font-family:'DM Mono',monospace;color:var(--dim)}
+
+/* Progress block */
+.progress-wrap{margin-top:20px;display:none}
+.progress-wrap.visible{display:block}
+.progress-steps{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.step-row{display:flex;align-items:center;gap:10px;font-size:12px;padding:8px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border)}
+.step-row.active{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
+.step-row.done{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.step-row.error{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.step-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.step-text{flex:1}
+.step-count{font-family:'DM Mono',monospace;font-size:11px;opacity:.8}
+
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{animation:spin .8s linear infinite;display:inline-block}
+
+/* Progress bar */
+.bar-wrap{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease;width:0}
+.bar-fill.green{background:var(--green)}
+.bar-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.bar-label span{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)}
+
+/* Stats row */
+.stats-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.stat-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+.stat-pill.green{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.stat-pill.blue{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
+.stat-pill.red{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+
+/* Log */
+.log-block{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;max-height:140px;overflow-y:auto;display:none}
+.log-block.visible{display:block}
+.log-line{padding:2px 0;border-bottom:1px solid var(--border);line-height:1.5}
+.log-line:last-child{border-bottom:none}
+.log-line.error{color:var(--accent)}
+.log-line.success{color:var(--green)}
+.log-line.info{color:var(--blue)}
+
+/* Info block */
+.info-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:10px}
+.info-block.success{border-color:var(--green-border);color:var(--green);background:var(--green-bg)}
+.info-block.error{border-color:var(--accent-border);color:var(--accent);background:var(--accent-bg)}
+
+/* Table */
+.table-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:500}
+.entity-tabs{display:flex;gap:4px}
+.etab{font-size:11px;font-family:'DM Mono',monospace;padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s}
+.etab.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.table-empty{padding:40px;text-align:center;font-size:12px;color:var(--dim)}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{font-size:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace}
+.badge-enabled{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-paused{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
+.badge-auto{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.badge-manual{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.table-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--dim);font-family:'DM Mono',monospace;background:var(--surface2)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/catalog">Каталог</a>
+    <a href="/earnings">Продажи</a>
+    <a href="/ads">Реклама</a>
+    <a href="/campaigns" class="active">Кампании</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Каталог рекламных кампаний</h1>
+  <p class="subtitle">Синхронизация структуры кампаний, групп, ключевых слов и таргетов из Amazon SP API</p>
+
+  <!-- Account selector -->
+  <div class="account-bar">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label>Тип аккаунта</label>
+      <div class="seg" id="typeSelector">
+        <button class="seg-btn active" onclick="setType('MERCH',this)">Merch by Amazon</button>
+        <button class="seg-btn" onclick="setType('KDP',this)">KDP</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:4px" id="mktWrap">
+      <label>Маркетплейс</label>
+      <div class="seg" id="mktSelector"></div>
+    </div>
+    <div class="profile-badge">
+      <div class="profile-dot"></div>
+      <span id="profileBadge">Merch US · 2418854071638725</span>
+    </div>
+  </div>
+
+  <!-- Sync panel -->
+  <div class="sync-panel">
+    <div class="panel-title">Обновить каталог</div>
+    <div class="panel-desc">Загружает кампании, группы объявлений, ключевые слова и таргеты из Amazon SP API.<br>Архивные объекты исключаются. Таблица перезаписывается полностью.</div>
+    <div class="sync-row">
+      <button class="btn btn-primary" id="syncBtn" onclick="startSync()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Синхронизировать
+      </button>
+      <span class="last-sync" id="lastSync"></span>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="bar-label">
+        <span id="barLabel">Подготовка...</span>
+        <span id="barPct">0%</span>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill" id="barFill"></div></div>
+
+      <div class="progress-steps" id="steps" style="margin-top:12px">
+        <div class="step-row" id="step1"><div class="step-icon">○</div><div class="step-text">Авторизация</div></div>
+        <div class="step-row" id="step2"><div class="step-icon">○</div><div class="step-text">Кампании</div><div class="step-count" id="cnt_campaigns"></div></div>
+        <div class="step-row" id="step3"><div class="step-icon">○</div><div class="step-text">Группы объявлений</div><div class="step-count" id="cnt_ad_groups"></div></div>
+        <div class="step-row" id="step4"><div class="step-icon">○</div><div class="step-text">Таргеты (ключевые слова, product targeting)</div><div class="step-count" id="cnt_targets"></div></div>
+        <div class="step-row" id="step5"><div class="step-icon">○</div><div class="step-text">Product Ads (ASIN)</div><div class="step-count" id="cnt_ads"></div></div>
+        <div class="step-row" id="step6"><div class="step-icon">○</div><div class="step-text">Запись в BigQuery</div><div class="step-count" id="cnt_bq"></div></div>
+      </div>
+
+      <div class="stats-row" id="statsRow" style="display:none"></div>
+      <div class="log-block" id="logBlock"></div>
+      <div id="resultBlock"></div>
+    </div>
+  </div>
+
+  <!-- Table preview -->
+  <div class="table-section" id="tableSection" style="display:none">
+    <div class="table-header">
+      <div class="table-title">Последние данные</div>
+      <div class="entity-tabs" id="entityTabs"></div>
+    </div>
+    <div id="tableBody"></div>
+    <div class="table-footer" id="tableFooter"></div>
+  </div>
+</main>
+
+<script>
+// ── Конфиг профилей ──────────────────────────────────────
+const PROFILES = {
+  MERCH: [
+    { marketplace: 'US', id: '2418854071638725' },
+    { marketplace: 'UK', id: '180261448232436'  },
+    { marketplace: 'DE', id: '2023177291219092' },
+    { marketplace: 'FR', id: '613747068444603'  },
+    { marketplace: 'IT', id: '1643110315908506' },
+    { marketplace: 'ES', id: '3571496662552642' },
+  ],
+  KDP: [
+    { marketplace: 'US',  id: '2138688425253475' },
+    { marketplace: 'CA',  id: '216157406396956'  },
+    { marketplace: 'UK',  id: '3828973734410759' },
+    { marketplace: 'DE',  id: '1209740463543490' },
+    { marketplace: 'FR',  id: '2062477294536113' },
+    { marketplace: 'IT',  id: '2012455889033628' },
+    { marketplace: 'ES',  id: '1530105280135495' },
+    { marketplace: 'AU',  id: '2089815793960864' },
+  ]
+};
+
+let currentType = 'MERCH';
+let currentMkt  = 'US';
+let pollTimer   = null;
+let currentJobId = null;
+
+// ── UI helpers ───────────────────────────────────────────
+function setType(type, el) {
+  currentType = type;
+  document.querySelectorAll('#typeSelector .seg-btn').forEach(b => b.classList.remove('active', 'active-blue'));
+  el.classList.add(type === 'KDP' ? 'active-blue' : 'active');
+  renderMkt();
+}
+
+function renderMkt() {
+  const list = PROFILES[currentType];
+  const wrap = document.getElementById('mktSelector');
+  wrap.innerHTML = '';
+  list.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.className = 'seg-btn' + (p.marketplace === currentMkt || i === 0 ? (currentType === 'KDP' ? ' active-blue' : ' active') : '');
+    if (i === 0 && !list.find(x => x.marketplace === currentMkt)) currentMkt = p.marketplace;
+    b.textContent = p.marketplace;
+    b.onclick = () => {
+      currentMkt = p.marketplace;
+      document.querySelectorAll('#mktSelector .seg-btn').forEach(x => x.classList.remove('active', 'active-blue'));
+      b.classList.add(currentType === 'KDP' ? 'active-blue' : 'active');
+      updateBadge();
+    };
+    wrap.appendChild(b);
+  });
+  updateBadge();
+}
+
+function updateBadge() {
+  const p = PROFILES[currentType].find(x => x.marketplace === currentMkt) || PROFILES[currentType][0];
+  document.getElementById('profileBadge').textContent = `${currentType} ${p.marketplace} · ${p.id}`;
+}
+
+// ── Step helpers ─────────────────────────────────────────
+function stepActive(n)  { setStep(n, 'active', '<span class="spinner">↻</span>'); }
+function stepDone(n)    { setStep(n, 'done',   '✓'); }
+function stepError(n)   { setStep(n, 'error',  '✕'); }
+function setStep(n, cls, icon) {
+  const el = document.getElementById('step' + n);
+  if (!el) return;
+  el.className = 'step-row ' + cls;
+  el.querySelector('.step-icon').innerHTML = icon;
+}
+
+function setCount(id, val) {
+  const el = document.getElementById(id);
+  if (el && val != null) el.textContent = val;
+}
+
+function setBar(pct, label, green) {
+  document.getElementById('barPct').textContent = pct + '%';
+  document.getElementById('barLabel').textContent = label;
+  const fill = document.getElementById('barFill');
+  fill.style.width = pct + '%';
+  fill.className = 'bar-fill' + (green ? ' green' : '');
+}
+
+function addLog(msg, cls) {
+  const lb = document.getElementById('logBlock');
+  lb.classList.add('visible');
+  const d = document.createElement('div');
+  d.className = 'log-line' + (cls ? ' ' + cls : '');
+  d.textContent = msg;
+  lb.appendChild(d);
+  lb.scrollTop = lb.scrollHeight;
+}
+
+function resetProgress() {
+  for (let i = 1; i <= 6; i++) setStep(i, '', '○');
+  ['campaigns','ad_groups','targets','ads','bq'].forEach(k => setCount('cnt_' + k, ''));
+  setBar(0, 'Подготовка...', false);
+  document.getElementById('statsRow').style.display = 'none';
+  document.getElementById('statsRow').innerHTML = '';
+  document.getElementById('logBlock').className = 'log-block';
+  document.getElementById('logBlock').innerHTML = '';
+  document.getElementById('resultBlock').innerHTML = '';
+}
+
+// ── Sync ─────────────────────────────────────────────────
+async function startSync() {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+
+  document.getElementById('progressWrap').classList.add('visible');
+  resetProgress();
+
+  const profile = PROFILES[currentType].find(x => x.marketplace === currentMkt) || PROFILES[currentType][0];
+
+  try {
+    const resp = await fetch('/campaigns/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_type: currentType, marketplace: profile.marketplace })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    currentJobId = data.job_id;
+    pollProgress();
+  } catch (e) {
+    document.getElementById('resultBlock').innerHTML =
+      `<div class="info-block error">Ошибка: ${e.message}</div>`;
+    btn.disabled = false;
+  }
+}
+
+function pollProgress() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch(`/campaigns/progress/${currentJobId}`);
+      const msgs = await resp.json();
+      msgs.forEach(handleMsg);
+    } catch (e) { /* ignore */ }
+  }, 800);
+}
+
+function handleMsg(msg) {
+  const { event, data } = msg;
+
+  if (event === 'step') {
+    const stepMap = {
+      'auth':       1,
+      'campaigns':  2,
+      'ad_groups':  3,
+      'targets':    4,
+      'ads':        5,
+      'bq':         6,
+    };
+    const n = stepMap[data.key] || data.step;
+    if (n) stepActive(n);
+    setBar(data.pct || 0, data.msg || '');
+    addLog(data.msg, 'info');
+    return;
+  }
+
+  if (event === 'count') {
+    const n = { campaigns:2, ad_groups:3, targets:4, ads:5, bq:6 }[data.key];
+    if (n) stepDone(n);
+    setCount('cnt_' + data.key, data.count + ' шт.');
+    setBar(data.pct || 0, data.msg || '');
+    addLog(`${data.key}: ${data.count} объектов`, 'success');
+    return;
+  }
+
+  if (event === 'progress') {
+    setBar(data.pct || 0, `Загрузка в BQ: ${data.uploaded}/${data.total}...`);
+    setCount('cnt_bq', `${data.uploaded}/${data.total}`);
+    return;
+  }
+
+  if (event === 'done') {
+    clearInterval(pollTimer);
+    setBar(100, 'Готово', true);
+    for (let i = 1; i <= 6; i++) stepDone(i);
+
+    // Stats pills
+    const sr = document.getElementById('statsRow');
+    sr.style.display = 'flex';
+    const stats = [
+      { label: 'Кампаний',  val: data.counts?.campaign || 0,            cls: '' },
+      { label: 'Групп',     val: data.counts?.ad_group || 0,            cls: '' },
+      { label: 'Keywords',  val: data.counts?.keyword || 0,             cls: 'blue' },
+      { label: 'Негативных',val: data.counts?.negative_keyword || 0,    cls: '' },
+      { label: 'Product T.',val: data.counts?.product_targeting || 0,   cls: '' },
+      { label: 'Ads',       val: data.counts?.product_ad || 0,          cls: 'green' },
+      { label: 'Всего строк',val: data.total,                           cls: 'green' },
+    ];
+    sr.innerHTML = stats.map(s =>
+      `<span class="stat-pill ${s.cls}">${s.label}: ${s.val}</span>`
+    ).join('');
+
+    document.getElementById('resultBlock').innerHTML =
+      `<div class="info-block success">✓ Синхронизация завершена · ${data.total} строк · ${new Date().toLocaleTimeString('ru')}</div>`;
+
+    document.getElementById('lastSync').textContent =
+      'Последняя синхронизация: ' + new Date().toLocaleString('ru');
+
+    document.getElementById('syncBtn').disabled = false;
+    loadPreview();
+    return;
+  }
+
+  if (event === 'error') {
+    clearInterval(pollTimer);
+    setBar(0, 'Ошибка', false);
+    addLog(data.msg, 'error');
+    document.getElementById('resultBlock').innerHTML =
+      `<div class="info-block error">✕ Ошибка: ${data.msg}</div>`;
+    document.getElementById('syncBtn').disabled = false;
+    return;
+  }
+}
+
+// ── Preview table ─────────────────────────────────────────
+const ENTITY_LABELS = {
+  campaign:           'Кампании',
+  ad_group:           'Группы',
+  keyword:            'Keywords',
+  negative_keyword:   'Негативные',
+  product_targeting:  'Product T.',
+  product_ad:         'Product Ads',
+  bidding_adjustment: 'Плейсменты',
+};
+
+let previewEntity = 'campaign';
+
+async function loadPreview(entity) {
+  entity = entity || previewEntity;
+  previewEntity = entity;
+
+  const profile = PROFILES[currentType].find(x => x.marketplace === currentMkt) || PROFILES[currentType][0];
+
+  try {
+    const resp = await fetch(`/campaigns/preview?account_type=${currentType}&marketplace=${profile.marketplace}&entity=${entity}`);
+    const data = await resp.json();
+
+    if (data.error) return;
+
+    document.getElementById('tableSection').style.display = 'block';
+
+    // Tabs
+    const tabs = document.getElementById('entityTabs');
+    tabs.innerHTML = Object.entries(ENTITY_LABELS).map(([k, v]) =>
+      `<button class="etab ${k === entity ? 'active' : ''}" onclick="loadPreview('${k}')">${v}</button>`
+    ).join('');
+
+    // Table
+    if (!data.rows || data.rows.length === 0) {
+      document.getElementById('tableBody').innerHTML = '<div class="table-empty">Нет данных. Запустите синхронизацию.</div>';
+      document.getElementById('tableFooter').textContent = '';
+      return;
+    }
+
+    const cols = data.columns;
+    let html = `<table><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+    data.rows.forEach(row => {
+      html += '<tr>' + cols.map(c => {
+        const val = row[c];
+        if (c === 'campaign_state' || c === 'ad_group_state' || c === 'keyword_state' || c === 'target_state' || c === 'ad_state') {
+          if (!val) return '<td>—</td>';
+          const cls = val === 'ENABLED' ? 'badge-enabled' : 'badge-paused';
+          return `<td><span class="badge ${cls}">${val}</span></td>`;
+        }
+        if (c === 'targeting_type') {
+          if (!val) return '<td>—</td>';
+          const cls = val === 'AUTO' ? 'badge-auto' : 'badge-manual';
+          return `<td><span class="badge ${cls}">${val}</span></td>`;
+        }
+        return `<td>${val != null ? val : '—'}</td>`;
+      }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+
+    document.getElementById('tableBody').innerHTML = html;
+    document.getElementById('tableFooter').textContent =
+      `Показано ${data.rows.length} из ${data.total} строк · entity_type = ${entity}`;
+
+  } catch (e) { /* ignore */ }
+}
+
+// ── Init ─────────────────────────────────────────────────
+renderMkt();
+loadPreview('campaign');
+</script>
+</body>
+</html>

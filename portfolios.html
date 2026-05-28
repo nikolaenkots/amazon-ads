@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Ads — Портфолио</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f2ed;--surface:#fff;--surface2:#f0ece5;--border:#e4dfd7;--border2:#d4cec5;--text:#1c1a17;--muted:#7a756d;--dim:#b5b0a8;--accent:#c8440a;--accent-bg:rgba(200,68,10,.07);--accent-border:rgba(200,68,10,.2);--green:#2d7a4f;--green-bg:rgba(45,122,79,.07);--green-border:rgba(45,122,79,.2);--blue:#1a5fa8;--blue-bg:rgba(26,95,168,.07);--blue-border:rgba(26,95,168,.2);--yellow:#a07800;--yellow-bg:rgba(160,120,0,.07);--yellow-border:rgba(160,120,0,.2)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.logo-dot{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:4px}
+nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:6px;transition:all .15s}
+nav a:hover{background:var(--surface2);color:var(--text)}
+nav a.active{background:var(--accent-bg);color:var(--accent)}
+main{flex:1;padding:40px;max-width:960px;margin:0 auto;width:100%}
+h1{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;margin-bottom:6px}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:#b03a08}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover:not(:disabled){background:var(--surface2)}
+.btn-secondary:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{animation:spin .8s linear infinite;display:inline-block}
+
+/* Sync panel */
+.sync-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
+.panel-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.panel-desc{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.sync-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+.info-block{padding:10px 14px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;margin-top:12px;display:none}
+.info-block.visible{display:block}
+.info-block.success{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
+.info-block.error{background:var(--accent-bg);border:1px solid var(--accent-border);color:var(--accent)}
+.info-block.info{background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--blue)}
+
+/* Table panel */
+.table-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:500}
+.table-meta{font-size:11px;font-family:'DM Mono',monospace;color:var(--dim)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{font-size:12px;padding:8px 14px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+tr.modified td{background:rgba(26,95,168,.04)}
+
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace}
+.badge-merch{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.badge-kdp{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.badge-us{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-mkt{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+/* Editable cell */
+.editable-cell{position:relative}
+.editable-cell input{width:100%;background:transparent;border:none;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);padding:0;outline:none}
+.editable-cell input:focus{background:var(--blue-bg);border-radius:4px;padding:2px 6px;margin:-2px -6px}
+.editable-cell input.changed{color:var(--blue)}
+
+.table-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2)}
+.table-footer-left{font-size:11px;font-family:'DM Mono',monospace;color:var(--dim)}
+.changes-badge{font-size:11px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:5px;background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--blue);display:none}
+.changes-badge.visible{display:inline-block}
+
+.table-empty{padding:48px;text-align:center;font-size:12px;color:var(--dim)}
+
+/* Save panel */
+.save-panel{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 0}
+
+/* Filter bar */
+.filter-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
+.filter-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.filter-btn{font-size:11px;font-family:'DM Mono',monospace;padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .15s}
+.filter-btn:hover{background:var(--surface2)}
+.filter-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+.filter-sep{width:1px;height:16px;background:var(--border);flex-shrink:0}
+.search-input{font-size:11px;font-family:'DM Mono',monospace;padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;width:180px}
+.search-input:focus{border-color:var(--blue-border);background:var(--blue-bg)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/catalog">Каталог</a>
+    <a href="/earnings">Продажи</a>
+    <a href="/ads">Реклама</a>
+    <a href="/campaigns">Кампании</a>
+    <a href="/portfolios" class="active">Портфолио</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Портфолио</h1>
+  <p class="subtitle">Управление именами портфолио для MERCH и KDP аккаунтов</p>
+
+  <!-- Sync panel -->
+  <div class="sync-panel">
+    <div class="panel-title">Обновить список портфолио</div>
+    <div class="panel-desc">Сканирует таблицы кампаний и добавляет новые портфолио в список. Существующие имена не затрагиваются.</div>
+    <div class="sync-row">
+      <button class="btn btn-primary" id="syncBtn" onclick="syncPortfolios()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Обновить список
+      </button>
+    </div>
+    <div class="info-block" id="syncResult"></div>
+  </div>
+
+  <!-- Table panel -->
+  <div class="table-panel">
+    <div class="table-header">
+      <div class="table-title">Портфолио</div>
+      <div class="table-meta" id="tableMeta">Загрузка...</div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="filter-label">Аккаунт</span>
+      <button class="filter-btn active" onclick="setFilter('type','ALL',this)">Все</button>
+      <button class="filter-btn" onclick="setFilter('type','MERCH',this)">MERCH</button>
+      <button class="filter-btn" onclick="setFilter('type','KDP',this)">KDP</button>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Маркет</span>
+      <button class="filter-btn active" onclick="setFilter('mkt','ALL',this)" id="mktAll">Все</button>
+      <div id="mktFilters"></div>
+      <div class="filter-sep"></div>
+      <input type="text" class="search-input" placeholder="Поиск по имени..." oninput="filterTable()" id="searchInput">
+    </div>
+
+    <div class="table-wrap">
+      <div id="tableBody"><div class="table-empty">Загрузка данных...</div></div>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-footer-left" id="tableFooter">—</div>
+      <span class="changes-badge" id="changesBadge">0 изменений</span>
+    </div>
+  </div>
+
+  <!-- Save panel -->
+  <div class="save-panel">
+    <button class="btn btn-secondary" id="resetBtn" onclick="resetChanges()" disabled>Отменить</button>
+    <button class="btn btn-primary" id="saveBtn" onclick="saveChanges()" disabled>
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Сохранить изменения
+    </button>
+  </div>
+  <div class="info-block" id="saveResult"></div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+let allPortfolios = [];
+let changes = {};  // { portfolio_id: { portfolio_name, notes } }
+let filters = { type: 'ALL', mkt: 'ALL' };
+
+// ── Load portfolios ───────────────────────────────────────
+async function loadPortfolios() {
+  try {
+    const resp = await fetch('/portfolios/list');
+    const data = await resp.json();
+    allPortfolios = data.portfolios || [];
+    buildMktFilters();
+    renderTable();
+  } catch (e) {
+    document.getElementById('tableBody').innerHTML =
+      '<div class="table-empty">Ошибка загрузки данных</div>';
+  }
+}
+
+// ── Build marketplace filter buttons ─────────────────────
+function buildMktFilters() {
+  const mkts = [...new Set(allPortfolios.map(p => p.marketplace))].sort();
+  const wrap = document.getElementById('mktFilters');
+  wrap.innerHTML = mkts.map(m =>
+    `<button class="filter-btn" onclick="setFilter('mkt','${m}',this)">${m}</button>`
+  ).join('');
+}
+
+// ── Filter ────────────────────────────────────────────────
+function setFilter(key, val, btn) {
+  filters[key] = val;
+
+  // Update active button in group
+  const group = btn.parentElement.querySelectorAll('.filter-btn');
+  group.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Reset mkt "All" button when switching mkt filter
+  if (key === 'mkt' && val === 'ALL') {
+    document.getElementById('mktAll').classList.add('active');
+  }
+
+  renderTable();
+}
+
+function filterTable() {
+  renderTable();
+}
+
+function getFiltered() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  return allPortfolios.filter(p => {
+    if (filters.type !== 'ALL' && p.account_type !== filters.type) return false;
+    if (filters.mkt !== 'ALL' && p.marketplace !== filters.mkt) return false;
+    if (search) {
+      const name = (p.portfolio_name || '').toLowerCase();
+      const id   = (p.portfolio_id || '').toLowerCase();
+      if (!name.includes(search) && !id.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Render table ──────────────────────────────────────────
+function renderTable() {
+  const rows = getFiltered();
+  document.getElementById('tableMeta').textContent = `${rows.length} из ${allPortfolios.length}`;
+  document.getElementById('tableFooter').textContent =
+    `Показано ${rows.length} портфолио · колонка "Название" доступна для редактирования`;
+
+  if (!rows.length) {
+    document.getElementById('tableBody').innerHTML =
+      '<div class="table-empty">Нет данных по выбранным фильтрам</div>';
+    return;
+  }
+
+  let html = `<table>
+    <thead><tr>
+      <th>Portfolio ID</th>
+      <th>Аккаунт</th>
+      <th>Маркет</th>
+      <th>Название</th>
+      <th>Заметки</th>
+    </tr></thead>
+    <tbody>`;
+
+  rows.forEach(p => {
+    const pid = p.portfolio_id;
+    const currentName  = changes[pid]?.portfolio_name !== undefined ? changes[pid].portfolio_name : (p.portfolio_name || '');
+    const currentNotes = changes[pid]?.notes !== undefined ? changes[pid].notes : (p.notes || '');
+    const isModified   = changes[pid] !== undefined;
+    const typeBadge    = p.account_type === 'MERCH' ? 'badge-merch' : 'badge-kdp';
+    const mktBadge     = p.marketplace === 'US' ? 'badge-us' : 'badge-mkt';
+
+    html += `<tr class="${isModified ? 'modified' : ''}" id="row-${pid}">
+      <td>${pid}</td>
+      <td><span class="badge ${typeBadge}">${p.account_type}</span></td>
+      <td><span class="badge ${mktBadge}">${p.marketplace}</span></td>
+      <td class="editable-cell">
+        <input type="text"
+          value="${escHtml(currentName)}"
+          placeholder="Введите название..."
+          class="${isModified && changes[pid]?.portfolio_name !== undefined ? 'changed' : ''}"
+          onchange="recordChange('${pid}','portfolio_name',this.value,'${escHtml(p.portfolio_name || '')}')"
+          oninput="this.classList.add('changed')"
+          data-original="${escHtml(p.portfolio_name || '')}"
+          data-field="portfolio_name"
+          data-pid="${pid}">
+      </td>
+      <td class="editable-cell">
+        <input type="text"
+          value="${escHtml(currentNotes)}"
+          placeholder="Заметки..."
+          class="${isModified && changes[pid]?.notes !== undefined ? 'changed' : ''}"
+          onchange="recordChange('${pid}','notes',this.value,'${escHtml(p.notes || '')}')"
+          oninput="this.classList.add('changed')"
+          data-original="${escHtml(p.notes || '')}"
+          data-field="notes"
+          data-pid="${pid}">
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableBody').innerHTML = html;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Record change ─────────────────────────────────────────
+function recordChange(pid, field, newVal, origVal) {
+  if (!changes[pid]) changes[pid] = {};
+  if (newVal === origVal) {
+    delete changes[pid][field];
+    if (Object.keys(changes[pid]).length === 0) delete changes[pid];
+  } else {
+    changes[pid][field] = newVal;
+  }
+  updateChangesUI();
+}
+
+function updateChangesUI() {
+  const count = Object.keys(changes).length;
+  const badge = document.getElementById('changesBadge');
+  badge.textContent = `${count} изменений`;
+  badge.classList.toggle('visible', count > 0);
+  document.getElementById('saveBtn').disabled = count === 0;
+  document.getElementById('resetBtn').disabled = count === 0;
+}
+
+// ── Reset changes ─────────────────────────────────────────
+function resetChanges() {
+  changes = {};
+  updateChangesUI();
+  renderTable();
+}
+
+// ── Sync portfolios ───────────────────────────────────────
+async function syncPortfolios() {
+  const btn = document.getElementById('syncBtn');
+  const result = document.getElementById('syncResult');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Обновляем...`;
+
+  result.className = 'info-block info visible';
+  result.textContent = 'Сканируем таблицы кампаний...';
+
+  try {
+    const resp = await fetch('/portfolios/sync', { method: 'POST' });
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    result.className = 'info-block success visible';
+    result.textContent = `✓ Готово · Найдено: ${data.total} · Добавлено новых: ${data.inserted}`;
+
+    await loadPortfolios();
+  } catch (e) {
+    result.className = 'info-block error visible';
+    result.textContent = `✕ Ошибка: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Обновить список`;
+  }
+}
+
+// ── Save changes ──────────────────────────────────────────
+async function saveChanges() {
+  const btn = document.getElementById('saveBtn');
+  const result = document.getElementById('saveResult');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Сохраняем...`;
+
+  result.className = 'info-block info visible';
+  result.textContent = 'Отправляем изменения...';
+
+  try {
+    // Собираем полные данные для каждого изменённого портфолио
+    const payload = Object.keys(changes).map(pid => {
+      const orig  = allPortfolios.find(p => p.portfolio_id === pid);
+      const delta = changes[pid];
+      return {
+        portfolio_id:   pid,
+        account_type:   orig.account_type,
+        marketplace:    orig.marketplace,
+        portfolio_name: delta.portfolio_name !== undefined ? delta.portfolio_name : (orig.portfolio_name || ''),
+        notes:          delta.notes !== undefined ? delta.notes : (orig.notes || '')
+      };
+    });
+
+    const resp = await fetch('/portfolios/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ changes: payload })
+    });
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    result.className = 'info-block success visible';
+    result.textContent = `✓ Сохранено ${data.updated} портфолио · ${new Date().toLocaleTimeString('ru')}`;
+
+    // Обновляем локальные данные
+    payload.forEach(p => {
+      const orig = allPortfolios.find(x => x.portfolio_id === p.portfolio_id);
+      if (orig) {
+        orig.portfolio_name = p.portfolio_name;
+        orig.notes = p.notes;
+      }
+    });
+
+    changes = {};
+    updateChangesUI();
+    renderTable();
+
+  } catch (e) {
+    result.className = 'info-block error visible';
+    result.textContent = `✕ Ошибка: ${e.message}`;
+    btn.disabled = false;
+  } finally {
+    btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Сохранить изменения`;
+    updateChangesUI();
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadPortfolios();
+</script>
+</body>
+</html>
