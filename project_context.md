@@ -286,25 +286,86 @@ PARTITION BY DATE(created_at)
 
 ## Логика импорта каталога
 
-CSV формат — экспорт из расширения Productor для Chrome.
-Маппинг колонок CSV:
-- col[0] → asin
-- col[1] → brand
-- col[2] → createdDate (Unix timestamp)
-- col[5] → design_id
-- col[7] → price
-- col[8] → listing_id
-- col[10] → marketplace
-- col[12] → title
-- col[13] → product_type
-- col[15] → status
-- col[17:] → pm_data JSON (буллиты, картинки)
+CSV формат — экспорт из расширения Productor для Chrome через IndexedDB скрипт (см. ниже).
 
-Процесс обновления (MERGE):
+### Порядок колонок в актуальном CSV (Productor, май 2026)
+```
+col[0]  asin
+col[1]  brandName
+col[2]  createdDate        (Unix timestamp)
+col[3]  currencyCode
+col[4]  deleteReasonType
+col[5]  designId
+col[6]  listPrice
+col[7]  listingId
+col[8]  lockReasonType
+col[9]  marketplace
+col[10] productImageUrn
+col[11] productTitle
+col[12] productType
+col[13] searchableOnRetail
+col[14] status
+col[15] updatedDate
+col[16] pm_data            (JSON: буллиты, картинки, продажи, BSR...)
+col[17] estimatedExpirationDate
+```
+
+⚠️ Парсер (`process_catalog_row`) читает колонки **по именам из заголовка**, а не по индексам —
+изменение порядка колонок в Productor не сломает импорт.
+
+### Скрипт выгрузки из Productor (IndexedDB → CSV)
+Запускается в консоли браузера на странице Merch by Amazon при активном Productor:
+```javascript
+const dbName = "prettymerch_tmp";
+const storeName = "products";
+const fromDate = new Date("2026-05-10").getTime() / 1000;
+const req = indexedDB.open(dbName);
+req.onsuccess = function(e) {
+  const db = e.target.result;
+  db.transaction(storeName, "readonly").objectStore(storeName).getAll().onsuccess = function(e) {
+    const data = e.target.result;
+    const filtered = data.filter(row => row.createdDate >= fromDate);
+    if (!filtered.length) {
+      console.log("Нет товаров после указанной даты");
+      return;
+    }
+    // Порядок колонок соответствует актуальному формату (май 2026)
+    const keys = [
+      "asin", "brandName", "createdDate", "currencyCode", "deleteReasonType",
+      "designId", "listPrice", "listingId", "lockReasonType", "marketplace",
+      "productImageUrn", "productTitle", "productType", "searchableOnRetail",
+      "status", "updatedDate", "pm_data", "estimatedExpirationDate"
+    ];
+    const csv = [
+      keys.join(","),
+      ...filtered.map(row =>
+        keys.map(k => JSON.stringify(row[k] ?? "")).join(",")
+      )
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "prettymerch_products.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    console.log(`Всего в базе: ${data.length}`);
+    console.log(`Выгружено после ${new Date(fromDate * 1000).toLocaleDateString()}: ${filtered.length}`);
+  };
+};
+```
+
+**Важно:** строки с пустым `asin` (новые товары без присвоенного Amazon ASIN) отбрасываются
+при импорте — это ожидаемое поведение. После того как Amazon присвоит ASIN, следующий импорт
+добавит их через MERGE.
+
+### Процесс обновления (MERGE):
 1. DROP + CREATE catalog_staging
-2. INSERT данные в staging чанками по 1000 строк
-3. MERGE staging → catalog (по listing_id, теги не перезаписываются)
-4. DROP catalog_staging (очистка)
+2. Чтение CSV через `csv.reader(f, newline='')` — корректная обработка многострочных полей
+3. `build_catalog_col_idx(header)` — маппинг по именам колонок из заголовка
+4. INSERT данные в staging чанками по 1000 строк
+5. MERGE staging → catalog (по `listing_id`, поле `tags` не перезаписывается)
+6. DROP catalog_staging (очистка)
 
 ---
 
