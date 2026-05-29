@@ -142,7 +142,7 @@ def portfolios_list():
 
 @portfolios_bp.route('/portfolios/import-csv', methods=['POST'])
 def portfolios_import_csv():
-    """Импортирует имена портфолио из CSV. Обновляет portfolio_name по portfolio_id."""
+    """Импортирует имена портфолио из CSV через MERGE."""
     try:
         data = request.json
         rows = data.get('rows', [])
@@ -150,25 +150,44 @@ def portfolios_import_csv():
         if not rows:
             return jsonify({"ok": True, "updated": 0})
 
-        client  = bigquery.Client(project=PROJECT_ID)
-        updated = 0
+        client = bigquery.Client(project=PROJECT_ID)
 
-        for item in rows:
-            portfolio_id   = item.get('portfolio_id', '').strip()
-            portfolio_name = (item.get('portfolio_name', '') or '').strip().replace("'", "\\'")
+        # Загружаем данные во временную таблицу
+        temp_table = f"{PROJECT_ID}.{DATASET}.portfolio_import_tmp"
 
-            if not portfolio_id or not portfolio_name:
-                continue
+        # Удаляем временную таблицу если осталась с прошлого раза
+        client.query(f"DROP TABLE IF EXISTS `{temp_table}`").result()
 
-            sql = f"""
-            UPDATE `{PROJECT_ID}.{DATASET}.portfolio_labels`
-            SET portfolio_name = '{portfolio_name}'
-            WHERE portfolio_id = '{portfolio_id}'
-            """
-            result = client.query(sql).result()
-            updated += 1
+        # Создаём временную таблицу
+        client.query(f"""
+            CREATE TABLE `{temp_table}` (
+                portfolio_id   STRING NOT NULL,
+                portfolio_name STRING NOT NULL
+            )
+        """).result()
 
-        return jsonify({"ok": True, "updated": updated})
+        # Загружаем данные
+        job = client.load_table_from_json(
+            rows,
+            temp_table,
+            job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
+        )
+        job.result()
+
+        # MERGE одним запросом
+        merge_sql = f"""
+        MERGE `{PROJECT_ID}.{DATASET}.portfolio_labels` AS target
+        USING `{temp_table}` AS source
+        ON target.portfolio_id = source.portfolio_id
+        WHEN MATCHED THEN UPDATE SET
+            target.portfolio_name = source.portfolio_name
+        """
+        result = client.query(merge_sql).result()
+
+        # Удаляем временную таблицу
+        client.query(f"DROP TABLE IF EXISTS `{temp_table}`").result()
+
+        return jsonify({"ok": True, "updated": len(rows)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
