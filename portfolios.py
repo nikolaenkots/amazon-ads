@@ -138,3 +138,37 @@ def portfolios_list():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@portfolios_bp.route('/portfolios/import-csv', methods=['POST'])
+def portfolios_import_csv():
+    """Импортирует имена портфолио из CSV. Обновляет portfolio_name по portfolio_id."""
+    try:
+        data = request.json
+        rows = data.get('rows', [])
+
+        if not rows:
+            return jsonify({"ok": True, "updated": 0})
+
+        client  = bigquery.Client(project=PROJECT_ID)
+        updated = 0
+
+        for item in rows:
+            portfolio_id   = item.get('portfolio_id', '').strip()
+            portfolio_name = (item.get('portfolio_name', '') or '').strip().replace("'", "\\'")
+
+            if not portfolio_id or not portfolio_name:
+                continue
+
+            sql = f"""
+            UPDATE `{PROJECT_ID}.{DATASET}.portfolio_labels`
+            SET portfolio_name = '{portfolio_name}'
+            WHERE portfolio_id = '{portfolio_id}'
+            """
+            result = client.query(sql).result()
+            updated += 1
+
+        return jsonify({"ok": True, "updated": updated})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

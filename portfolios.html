@@ -118,6 +118,12 @@ tr.modified td{background:rgba(26,95,168,.04)}
         <svg viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2M12 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Обновить список
       </button>
+      <label class="btn btn-secondary" style="cursor:pointer">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Импорт CSV
+        <input type="file" accept=".csv" id="csvInput" style="display:none" onchange="importCSV(this)">
+      </label>
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">CSV: portfolio_id, portfolio_name</span>
     </div>
     <div class="info-block" id="syncResult"></div>
   </div>
@@ -409,6 +415,62 @@ async function saveChanges() {
   } finally {
     btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Сохранить изменения`;
     updateChangesUI();
+  }
+}
+
+// ── Import CSV ────────────────────────────────────────────
+async function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const result = document.getElementById('syncResult');
+  result.className = 'info-block info visible';
+  result.textContent = 'Читаем CSV...';
+
+  try {
+    const text = await file.text();
+    const lines = text.trim().split('\n').filter(l => l.trim());
+
+    // Пропускаем заголовок если есть
+    const startIdx = lines[0].toLowerCase().includes('portfolio_id') ? 1 : 0;
+    const rows = [];
+
+    for (let i = startIdx; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 2) continue;
+      const portfolio_id   = cols[0].trim();
+      const portfolio_name = cols[1].trim();
+      if (!portfolio_id || !portfolio_name) continue;
+      rows.push({ portfolio_id, portfolio_name });
+    }
+
+    if (!rows.length) {
+      result.className = 'info-block error visible';
+      result.textContent = '✕ CSV пустой или неверный формат. Ожидается: portfolio_id, portfolio_name';
+      input.value = '';
+      return;
+    }
+
+    result.textContent = `Найдено ${rows.length} строк, отправляем...`;
+
+    const resp = await fetch('/portfolios/import-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
+    });
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    result.className = 'info-block success visible';
+    result.textContent = `✓ Импортировано ${data.updated} из ${rows.length} · ${new Date().toLocaleTimeString('ru')}`;
+
+    await loadPortfolios();
+  } catch (e) {
+    result.className = 'info-block error visible';
+    result.textContent = `✕ Ошибка: ${e.message}`;
+  } finally {
+    input.value = '';
   }
 }
 
