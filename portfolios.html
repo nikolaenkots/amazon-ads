@@ -123,7 +123,7 @@ tr.modified td{background:rgba(26,95,168,.04)}
         Импорт CSV
         <input type="file" accept=".csv" id="csvInput" style="display:none" onchange="importCSV(this)">
       </label>
-      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">CSV: portfolio_id, portfolio_name</span>
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Amazon bulk CSV или portfolio_id,portfolio_name</span>
     </div>
     <div class="info-block" id="syncResult"></div>
   </div>
@@ -430,28 +430,46 @@ async function importCSV(input) {
   try {
     const text = await file.text();
     const lines = text.trim().split('\n').filter(l => l.trim());
+    if (!lines.length) throw new Error('Файл пустой');
 
-    // Пропускаем заголовок если есть
-    const startIdx = lines[0].toLowerCase().includes('portfolio_id') ? 1 : 0;
+    // Определяем разделитель
+    const firstLine = lines[0];
+    const sep = firstLine.includes(';') ? ';' : ',';
+
+    // Парсим заголовок
+    const headers = firstLine.split(sep).map(h => h.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g, '').toLowerCase());
+
+    // Ищем нужные колонки
+    const idxId   = headers.findIndex(h => h.includes('portfolio id') || h === 'portfolio_id');
+    const idxName = headers.findIndex(h => h.includes('portfolio name') || h === 'portfolio_name');
+    const idxEntity = headers.findIndex(h => h === 'entity');
+
+    if (idxId === -1 || idxName === -1) {
+      throw new Error(`Не найдены колонки Portfolio ID / Portfolio Name. Заголовки: ${headers.join(', ')}`);
+    }
+
     const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
 
-    for (let i = startIdx; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-      if (cols.length < 2) continue;
-      const portfolio_id   = cols[0].trim();
-      const portfolio_name = cols[1].trim();
+      // Фильтруем только Portfolio строки если есть колонка Entity
+      if (idxEntity !== -1 && cols[idxEntity] && cols[idxEntity].toLowerCase() !== 'portfolio') continue;
+
+      const portfolio_id   = cols[idxId]?.trim();
+      const portfolio_name = cols[idxName]?.trim();
       if (!portfolio_id || !portfolio_name) continue;
+
       rows.push({ portfolio_id, portfolio_name });
     }
 
     if (!rows.length) {
       result.className = 'info-block error visible';
-      result.textContent = '✕ CSV пустой или неверный формат. Ожидается: portfolio_id, portfolio_name';
+      result.textContent = '✕ Нет подходящих строк в файле';
       input.value = '';
       return;
     }
 
-    result.textContent = `Найдено ${rows.length} строк, отправляем...`;
+    result.textContent = `Найдено ${rows.length} портфолио, отправляем...`;
 
     const resp = await fetch('/portfolios/import-csv', {
       method: 'POST',
