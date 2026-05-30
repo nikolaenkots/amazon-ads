@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Аналитика кампаний · Amazon Ads</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #f5f2ed;
+  --surface:  #ffffff;
+  --surface2: #f0ece5;
+  --border:   #e4dfd7;
+  --border2:  #d4cec5;
+  --text:     #1c1a17;
+  --muted:    #7a756d;
+  --dim:      #b5b0a8;
+  --accent:   #c8440a;
+  --accent-bg: rgba(200,68,10,0.07);
+  --accent-border: rgba(200,68,10,0.2);
+  --green:    #2d7a4f;
+  --green-bg: rgba(45,122,79,0.07);
+  --green-border: rgba(45,122,79,0.2);
+  --blue:     #1a5fa8;
+  --blue-bg:  rgba(26,95,168,0.07);
+  --blue-border: rgba(26,95,168,0.2);
+  --red:      #c0392b;
+  --red-bg:   rgba(192,57,43,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.logo-dot {
+  width: 22px; height: 22px; background: var(--accent); border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-nav { display: flex; align-items: center; gap: 16px; }
+.header-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted); text-decoration: none;
+  transition: color .15s;
+}
+.header-back:hover { color: var(--text); }
+.header-tag {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--dim);
+}
+
+/* ── Layout ── */
+main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+/* ── Filters panel ── */
+.filters-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.filters-row {
+  display: grid;
+  gap: 10px;
+  align-items: end;
+}
+.filters-row-1 { grid-template-columns: auto 160px 160px 160px 200px 200px 1fr; }
+.filters-row-2 { grid-template-columns: 160px 200px 1fr; }
+.filters-row-3 { grid-template-columns: auto auto 1fr; }
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+}
+.filter-group input,
+.filter-group select {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 0 10px;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+.filter-group input:focus,
+.filter-group select:focus { border-color: var(--accent); }
+
+.filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+.btn {
+  height: 34px; padding: 0 16px; border-radius: 6px; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #b33d09; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Account type tabs ── */
+.acct-tabs { display: flex; gap: 4px; margin-bottom: 0; }
+.acct-tab {
+  height: 34px; padding: 0 14px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; color: var(--muted); transition: all .15s;
+}
+.acct-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── Stats summary ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.stat-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  margin-bottom: 4px;
+}
+.stat-val { font-size: 18px; font-weight: 500; }
+.stat-val.green { color: var(--green); }
+.stat-val.accent { color: var(--accent); }
+.stat-val.blue { color: var(--blue); }
+
+/* ── Table ── */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.table-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.table-title { font-size: 14px; font-weight: 500; }
+.table-count {
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  text-align: left;
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: var(--text); }
+thead th .sort-arrow { margin-left: 4px; opacity: .4; }
+thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td { padding: 10px 14px; vertical-align: middle; }
+
+.td-name { max-width: 280px; }
+.td-name-text {
+  font-size: 13px; font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 260px;
+}
+.td-name-sub { font-size: 11px; color: var(--muted); margin-top: 1px; font-family: 'DM Mono', monospace; }
+/* Все td обрезаются по ширине колонки */
+tbody td {
+  max-width: 0; /* при table-layout:fixed — обрезает по ширине th */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 10px 10px; vertical-align: middle;
+}
+tbody td.td-name, tbody td.num { max-width: none; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500;
+  font-family: 'DM Mono', monospace;
+}
+.badge-enabled  { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-border); }
+.badge-paused   { background: var(--surface2);  color: var(--muted);  border: 1px solid var(--border); }
+.badge-auto     { background: var(--blue-bg);   color: var(--blue);   border: 1px solid var(--blue-border); }
+.badge-manual   { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); }
+
+.num { font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; }
+.num-zero { color: var(--dim); }
+.num-pos  { color: var(--text); }
+
+.acos-high { color: var(--red); font-weight: 500; }
+.acos-ok   { color: var(--green); }
+
+/* ── Empty / loading ── */
+.table-empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.pagination-info { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; }
+.page-btns { display: flex; gap: 4px; }
+.page-btn {
+  height: 30px; min-width: 30px; padding: 0 8px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--text);
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.page-btn:hover:not(:disabled) { background: var(--surface2); }
+.page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Error ── */
+.error-block {
+  background: var(--red-bg); border: 1px solid rgba(192,57,43,.2);
+  border-radius: 8px; padding: 12px 16px;
+  font-size: 13px; color: var(--red);
+  margin-bottom: 16px;
+}
+
+/* ── No data indicator ── */
+.no-data-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); display: inline-block; }
+
+/* ── Campaign expand row ── */
+.expand-btn {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface2); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 10px; transition: all .15s;
+  vertical-align: middle; margin-right: 6px;
+}
+.expand-btn:hover { background: var(--border); color: var(--text); }
+.expand-btn.open { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.structure-row td {
+  padding: 0 !important;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.structure-panel {
+  padding: 12px 16px;
+  font-size: 12px;
+}
+.structure-loading {
+  padding: 16px; text-align: center; color: var(--muted); font-size: 12px;
+}
+
+/* Группа объявлений */
+.sg-group {
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.sg-group-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-weight: 500;
+}
+.sg-group-header:hover { background: var(--surface2); }
+.sg-group-toggle { color: var(--muted); font-size: 10px; transition: transform .15s; }
+.sg-group-toggle.open { transform: rotate(90deg); }
+.sg-group-name { flex: 1; font-size: 12px; }
+.sg-group-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.sg-state { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-family: 'DM Mono', monospace; white-space: nowrap; }
+.sg-state-enabled { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.sg-state-paused  { background: var(--surface2);  color: var(--muted);  border: 1px solid var(--border); }
+
+.sg-group-body { display: none; padding: 0; }
+.sg-group-body.open { display: block; }
+
+/* Секции внутри группы */
+.sg-section { border-top: 1px solid var(--border); }
+.sg-section-title {
+  padding: 4px 10px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--dim); background: var(--surface2);
+}
+
+/* ── Вкладки внутри группы ── */
+.sg-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 10px;
+}
+.sg-tab {
+  padding: 5px 10px; font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer; color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all .15s;
+  white-space: nowrap;
+}
+.sg-tab:hover { color: var(--text); }
+.sg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.sg-tab-badge {
+  display: inline-block; min-width: 16px;
+  padding: 0 4px; margin-left: 4px;
+  border-radius: 99px; font-size: 9px;
+  background: var(--surface2); color: var(--dim);
+  text-align: center; vertical-align: middle;
+}
+.sg-tab.active .sg-tab-badge { background: var(--accent-bg); color: var(--accent); }
+.sg-tab-panel { display: none; }
+.sg-tab-panel.active { display: block; }
+.sg-items { }
+.sg-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px; align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.sg-item-10col {
+  grid-template-columns: 28px 1.5fr 55px 55px 75px 55px 55px 75px 80px 60px;
+}
+.sg-item-st {
+  grid-template-columns: 1.5fr 1fr 65px 75px 55px 55px 75px 80px 60px;
+}
+.sg-item:last-child { border-bottom: none; }
+.sg-item:hover { background: var(--surface2); }
+.sg-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.sg-item-match {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--surface2); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.sg-item-bid {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--blue); white-space: nowrap;
+}
+.sg-item-neg { color: var(--muted); font-style: italic; }
+
+/* Статистика строки */
+.sg-stats {
+  display: flex; gap: 10px; align-items: center;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  white-space: nowrap;
+}
+.sg-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.sg-stat-val { font-size: 11px; color: var(--text); }
+.sg-stat-val.zero { color: var(--dim); }
+.sg-stat-val.acos-hi { color: var(--red); font-weight: 600; }
+.sg-stat-val.acos-ok { color: var(--green); }
+.sg-stat-lbl { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Строка статистики под заголовком группы */
+.sg-group-stats {
+  display: flex; gap: 16px;
+  padding: 5px 10px 5px 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+.sg-gstat { display: flex; flex-direction: column; }
+.sg-gstat-val { font-size: 12px; }
+.sg-gstat-val.zero { color: var(--dim); }
+.sg-gstat-val.acos-hi { color: var(--red); font-weight: 600; }
+.sg-gstat-val.acos-ok { color: var(--green); }
+.sg-gstat-lbl { font-size: 9px; color: var(--dim); text-transform: uppercase; }
+
+/* Плейсменты */
+.sg-adjustments {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 6px 10px;
+}
+.sg-adj-chip {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  padding: 2px 8px; border-radius: 99px;
+  background: var(--blue-bg); color: var(--blue);
+  border: 1px solid var(--blue-border);
+}
+
+/* ── Numeric filter rows ── */
+.num-filter-row { display: flex; gap: 4px; align-items: center; }
+.num-op {
+  height: 34px; width: 90px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 0 6px; outline: none;
+}
+.num-op:focus { border-color: var(--accent); }
+.num-val {
+  height: 34px; flex: 1; min-width: 0;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 0 8px; outline: none;
+}
+.num-val:focus { border-color: var(--accent); }
+
+/* ── Inline table filters ── */
+.thead-filters td {
+  background: var(--surface2);
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.tf-input, .tf-select {
+  width: 100%; height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  padding: 0 6px;
+  outline: none;
+}
+.tf-input:focus, .tf-select:focus { border-color: var(--accent); }
+
+/* числовой фильтр в thead: строка op + value [+ value2] */
+.nf-wrap { display: flex; flex-direction: column; gap: 3px; }
+.nf-row  { display: flex; gap: 3px; }
+.nf-op {
+  height: 22px; width: 46px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: var(--surface); color: var(--text);
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  padding: 0 3px; outline: none; cursor: pointer;
+}
+.nf-op:focus { border-color: var(--accent); }
+.nf-val {
+  height: 22px; min-width: 0; flex: 1;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: var(--surface); color: var(--text);
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  padding: 0 4px; outline: none;
+}
+.nf-val:focus { border-color: var(--accent); }
+.nf-op.active, .nf-val.active { border-color: var(--accent); background: var(--accent-bg); }
+
+/* ── Column resize ── */
+table { table-layout: fixed; }
+thead th {
+  position: relative;
+  white-space: nowrap;
+  /* НЕТ overflow:hidden — иначе попап обрезается */
+}
+.col-resizer {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 5px; cursor: col-resize;
+  background: transparent;
+  z-index: 2;
+}
+.col-resizer:hover, .col-resizer.dragging { background: var(--accent); opacity: .5; }
+
+/* ── Excel-style filter popup ── */
+.th-inner {
+  display: flex; align-items: center; gap: 4px;
+  padding-right: 6px; /* отступ от resizer */
+  cursor: pointer;
+}
+.th-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sort-arrow { opacity: .4; flex-shrink: 0; }
+thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+
+/* Иконка фильтра — отдельный элемент, НЕ внутри th-inner с setSort */
+.filter-icon {
+  flex-shrink: 0; width: 18px; height: 18px;
+  border-radius: 3px; border: 1px solid transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--dim);
+  transition: all .15s;
+  position: relative; /* для попапа */
+  z-index: 10;
+}
+.filter-icon:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+.filter-icon.has-filter { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+/* Попап позиционируется относительно .filter-icon */
+.filter-popup {
+  display: none;
+  position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  z-index: 9999;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  min-width: 190px;
+  white-space: normal;
+}
+.filter-popup.open { display: block; }
+.filter-popup .fp-title {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.fp-search {
+  width: 100%; height: 28px; margin-bottom: 6px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text);
+  font-size: 12px; padding: 0 8px; outline: none;
+}
+.fp-search:focus { border-color: var(--accent); }
+.fp-list {
+  max-height: 200px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1px;
+  margin-bottom: 8px;
+}
+.fp-list label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: 4px;
+  font-size: 12px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fp-list label:hover { background: var(--surface2); }
+.fp-list input[type=checkbox], .fp-list input[type=radio] { flex-shrink: 0; accent-color: var(--accent); }
+.fp-row {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
+}
+.fp-op {
+  height: 28px; flex: 0 0 60px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text);
+  font-size: 12px; padding: 0 4px; outline: none;
+}
+.fp-val {
+  height: 28px; flex: 1; min-width: 0;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text);
+  font-size: 12px; padding: 0 6px; outline: none;
+}
+.fp-val:focus, .fp-op:focus { border-color: var(--accent); }
+.fp-actions { display: flex; gap: 6px; margin-top: 4px; }
+.fp-apply {
+  flex: 1; height: 28px; border: none; border-radius: 4px;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.fp-apply:hover { background: #b33d09; }
+.fp-clear {
+  height: 28px; padding: 0 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 12px; cursor: pointer;
+}
+.fp-clear:hover { background: var(--border); }
+
+/* портфолио popup — список чекбоксов */
+.fp-list {
+  max-height: 200px; overflow-y: auto;
+  margin-bottom: 8px;
+}
+.fp-list label {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 2px; font-size: 13px; cursor: pointer;
+  border-radius: 4px;
+}
+.fp-list label:hover { background: var(--surface2); }
+.fp-search {
+  width: 100%; height: 28px; margin-bottom: 8px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--text);
+  font-size: 12px; padding: 0 7px; outline: none;
+}
+.fp-search:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+    </div>
+    Amazon Ads Automation
+  </div>
+  <div class="header-nav">
+    <a href="/" class="header-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Главная
+    </a>
+    <span class="header-tag">Кампании · Аналитика</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Filters -->
+  <div class="filters-panel">
+
+    <!-- Ряд 1: тип, даты, маркетплейс, портфолио, таргетинг, кнопки -->
+    <div class="filters-row filters-row-1">
+      <div class="filter-group">
+        <div class="filter-label">Тип аккаунта</div>
+        <div class="acct-tabs">
+          <button class="acct-tab active" id="tabMerch" onclick="setAcct('MERCH')">Merch</button>
+          <button class="acct-tab" id="tabKdp" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Дата от</div>
+        <input type="date" id="dateFrom">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Дата до</div>
+        <input type="date" id="dateTo">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Маркетплейс</div>
+        <select id="filterMkt">
+          <option value="">Все</option>
+          <option value="US">US</option>
+          <option value="UK">UK</option>
+          <option value="DE">DE</option>
+          <option value="FR">FR</option>
+          <option value="IT">IT</option>
+          <option value="ES">ES</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Портфолио</div>
+        <select id="filterPortfolio"><option value="">Все</option></select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Тип таргетинга</div>
+        <select id="filterTargeting">
+          <option value="">Все</option>
+          <option value="AUTO">Auto</option>
+          <option value="MANUAL">Manual</option>
+        </select>
+      </div>
+      <div class="filter-group filter-actions" style="display:flex;gap:8px;align-items:flex-end">
+        <button class="btn btn-primary" id="btnApply" onclick="applyFilters()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Применить
+        </button>
+        <button class="btn btn-secondary" onclick="resetFilters()">Сброс</button>
+      </div>
+    </div>
+
+    <!-- Ряд 2: статус, активность, поиск, клики, ACOS, расход -->
+    <div class="filters-row filters-row-2">
+      <div class="filter-group">
+        <div class="filter-label">Статус</div>
+        <select id="filterState">
+          <option value="">Все</option>
+          <option value="ENABLED">Enabled</option>
+          <option value="PAUSED">Paused</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Активность</div>
+        <select id="filterActivity">
+          <option value="">Все</option>
+          <option value="has_clicks">Есть клики</option>
+          <option value="has_impressions">Есть показы</option>
+          <option value="no_clicks">Нет кликов</option>
+          <option value="no_impressions">Нет показов</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Поиск по названию</div>
+        <input type="text" id="filterName" placeholder="Название кампании...">
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Error -->
+  <div class="error-block" id="errorBlock" style="display:none"></div>
+
+  <!-- Summary stats -->
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card">
+      <div class="stat-label">Кампаний</div>
+      <div class="stat-val" id="sTotalCamp">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Показы</div>
+      <div class="stat-val blue" id="sImpr">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Клики</div>
+      <div class="stat-val" id="sClicks">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Расходы</div>
+      <div class="stat-val accent" id="sCost">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Продажи 14d</div>
+      <div class="stat-val green" id="sSales">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ACOS</div>
+      <div class="stat-val" id="sAcos">—</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-header-row">
+      <div class="table-title">Кампании</div>
+      <div class="table-count" id="tableCount">—</div>
+    </div>
+
+    <div id="tableContainer">
+      <div class="table-empty">
+        Выберите период и нажмите <b>Применить</b>
+      </div>
+    </div>
+
+    <div class="pagination" id="paginationRow" style="display:none">
+      <div class="pagination-info" id="pageInfo"></div>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+let state = {
+  acct: 'MERCH',
+  page: 1,
+  perPage: 25,
+  total: 0,
+  sortBy: 'clicks',
+  sortDir: 'desc',
+  data: [],
+  portfolios: [],
+};
+
+// ── Init dates ────────────────────────────────────────────
+(function initDates() {
+  const to   = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  document.getElementById('dateTo').value   = to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
+})();
+
+// ── Account type toggle ───────────────────────────────────
+function setAcct(acct) {
+  state.acct = acct;
+  document.getElementById('tabMerch').classList.toggle('active', acct === 'MERCH');
+  document.getElementById('tabKdp').classList.toggle('active', acct === 'KDP');
+
+  // Update marketplace options based on account type
+  const mkt = document.getElementById('filterMkt');
+  const kdpMkts  = ['','US','CA','UK','DE','FR','IT','ES','AU'];
+  const merchMkts = ['','US','UK','DE','FR','IT','ES'];
+  const opts = acct === 'KDP' ? kdpMkts : merchMkts;
+  mkt.innerHTML = opts.map(v => `<option value="${v}">${v || 'Все'}</option>`).join('');
+
+  loadPortfolios();
+}
+
+// ── Load portfolios (верхний селект + попап) ─────────────
+async function loadPortfolios() {
+  try {
+    const r = await fetch('/portfolios/list');
+    const d = await r.json();
+    state.portfolios = (d.portfolios || []).filter(p => p.account_type === state.acct);
+    const sel = document.getElementById('filterPortfolio');
+    sel.innerHTML = '<option value="">Все</option>' +
+      state.portfolios.map(p =>
+        `<option value="${p.portfolio_id}">${p.portfolio_name || p.portfolio_id}</option>`
+      ).join('');
+  } catch(e) { console.warn('loadPortfolios error:', e); }
+  // Также загрузить полный список для popup (из аналитики)
+  loadPortfolioFilter();
+}
+
+// ── Build query params ────────────────────────────────────
+function buildParams(page) {
+  const p = new URLSearchParams();
+  p.set('account_type', state.acct);
+  p.set('page', page || state.page);
+  p.set('per_page', state.perPage);
+  p.set('sort_by', state.sortBy);
+  p.set('sort_dir', state.sortDir);
+
+  const df = document.getElementById('dateFrom').value;
+  const dt = document.getElementById('dateTo').value;
+  const mkt = document.getElementById('filterMkt').value;
+  const pf  = document.getElementById('filterPortfolio').value;
+  const tgt = document.getElementById('filterTargeting').value;
+  const st  = document.getElementById('filterState').value;
+  const act = document.getElementById('filterActivity').value;
+  const nm  = document.getElementById('filterName').value.trim();
+  // Числовые фильтры с операторами
+  const numFilter = (opId, valId, val2Id, prefix) => {
+    const op  = document.getElementById(opId).value;
+    const v1  = document.getElementById(valId).value;
+    const v2  = document.getElementById(val2Id).value;
+    if (!op || v1 === '') return;
+    if (op === 'range') {
+      if (v1 !== '') p.set(prefix + '_min', v1);
+      if (v2 !== '') p.set(prefix + '_max', v2);
+    } else {
+      p.set(prefix + '_op', op);
+      p.set(prefix + '_val', v1);
+    }
+  };
+
+  if (df)  p.set('date_from', df);
+  if (dt)  p.set('date_to', dt);
+  if (mkt) p.set('marketplace', mkt);
+  // Портфолио — мультивыбор
+  const selPf = state.selectedPortfolios || [];
+  if (selPf.length === 1) p.set('portfolio_id', selPf[0]);
+  else if (selPf.length > 1) p.set('portfolio_ids', selPf.join(','));
+  else if (pf) p.set('portfolio_id', pf); // fallback на верхний селект
+  if (tgt) p.set('targeting_type', tgt);
+  if (st)  p.set('campaign_state', st);
+  if (act) p.set('activity', act);
+  if (nm)  p.set('name', nm);
+
+  buildNumParams(p);
+  return p;
+}
+
+// ── Apply filters ─────────────────────────────────────────
+function applyFilters() {
+  // Сбрасываем кэш структуры при смене периода
+  Object.keys(_structureCache).forEach(k => delete _structureCache[k]);
+  state.page = 1;
+  fetchData();
+}
+
+// ── Reset filters ─────────────────────────────────────────
+function resetFilters() {
+  const to = new Date(), from = new Date();
+  from.setDate(from.getDate() - 30);
+  document.getElementById('dateTo').value   = to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
+  document.getElementById('filterMkt').value       = '';
+  document.getElementById('filterPortfolio').value = '';
+  document.getElementById('filterTargeting').value = '';
+  document.getElementById('filterState').value     = '';
+  document.getElementById('filterActivity').value  = '';
+  document.getElementById('filterName').value      = '';
+  // Сброс числовых фильтров попапов
+  window._nfState = {};
+  Object.keys(NF_FIELDS).forEach(id => {
+    ['fp_op_','fp_v1_','fp_v2_'].forEach(p => {
+      const el = document.getElementById(p + id);
+      if (el) el.value = '';
+    });
+    const row2 = document.getElementById('fp_row2_' + id);
+    if (row2) row2.style.display = 'none';
+  });
+  state.page = 1;
+  fetchData();
+}
+
+// ── Fetch data ────────────────────────────────────────────
+async function fetchData() {
+  const btn = document.getElementById('btnApply');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Загрузка...`;
+  document.getElementById('errorBlock').style.display = 'none';
+  document.getElementById('tableContainer').innerHTML =
+    `<div class="table-empty"><span class="spinner"></span></div>`;
+  document.getElementById('paginationRow').style.display = 'none';
+  document.getElementById('statsRow').style.display = 'none';
+
+  try {
+    const params = buildParams(state.page);
+    const r = await fetch(`/analytics/campaigns/data?${params}`);
+    const d = await r.json();
+
+    if (d.error) throw new Error(d.error);
+
+    state.data  = d.rows || [];
+    state.total = d.total || 0;
+    renderTable(d);
+    renderStats(d.summary);
+    renderPagination(d.total, d.page, d.per_page);
+
+    document.getElementById('tableCount').textContent =
+      `${d.total.toLocaleString('ru')} кампаний`;
+    document.getElementById('statsRow').style.display = 'grid';
+
+    // Обновляем список портфолио по всему результату (не только текущей странице)
+    loadPortfolioFilter();
+
+  } catch(e) {
+    document.getElementById('errorBlock').textContent = '✕ ' + e.message;
+    document.getElementById('errorBlock').style.display = 'block';
+    document.getElementById('tableContainer').innerHTML =
+      `<div class="table-empty">Ошибка загрузки</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Применить`;
+  }
+}
+
+// ── Render table ──────────────────────────────────────────
+function renderTable(d) {
+  if (!d.rows || !d.rows.length) {
+    document.getElementById('tableContainer').innerHTML =
+      `<div class="table-empty">Нет данных по выбранным фильтрам</div>`;
+    return;
+  }
+
+  const sortArrow = (col) => {
+    if (state.sortBy !== col) return `<span class="sort-arrow">↕</span>`;
+    return `<span class="sort-arrow">${state.sortDir === 'desc' ? '↓' : '↑'}</span>`;
+  };
+  const thClass = (col) => state.sortBy === col ? 'sorted' : '';
+
+  const html = `
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          ${makeThSort('campaign_name','Кампания',300)}
+          ${makeThSort('marketplace','MKT',55)}
+          ${makeThSort('campaign_state','Статус',80)}
+          ${makeThSort('targeting_type','Тип',70)}
+          ${makeThPortfolio(80)}
+          ${makeThNum('impressions','Показы','impr',90,0)}
+          ${makeThNum('clicks','Клики','clicks',80,0)}
+          ${makeThNum('cost','Расход','cost',90,0.01)}
+          ${makeThNum('ctr','CTR','ctr',70,0.001)}
+          ${makeThNum('sales_14d','Продажи','sales',90,0.01)}
+          ${makeThNum('purchases_14d','Заказы','orders',75,1)}
+          ${makeThNum('acos','ACOS','acos',75,0.1)}
+          ${makeThSort('daily_budget','Бюджет/д',80)}
+        </tr>
+
+      </thead>
+      <tbody id="tableBody">
+        ${d.rows.map(row => renderRow(row)).join('')}
+      </tbody>
+    </table>
+    </div>`;
+  document.getElementById('tableContainer').innerHTML = html;
+}
+
+// ── NF_FIELDS: числовые колонки ──────────────────────────
+const NF_FIELDS = {
+  impr:   'impressions',
+  clicks: 'clicks',
+  cost:   'cost',
+  ctr:    'ctr',
+  sales:  'sales_14d',
+  orders: 'purchases_14d',
+  acos:   'acos',
+};
+
+// Активные попапы
+let _openPopup = null;
+function closeAllPopups() {
+  document.querySelectorAll('.filter-popup.open').forEach(p => p.classList.remove('open'));
+  _openPopup = null;
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.filter-popup') && !e.target.closest('.filter-icon')) closeAllPopups();
+});
+
+// ── Генератор th с сортировкой ──────────────────────────
+function makeThSort(col, label, w) {
+  const arr = state.sortBy === col ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
+  const cls = state.sortBy === col ? 'sorted' : '';
+  return `<th class="${cls}" style="width:${w}px">
+    <div class="th-inner" onclick="setSort('${col}')">
+      <span class="th-label">${label}</span>
+      <span class="sort-arrow">${arr}</span>
+    </div>
+    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+  </th>`;
+}
+
+// ── th для портфолио с попапом (чекбоксы) ──────────────
+function makeThPortfolio(w) {
+  const arr    = state.sortBy === 'portfolio_name' ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
+  const hasF   = (state.selectedPortfolios || []).length > 0;
+  const active = hasF ? ' has-filter' : '';
+  return `<th style="width:${w}px; min-width:130px; overflow:visible">
+    <div class="th-inner" onclick="setSort('portfolio_name')">
+      <span class="th-label">Портфолио</span>
+      <span class="sort-arrow">${arr}</span>
+    </div>
+    <span class="filter-icon${active}" onclick="togglePopup(event,'popup_portfolio')" title="Фильтр портфолио">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <div class="filter-popup" id="popup_portfolio" onclick="event.stopPropagation()">
+        <div class="fp-title">Портфолио <span id="fp_pf_count" style="color:var(--accent)"></span></div>
+        <input class="fp-search" id="fp_pf_search" placeholder="Поиск..." oninput="filterPfList(this.value)">
+        <div class="fp-list" id="fp_pf_list"></div>
+        <div class="fp-actions">
+          <button class="fp-apply" onclick="applyPortfolioFilter()">Применить</button>
+          <button class="fp-clear" onclick="clearPortfolioFilter()">Снять все</button>
+        </div>
+      </div>
+    </span>
+    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+  </th>`;
+}
+
+// ── th для числовой колонки с попапом ──────────────────
+function makeThNum(col, label, id, w, step) {
+  const arr     = state.sortBy === col ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
+  const cls     = state.sortBy === col ? 'sorted' : '';
+  const active  = (window._nfState || {})[id] ? ' has-filter' : '';
+  const stepAttr = step > 0 && step < 1 ? `step="${step}"` : '';
+  return `<th class="${cls}" style="width:${w}px">
+    <div class="th-inner" onclick="setSort('${col}')">
+      <span class="th-label">${label}</span>
+      <span class="sort-arrow">${arr}</span>
+    </div>
+    <span class="filter-icon${active}" onclick="togglePopup(event,'popup_${id}')" title="Фильтр ${label}">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <div class="filter-popup" id="popup_${id}" onclick="event.stopPropagation()">
+        <div class="fp-title">${label}</div>
+        <div class="fp-row">
+          <select class="fp-op" id="fp_op_${id}" onchange="onFpOpChange('${id}')">
+            <option value="">—</option>
+            <option value="gt">&gt;</option>
+            <option value="gte">&gt;=</option>
+            <option value="lt">&lt;</option>
+            <option value="lte">&lt;=</option>
+            <option value="eq">=</option>
+            <option value="range">диапазон</option>
+          </select>
+          <input type="number" class="fp-val" id="fp_v1_${id}" placeholder="значение" ${stepAttr}>
+        </div>
+        <div class="fp-row" id="fp_row2_${id}" style="display:none">
+          <span style="font-size:11px;color:var(--dim);line-height:26px;flex-shrink:0">до</span>
+          <input type="number" class="fp-val" id="fp_v2_${id}" placeholder="до" ${stepAttr}>
+        </div>
+        <div class="fp-actions">
+          <button class="fp-apply" onclick="applyNumFilter('${col}','${id}')">Применить</button>
+          <button class="fp-clear" onclick="clearNumFilter('${id}')">Сброс</button>
+        </div>
+      </div>
+    </span>
+    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+  </th>`;
+}
+
+function togglePopup(e, id) {
+  e.stopPropagation();
+  const popup = document.getElementById(id);
+  if (!popup) return;
+  const isOpen = popup.classList.contains('open');
+  closeAllPopups();
+  if (!isOpen) {
+    popup.classList.add('open');
+    _openPopup = id;
+    // Портфолио: заполняем список из кэша при каждом открытии
+    if (id === 'popup_portfolio') {
+      renderPfList(document.getElementById('fp_pf_search')?.value || '');
+    }
+  }
+}
+
+function onFpOpChange(id) {
+  const op   = document.getElementById('fp_op_' + id)?.value;
+  const row2 = document.getElementById('fp_row2_' + id);
+  if (row2) row2.style.display = op === 'range' ? '' : 'none';
+}
+
+// Сохраняем состояние фильтров попапов глобально
+window._nfState = window._nfState || {};
+
+function applyNumFilter(field, id) {
+  const op = document.getElementById('fp_op_' + id)?.value || '';
+  const v1 = document.getElementById('fp_v1_' + id)?.value || '';
+  const v2 = document.getElementById('fp_v2_' + id)?.value || '';
+  window._nfState[id] = op && v1 !== '' ? {op, v1, v2} : null;
+  closeAllPopups();
+  state.page = 1;
+  fetchData();
+}
+
+function clearNumFilter(id) {
+  ['fp_op_','fp_v1_','fp_v2_'].forEach(p => {
+    const el = document.getElementById(p + id);
+    if (el) el.value = '';
+  });
+  const row2 = document.getElementById('fp_row2_' + id);
+  if (row2) row2.style.display = 'none';
+  window._nfState[id] = null;
+  closeAllPopups();
+  state.page = 1;
+  fetchData();
+}
+
+// ── Портфолио попап (мультивыбор с чекбоксами) ──────────
+let _allPortfoliosForFilter = [];
+// state.selectedPortfolios = [] — массив выбранных portfolio_id
+
+async function loadPortfolioFilter() {
+  try {
+    const p = new URLSearchParams({account_type: state.acct});
+    const mkt = document.getElementById('filterMkt')?.value || '';
+    const tgt = document.getElementById('filterTargeting')?.value || '';
+    const st  = document.getElementById('filterState')?.value || '';
+    if (mkt) p.set('marketplace', mkt);
+    if (tgt) p.set('targeting_type', tgt);
+    if (st)  p.set('campaign_state', st);
+    const r = await fetch('/analytics/campaigns/portfolios?' + p);
+    const d = await r.json();
+    _allPortfoliosForFilter = d.portfolios || [];
+    renderPfList('');
+    // обновить счётчик
+    const cnt = document.getElementById('fp_pf_count');
+    if (cnt) cnt.textContent = _allPortfoliosForFilter.length ? `(${_allPortfoliosForFilter.length})` : '';
+  } catch(e) { console.warn('portfolio filter load error', e); }
+}
+
+function renderPfList(search) {
+  const list = document.getElementById('fp_pf_list');
+  if (!list) return;
+  const sel = state.selectedPortfolios || [];
+  const filtered = search
+    ? _allPortfoliosForFilter.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : _allPortfoliosForFilter;
+  if (!filtered.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(p =>
+    `<label>
+      <input type="checkbox" name="fp_pf" value="${p.id}" ${sel.includes(p.id)?'checked':''}>
+      <span style="overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</span>
+    </label>`
+  ).join('');
+}
+
+function filterPfList(search) { renderPfList(search); }
+
+function applyPortfolioFilter() {
+  const checked = [...document.querySelectorAll('input[name="fp_pf"]:checked')];
+  state.selectedPortfolios = checked.map(el => el.value);
+  // Для совместимости с buildParams — берём первое если одно, иначе спецзначение
+  closeAllPopups();
+  state.page = 1;
+  fetchData();
+}
+
+function clearPortfolioFilter() {
+  state.selectedPortfolios = [];
+  renderPfList(document.getElementById('fp_pf_search')?.value || '');
+}
+
+// ── Собрать числовые фильтры из _nfState в params ────────
+function buildNumParams(p) {
+  const NF_MAP = {impr:'impressions',clicks:'clicks',cost:'cost',ctr:'ctr',sales:'sales_14d',orders:'purchases_14d',acos:'acos'};
+  Object.entries(window._nfState || {}).forEach(([id, s]) => {
+    if (!s) return;
+    const field = NF_MAP[id]; if (!field) return;
+    if (s.op === 'range') {
+      if (s.v1 !== '') p.set(field + '_min', s.v1);
+      if (s.v2 !== '') p.set(field + '_max', s.v2);
+    } else {
+      p.set(field + '_op',  s.op);
+      p.set(field + '_val', s.v1);
+    }
+  });
+}
+
+// ── Resize столбцов ───────────────────────────────────────
+let _resizing = null;
+function startResize(e, handle) {
+  e.stopPropagation();
+  const th = handle.parentElement;
+  _resizing = { th, startX: e.pageX, startW: th.offsetWidth };
+  handle.classList.add('dragging');
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('mouseup', stopResize);
+}
+function doResize(e) {
+  if (!_resizing) return;
+  const w = Math.max(40, _resizing.startW + e.pageX - _resizing.startX);
+  _resizing.th.style.width = w + 'px';
+}
+function stopResize() {
+  if (_resizing) {
+    document.querySelector('.col-resizer.dragging')?.classList.remove('dragging');
+    _resizing = null;
+  }
+  document.removeEventListener('mousemove', doResize);
+  document.removeEventListener('mouseup', stopResize);
+}
+
+function renderRow(r) {
+  const fmt   = (n) => n == null ? `<span class="no-data-dot"></span>` : Number(n).toLocaleString('ru');
+  const fmtF  = (n, dec=2) => n == null ? `<span class="no-data-dot"></span>` : Number(n).toFixed(dec);
+  const zero  = (n) => (!n || n == 0) ? 'num-zero' : 'num-pos';
+
+  const stBadge = r.campaign_state === 'ENABLED'
+    ? `<span class="badge badge-enabled">Enabled</span>`
+    : `<span class="badge badge-paused">Paused</span>`;
+
+  const tgtBadge = r.targeting_type === 'AUTO'
+    ? `<span class="badge badge-auto">Auto</span>`
+    : r.targeting_type === 'MANUAL'
+    ? `<span class="badge badge-manual">Manual</span>`
+    : `<span style="color:var(--dim);font-size:11px">—</span>`;
+
+  const acosVal = r.acos != null ? parseFloat(r.acos) : null;
+  const acosClass = acosVal == null ? '' : acosVal > 40 ? 'acos-high' : acosVal < 15 ? 'acos-ok' : '';
+  const acosStr = acosVal == null
+    ? `<span class="no-data-dot"></span>`
+    : `<span class="num ${acosClass}">${acosVal.toFixed(1)}%</span>`;
+
+  const ctrVal = r.ctr != null ? (parseFloat(r.ctr) * 100).toFixed(2) + '%' : `<span class="no-data-dot"></span>`;
+
+  const portfolioLabel = r.portfolio_name || (r.portfolio_id ? r.portfolio_id : null);
+  const portfolio = portfolioLabel
+    ? `<span style="font-size:12px;color:var(--muted)" title="${r.portfolio_id||''}">${r.portfolio_name || '— ' + r.portfolio_id}</span>`
+    : `<span style="color:var(--dim);font-size:11px">—</span>`;
+
+  return `<tr class="campaign-row" data-id="${r.campaign_id}" data-acct="${state.acct}">
+    <td class="td-name">
+      <button class="expand-btn" onclick="toggleStructure(event,'${r.campaign_id}')" data-name="${r.campaign_name||''}" data-acct="${state.acct}">+</button>
+      <span class="td-name-text" style="display:inline-block;max-width:220px;vertical-align:middle" title="${r.campaign_name || ''}">${r.campaign_name || '—'}</span>
+      <div class="td-name-sub" style="padding-left:26px">${r.campaign_id || ''}</div>
+    </td>
+    <td><span class="badge" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)">${r.marketplace || '—'}</span></td>
+    <td>${stBadge}</td>
+    <td>${tgtBadge}</td>
+    <td>${portfolio}</td>
+    <td class="num ${zero(r.impressions)}">${fmt(r.impressions)}</td>
+    <td class="num ${zero(r.clicks)}">${fmt(r.clicks)}</td>
+    <td class="num ${zero(r.cost)}">$${r.cost != null ? Number(r.cost).toFixed(2) : '—'}</td>
+    <td class="num">${ctrVal}</td>
+    <td class="num ${zero(r.sales_14d)}">$${r.sales_14d != null ? Number(r.sales_14d).toFixed(2) : '—'}</td>
+    <td class="num ${zero(r.purchases_14d)}">${fmt(r.purchases_14d)}</td>
+    <td>${acosStr}</td>
+    <td class="num">${r.daily_budget != null ? '$' + Number(r.daily_budget).toFixed(2) : '<span class="no-data-dot"></span>'}</td>
+  </tr>`;
+}
+
+// ── Render stats ──────────────────────────────────────────
+function renderStats(s) {
+  if (!s) return;
+  const n = (v, dec=0) => v == null ? '—' : Number(v).toLocaleString('ru', {maximumFractionDigits: dec});
+  document.getElementById('sTotalCamp').textContent = n(s.total_campaigns);
+  document.getElementById('sImpr').textContent      = n(s.total_impressions);
+  document.getElementById('sClicks').textContent    = n(s.total_clicks);
+  document.getElementById('sCost').textContent      = '$' + n(s.total_cost, 2);
+  document.getElementById('sSales').textContent     = '$' + n(s.total_sales_14d, 2);
+  const acos = s.total_cost && s.total_sales_14d
+    ? (s.total_cost / s.total_sales_14d * 100).toFixed(1) + '%'
+    : '—';
+  const acosEl = document.getElementById('sAcos');
+  acosEl.textContent = acos;
+  const acosNum = parseFloat(acos);
+  acosEl.className = 'stat-val' + (acosNum > 40 ? ' acos-high' : acosNum < 15 ? ' acos-ok' : '');
+}
+
+// ── Pagination ────────────────────────────────────────────
+function renderPagination(total, page, perPage) {
+  if (total <= perPage) {
+    document.getElementById('paginationRow').style.display = 'none';
+    return;
+  }
+  const totalPages = Math.ceil(total / perPage);
+  const from = (page - 1) * perPage + 1;
+  const to   = Math.min(page * perPage, total);
+
+  document.getElementById('pageInfo').textContent =
+    `${from.toLocaleString('ru')}–${to.toLocaleString('ru')} из ${total.toLocaleString('ru')}`;
+
+  // Build page buttons: prev, up to 7 pages around current, next
+  let pages = [];
+  if (totalPages <= 7) {
+    pages = Array.from({length: totalPages}, (_,i) => i+1);
+  } else {
+    const delta = 2;
+    const left  = Math.max(1, page - delta);
+    const right = Math.min(totalPages, page + delta);
+    if (left > 1)  pages.push(1, left > 2 ? '…' : null);
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages) pages.push(right < totalPages - 1 ? '…' : null, totalPages);
+    pages = pages.filter(p => p !== null);
+  }
+
+  const btns = document.getElementById('pageBtns');
+  btns.innerHTML = `
+    <button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>
+    ${pages.map(p => p === '…'
+      ? `<button class="page-btn" disabled>…</button>`
+      : `<button class="page-btn${p===page?' active':''}" onclick="goPage(${p})">${p}</button>`
+    ).join('')}
+    <button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>
+  `;
+  document.getElementById('paginationRow').style.display = 'flex';
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(state.total / state.perPage);
+  if (p < 1 || p > totalPages) return;
+  state.page = p;
+  fetchData();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ── Sort ──────────────────────────────────────────────────
+function setSort(col) {
+  if (state.sortBy === col) {
+    state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    state.sortBy  = col;
+    state.sortDir = 'desc';
+  }
+  state.page = 1;
+  fetchData();
+}
+
+// ── Enter key on name filter ──────────────────────────────
+document.getElementById('filterName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') applyFilters();
+});
+
+// ── Expand / collapse структуры кампании ─────────────────
+const _structureCache = {};
+
+async function toggleStructure(e, campaignId) {
+  e.stopPropagation();
+  const btn  = e.currentTarget;
+  const tr   = btn.closest('tr');
+  const acct = btn.dataset.acct || tr?.dataset.acct || state.acct;
+
+  // Убрать уже открытую строку этой кампании
+  const existingRow = document.getElementById('struct_' + campaignId);
+  if (existingRow) {
+    existingRow.remove();
+    btn.classList.remove('open');
+    btn.textContent = '+';
+    return;
+  }
+
+  btn.classList.add('open');
+  btn.textContent = '−';
+
+  // Вставить строку-заглушку
+  const structRow = document.createElement('tr');
+  structRow.id = 'struct_' + campaignId;
+  structRow.className = 'structure-row';
+  structRow.innerHTML = `<td colspan="13"><div class="structure-loading"><span class="spinner"></span> Загрузка структуры...</div></td>`;
+  tr.insertAdjacentElement('afterend', structRow);
+
+  try {
+    let data = _structureCache[campaignId];
+    if (!data) {
+      const df = document.getElementById('dateFrom')?.value || '';
+    const dt = document.getElementById('dateTo')?.value || '';
+    const sp = new URLSearchParams({campaign_id: campaignId, account_type: acct});
+    if (df) sp.set('date_from', df);
+    if (dt) sp.set('date_to', dt);
+    const r = await fetch(`/analytics/campaigns/structure?${sp}`);
+      data = await r.json();
+      if (!data.error) _structureCache[campaignId] = data;
+      if (!data.campaign_name) {
+        const tr2 = btn.closest('tr');
+        data.campaign_name = tr2?.querySelector('.td-name-text')?.title || '';
+      }
+    }
+    if (data.error) throw new Error(data.error);
+    structRow.querySelector('td').innerHTML = renderStructure(data, data.campaign_name || '');
+  } catch(err) {
+    structRow.querySelector('td').innerHTML =
+      `<div class="structure-loading" style="color:var(--red)">Ошибка: ${err.message}</div>`;
+  }
+}
+
+function toggleSgGroup(el) {
+  const body   = el.nextElementSibling;
+  const toggle = el.querySelector('.sg-group-toggle');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (toggle) toggle.classList.toggle('open', !isOpen);
+}
+
+function switchSgTab(e, gid, idx) {
+  e.stopPropagation();
+  const body = e.target.closest('.sg-group-body');
+  if (!body) return;
+  // Переключить вкладки
+  body.querySelectorAll('.sg-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  body.querySelectorAll('.sg-tab-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
+function renderStructure(data, campaignName) {
+  const { groups = [], adjustments = [], campaign_stats: cs = {} } = data;
+
+  const stateChip = (s) => {
+    if (!s) return '';
+    const cls = s === 'ENABLED' ? 'sg-state-enabled' : 'sg-state-paused';
+    return `<span class="sg-state ${cls}">${s === 'ENABLED' ? 'On' : 'Off'}</span>`;
+  };
+
+  const bidStr = (b) => b != null ? `$${Number(b).toFixed(2)}` : '—';
+  const n = (v, dec=0) => (v == null || v === 0)
+    ? `<span class="sg-stat-val zero">—</span>`
+    : `<span class="sg-stat-val">${Number(v).toLocaleString('ru',{maximumFractionDigits:dec})}</span>`;
+  const cost$ = (v) => (v == null || v === 0)
+    ? `<span class="sg-stat-val zero">—</span>`
+    : `<span class="sg-stat-val">$${Number(v).toFixed(2)}</span>`;
+  const acosEl = (v) => {
+    if (v == null) return `<span class="sg-stat-val zero">—</span>`;
+    const cls = v > 40 ? 'acos-hi' : v < 15 ? 'acos-ok' : '';
+    return `<span class="sg-stat-val ${cls}">${Number(v).toFixed(1)}%</span>`;
+  };
+  const ctrEl = (v) => v == null
+    ? `<span class="sg-stat-val zero">—</span>`
+    : `<span class="sg-stat-val">${Number(v).toFixed(2)}%</span>`;
+
+  const statsBlock = (s, size='sm') => {
+    if (!s || !Object.keys(s).length) return '';
+    return `<div class="sg-stats">
+      <div class="sg-stat">${n(s.impressions)}<span class="sg-stat-lbl">Показы</span></div>
+      <div class="sg-stat">${n(s.clicks)}<span class="sg-stat-lbl">Клики</span></div>
+      <div class="sg-stat">${ctrEl(s.ctr)}<span class="sg-stat-lbl">CTR</span></div>
+      <div class="sg-stat">${cost$(s.cost)}<span class="sg-stat-lbl">Расход</span></div>
+      <div class="sg-stat">${cost$(s.sales_14d)}<span class="sg-stat-lbl">Продажи</span></div>
+      <div class="sg-stat">${n(s.purchases_14d)}<span class="sg-stat-lbl">Заказы</span></div>
+      <div class="sg-stat">${acosEl(s.acos)}<span class="sg-stat-lbl">ACOS</span></div>
+    </div>`;
+  };
+
+  let html = '<div class="structure-panel">';
+
+  // Название кампании (только если отличается от того что видно в таблице)
+  // Убрано — дублирует строку таблицы
+
+  // Суммарная статистика кампании
+  if (cs && cs.clicks != null) {
+    const fmtn = (v,d=0) => v != null ? Number(v).toLocaleString('ru',{maximumFractionDigits:d}) : '—';
+    const fmtc = (v) => v != null ? '$'+Number(v).toFixed(2) : '—';
+    const acosColor = cs.acos > 40 ? 'var(--red)' : cs.acos < 15 ? 'var(--green)' : 'var(--text)';
+    html += `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;font-family:DM Mono,monospace">
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px">${fmtn(cs.impressions)}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Показы</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px">${fmtn(cs.clicks)}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Клики</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px">${cs.ctr != null ? cs.ctr.toFixed(2)+'%' : '—'}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">CTR</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px;color:var(--accent)">${fmtc(cs.cost)}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Расход</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px;color:var(--green)">${fmtc(cs.sales_14d)}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Продажи</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px">${fmtn(cs.purchases_14d)}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Заказы</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:11px;font-weight:600;color:${acosColor}">${cs.acos != null ? cs.acos.toFixed(1)+'%' : '—'}</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">ACOS</span>
+      </div>
+      ${cs.top_of_search_share != null ? `<div style="display:flex;flex-direction:column;gap:1px;margin-left:auto">
+        <span style="font-size:11px;color:var(--blue)">${cs.top_of_search_share.toFixed(1)}%</span>
+        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Top of Search IS</span>
+      </div>` : ''}
+    </div>`;
+  }
+
+  // Полное имя кампании
+  if (data.campaign_name) {
+    html += `<div style="font-size:11px;color:var(--muted);padding:4px 2px 8px;font-family:DM Mono,monospace">📋 ${data.campaign_name}</div>`;
+  }
+
+  // Плейсменты
+  if (adjustments.length) {
+    const PNAME = {
+      TOP_OF_SEARCH:  '🔝 Top of Search',
+      PRODUCT_PAGE:   '📦 Product Page',
+      REST_OF_SEARCH: '🔍 Rest of Search',
+    };
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-family:DM Mono,monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px">Корректировки ставок</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    adjustments.forEach(a => {
+      const pname = PNAME[a.placement] || a.placement;
+      const pct   = a.percentage || 0;
+      const color = pct > 0 ? 'var(--blue)' : 'var(--muted)';
+      const bg    = pct > 0 ? 'var(--blue-bg)' : 'var(--surface2)';
+      const border= pct > 0 ? 'var(--blue-border)' : 'var(--border)';
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;border:1px solid ${border};background:${bg}">
+        <span style="font-size:12px">${pname}</span>
+        <span style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:${color}">+${pct}%</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  if (!groups.length) {
+    html += '<div style="color:var(--dim);font-size:12px;padding:8px">Нет групп объявлений</div></div>';
+    return html;
+  }
+
+  groups.forEach(g => {
+    const kwCount  = g.keywords.length;
+    const tgCount  = g.targets.length;
+    const negCount = g.negatives.length;
+    const meta = [
+      kwCount  ? `${kwCount} kw`  : null,
+      tgCount  ? `${tgCount} pt`  : null,
+      negCount ? `${negCount} neg`: null,
+    ].filter(Boolean).join(' · ');
+
+    // Собираем поисковые запросы группы (все kw + auto)
+    const allSearchTerms = [
+      ...(g.search_terms || []),
+      ...g.keywords.flatMap(kw => kw.search_terms || []),
+    ].sort((a,b) => (b.clicks||0) - (a.clicks||0));
+
+    const gid = g.id.replace(/[^a-z0-9]/gi,'_');
+
+    html += `<div class="sg-group">
+      <div class="sg-group-header" onclick="toggleSgGroup(this)">
+        <span class="sg-group-toggle">▶</span>
+        <span class="sg-group-name">${g.name || g.id}</span>
+        ${stateChip(g.state)}
+        <span class="sg-group-meta">${bidStr(g.bid)}${meta ? ' · ' + meta : ''}</span>
+        ${statsBlock(g.stats)}
+      </div>
+      <div class="sg-group-body">`;
+
+    // Заголовок таблицы
+    const colHeader = `<div class="sg-item sg-item-10col" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+      <span></span>
+      <span>Таргет / Ключевое слово</span>
+      <span>Match</span>
+      <span>Бид</span>
+      <span style="text-align:right">Показы</span>
+      <span style="text-align:right">Клики</span>
+      <span style="text-align:right">CTR</span>
+      <span style="text-align:right">Расход</span>
+      <span style="text-align:right">Продажи</span>
+      <span style="text-align:right">ACOS</span>
+    </div>`;
+
+    const renderStatCells = (s) => {
+      const z = (v,fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
+      return `
+        <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
+        <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
+        <span class="num">${z(s.ctr, v => Number(v).toFixed(2)+'%')}</span>
+        <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
+        <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
+        <span class="num">${s.acos != null
+          ? '<span class="' + (s.acos>40?'acos-high':s.acos<15?'acos-ok':'') + '">' + Number(s.acos).toFixed(1) + '%</span>'
+          : '<span style="color:var(--dim)">—</span>'}</span>
+`;
+    };
+
+    // ── Вкладки ──
+    const tab1 = g.keywords.length + g.targets.length;
+    const tab2 = allSearchTerms.length;
+    const tab3 = g.negatives.length;
+
+    html += `<div class="sg-tabs">
+      <span class="sg-tab active" onclick="switchSgTab(event,'${gid}',0)">
+        Таргеты<span class="sg-tab-badge">${tab1}</span>
+      </span>
+      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',1)">
+        Поисковые запросы<span class="sg-tab-badge">${tab2}</span>
+      </span>
+      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',2)">
+        Минус слова<span class="sg-tab-badge">${tab3}</span>
+      </span>
+    </div>`;
+
+    // ── Панель 0: Таргеты + Ключевые слова ──
+    html += `<div class="sg-tab-panel active" data-group="${gid}" data-panel="0">`;
+    html += colHeader;
+    g.keywords.forEach(kw => {
+      const s = kw.stats || {};
+      html += `<div class="sg-item sg-item-10col">
+        ${stateChip(kw.state)}
+        <span class="sg-item-text">${kw.text || '—'}</span>
+        <span class="sg-item-match">${kw.match_type || ''}</span>
+        <span class="sg-item-bid">${bidStr(kw.bid)}</span>
+        ${renderStatCells(s)}
+      </div>`;
+    });
+    g.targets.forEach(t => {
+      const s = t.stats || {};
+      html += `<div class="sg-item sg-item-10col">
+          ${stateChip(t.state)}
+          <span class="sg-item-text">${t.expression || '—'}</span>
+        <span></span>
+        <span class="sg-item-bid">${bidStr(t.bid)}</span>
+        ${renderStatCells(s)}
+        </div>`;
+    });
+    if (!g.keywords.length && !g.targets.length) {
+      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет таргетов</div>`;
+    }
+    html += `</div>`;
+
+    // ── Панель 1: Поисковые запросы ──
+    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="1">`;
+    if (allSearchTerms.length) {
+      // Поисковые запросы: свой заголовок без колонок Бид и Статус
+      html += `<div class="sg-item sg-item-st" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+        <span>Поисковый запрос</span>
+        <span>Ключевое слово / Таргет</span>
+        <span>Match</span>
+        <span style="text-align:right">Показы</span>
+        <span style="text-align:right">Клики</span>
+        <span style="text-align:right">CTR</span>
+        <span style="text-align:right">Расход</span>
+        <span style="text-align:right">Продажи</span>
+        <span style="text-align:right">ACOS</span>
+      </div>`;
+      allSearchTerms.forEach(st => {
+        const s = st;
+        const z = (v,fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
+        html += `<div class="sg-item sg-item-st">
+          <span class="sg-item-text" title="${st.term || ''}">${st.term || '—'}</span>
+          <span class="sg-item-text" style="color:var(--muted);font-size:11px" title="${st.keyword || ''}">${
+            st.keyword
+              ? (st.keyword.length > 25 ? st.keyword.slice(0,25)+'…' : st.keyword)
+              : (st.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED'
+                  ? '<span style="color:var(--dim);font-size:10px">auto</span>'
+                  : '<span style="color:var(--dim)">—</span>')
+          }</span>
+          <span class="sg-item-match">${st.match_type || (st.keyword_type ? st.keyword_type.replace('TARGETING_EXPRESSION_PREDEFINED','AUTO') : '')}</span>
+          <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
+          <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
+          <span class="num">${z(s.ctr, v => Number(v).toFixed(2)+'%')}</span>
+          <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
+          <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
+          <span class="num">${s.acos != null ? '<span class="'+(s.acos>40?'acos-high':s.acos<15?'acos-ok':'')+'">' + Number(s.acos).toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>'}</span>
+        </div>`;
+      });
+    } else {
+      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет данных за период</div>`;
+    }
+    html += `</div>`;
+
+    // ── Панель 2: Минус слова ──
+    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="2">`;
+    if (g.negatives.length) {
+      g.negatives.forEach(n => {
+        html += `<div class="sg-item">
+          <span class="sg-item-text sg-item-neg">${n.text || '—'}</span>
+          <span class="sg-item-match">${n.match_type || ''}</span>
+        </div>`;
+      });
+    } else {
+      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет минус слов</div>`;
+    }
+    html += `</div>`;
+
+    html += '</div></div>'; // sg-group-body + sg-group
+  });
+
+  html += '</div>';
+  return html;
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadPortfolios();
+</script>
+</body>
+</html>

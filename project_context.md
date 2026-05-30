@@ -31,6 +31,7 @@
 | `ads_routes.py` | ✅ Готов | Blueprint рекламы — `/ads`, `/ads/create_report`, `/ads/refresh_statuses` и др. |
 | `campaigns_routes.py` | ✅ Готов | Blueprint кампаний — `/campaigns`, `/campaigns/sync`, `/campaigns/preview` |
 | `portfolios.py` | ✅ Готов | Blueprint портфолио — `/portfolios/*` endpoints |
+| `analytics_routes.py` | ✅ Готов | Blueprint аналитики — `/analytics/campaigns`, `/analytics/campaigns/data`, `/analytics/campaigns/portfolios`, `/analytics/campaigns/structure`, `/analytics/debug/targeting` |
 | `collect.py` | ✅ Готов | Сбор статистики из Amazon Ads API через CLI |
 
 ### HTML страницы
@@ -43,6 +44,7 @@
 | `ads.html` | `/ads` | Сбор рекламной статистики |
 | `campaigns.html` | `/campaigns` | Синхронизация кампаний из SP API |
 | `portfolios.html` | `/portfolios` | Управление именами портфолио |
+| `campaigns_analytics.html` | `/analytics/campaigns` | Аналитика кампаний с фильтрами, пагинацией и раскрытием структуры |
 
 ### Конфиги и данные
 
@@ -51,13 +53,6 @@
 | `config/amazon_secrets.json` | Amazon Ads API ключи и профили |
 | `config/bigquery_key.json` | Ключ сервисного аккаунта Google Cloud |
 | `reports_log.json` | Лог очереди отчётов Amazon Ads |
-
-### Планируется
-
-| Файл | Описание |
-|---|---|
-| `analyze.py` | Анализ ставок, запись в pending_changes |
-| `send.py` | Отправка одобренных ставок в Amazon |
 
 ---
 
@@ -69,7 +64,8 @@ app.py
 ├── earnings_routes.py  → earnings_bp
 ├── ads_routes.py       → ads_bp
 ├── campaigns_routes.py → campaigns_bp
-└── portfolios.py       → portfolios_bp
+├── portfolios.py       → portfolios_bp
+└── analytics_routes.py → analytics_bp
 ```
 
 `progress_store = {}` — shared dict в `app.py`, импортируется всеми blueprints через `import app`.
@@ -80,6 +76,67 @@ def _get_progress_store():
     import app
     return app.progress_store
 ```
+
+---
+
+## Analytics API (analytics_routes.py)
+
+### Страница аналитики кампаний
+```
+GET /analytics/campaigns → campaigns_analytics.html
+```
+
+### Данные кампаний
+```
+GET /analytics/campaigns/data
+```
+Параметры:
+- `account_type` — MERCH | KDP
+- `date_from`, `date_to` — YYYY-MM-DD
+- `marketplace` — US | UK | DE | FR | IT | ES | CA | AU
+- `portfolio_id` — один portfolio_id
+- `portfolio_ids` — несколько через запятую (мультивыбор)
+- `targeting_type` — AUTO | MANUAL
+- `campaign_state` — ENABLED | PAUSED
+- `activity` — has_clicks | has_impressions | no_clicks | no_impressions
+- `name` — поиск по campaign_name
+- `sort_by`, `sort_dir` — сортировка
+- `page`, `per_page` — пагинация (max 100)
+- Числовые фильтры: `clicks_op/val/min/max`, `acos_op/val/min/max`, `cost_op/val/min/max`, `impressions_*`, `sales_14d_*`, `purchases_14d_*`, `ctr_*`
+
+Возвращает: `rows`, `total`, `page`, `per_page`, `summary` (агрегаты по всей выборке).
+
+### Портфолио для фильтра
+```
+GET /analytics/campaigns/portfolios?account_type=MERCH&marketplace=US
+```
+Возвращает уникальные портфолио из `campaigns_merch` с JOIN на `portfolio_labels`.
+
+### Структура кампании
+```
+GET /analytics/campaigns/structure?campaign_id=...&account_type=MERCH&date_from=...&date_to=...
+```
+Возвращает:
+- `campaign_name` — полное название кампании
+- `adjustments` — плейсменты (TOP_OF_SEARCH, PRODUCT_PAGE, REST_OF_SEARCH) с процентами
+- `groups` — группы объявлений, каждая содержит:
+  - `stats` — суммарная статистика группы за период
+  - `keywords` — ключевые слова с `stats` и `search_terms`
+  - `targets` — product targeting с `stats`
+  - `negatives` — минус слова
+  - `search_terms` — поисковые запросы группы (для AUTO)
+
+Статистика для auto-таргетов: маппинг `targets_stats.targeting` → `campaigns_merch.targeting_expression`:
+- `close-match` → `KEYWORDS_CLOSE_MATCH`
+- `loose-match` → `KEYWORDS_LOOSE_MATCH`
+- `substitutes` → `PRODUCT_SUBSTITUTES`
+- `complements` → `PRODUCT_COMPLEMENTS`
+
+### Debug endpoint
+```
+GET /analytics/debug/targeting?campaign_id=...&account_type=MERCH&date_from=...&date_to=...
+```
+Показывает raw данные из `targets_stats` и `campaigns_merch` для отладки маппинга.
 
 ---
 
@@ -309,8 +366,6 @@ POST /portfolios/import-csv  → импорт имён из CSV через MERGE
 - **Amazon Bulk CSV** (разделитель `;`) — колонки `Portfolio ID`, `Portfolio Name`, фильтрует строки где `Entity = Portfolio`
 - **Простой CSV** (разделитель `,`) — колонки `portfolio_id`, `portfolio_name`
 
-Логика на сервере: загружает строки во временную таблицу `portfolio_import_tmp` → один MERGE запрос обновляет `portfolio_labels` → удаляет временную таблицу. Использует MERGE вместо цикла UPDATE чтобы избежать ошибки `concurrent update` в BigQuery.
-
 ---
 
 ## Логика импорта каталога
@@ -397,54 +452,25 @@ req.onsuccess = function(e) {
 
 ### Через веб-интерфейс (ads.html)
 1. POST /ads/create_report → создаёт отчёт в Amazon, пишет в reports_log.json
-2. POST /ads/refresh_statuses → проверяет статус PENDING отчётов
-3. POST /ads/download_report → скачивает gzip с S3
-4. POST /ads/upload_to_bq → DELETE старых данных + INSERT новых
+2. POST /ads/refresh_statuses → проверяет статусы, скачивает готовые, пишет в BigQuery
 
 ### Через CLI (collect.py)
 ```bash
-python3 collect.py 2026-04-27                       # Merch US
-python3 collect.py 2026-04-01 2026-04-27 MERCH US   # период
-python3 collect.py 2026-04-27 2026-04-27 KDP UK     # KDP UK
-python3 collect.py 2026-04-27 all                   # все профили
+python3 collect.py --date 2026-05-31 --account MERCH --marketplace US
+python3 collect.py --date 2026-05-31 --all
 ```
 
-### Ограничения API
-- Отчёт за один день: ~21k строк, ~600 KB
-- Отчёт за 30 дней: ~630k строк, ~18 MB
-- Amazon хранит данные 95 дней
-- Attribution restatement: данные пересчитываются до 14 дней назад
-- Один запрос к API — макс 31 день
+Процесс: авторизация → создание отчёта → поллинг статуса → скачивание → DELETE старых данных за период → WRITE_APPEND в BigQuery.
+
+Использует MERGE вместо цикла UPDATE чтобы избежать ошибки `concurrent update` в BigQuery.
 
 ---
 
-## Правила изменения ставок (бизнес-логика, планируется)
+## Как обновить на сервере
 
-- Минимум 10 кликов за 14 дней для принятия решения
-- ACOS > 40% и CVR < 1% → снизить ставку на 20%
-- ACOS < 15% и CVR > 3% → повысить ставку на 15%
-- Все изменения сначала в pending_changes_merch/kdp → одобрение → send.py → change_log_merch/kdp
-
-### Связь таблиц для анализа ставок
-```sql
-SELECT t.keyword, a.advertised_asin, SUM(t.clicks), SUM(t.sales_14d)
-FROM targets_stats_merch t
-JOIN asin_stats_merch a ON t.ad_group_id = a.ad_group_id AND t.date = a.date
-GROUP BY 1, 2
-```
-
----
-
-## GitHub репозиторий
-
-Репо: `https://github.com/nikolaenkots/amazon-ads` (приватное)
-Ветка: `master`
-
-### Синхронизация изменений с сервера на GitHub
-После любых правок на PythonAnywhere:
 ```bash
 cd ~/amazon-ads
-git add .
+git add -A
 git commit -m "описание изменений"
 git push
 ```
