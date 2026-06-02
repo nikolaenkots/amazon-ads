@@ -268,6 +268,37 @@ tbody td.td-name, tbody td.num { max-width: none; }
 /* ── No data indicator ── */
 .no-data-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); display: inline-block; }
 
+/* ── Toggle state button ── */
+.state-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 18px; border-radius: 99px; border: none;
+  cursor: pointer; transition: all .2s; flex-shrink: 0;
+  position: relative; vertical-align: middle;
+}
+.state-toggle::after {
+  content: ''; position: absolute;
+  width: 12px; height: 12px; border-radius: 50%; background: #fff;
+  top: 3px; transition: left .2s;
+}
+.state-toggle.on  { background: var(--green); }
+.state-toggle.on::after  { left: 17px; }
+.state-toggle.off { background: var(--dim); }
+.state-toggle.off::after { left: 3px; }
+.state-toggle.pending { background: var(--yellow); opacity: .8; }
+.state-toggle.pending::after { left: 10px; }
+.state-toggle:disabled { cursor: not-allowed; opacity: .5; }
+.state-toggle:hover:not(:disabled) { filter: brightness(1.1); }
+
+/* Маленький индикатор pending рядом с toggle */
+.pending-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--yellow); display: none;
+  vertical-align: middle; margin-left: 3px;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+.pending-dot.visible { display: inline-block; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
 /* ── Campaign expand row ── */
 .expand-btn {
   width: 20px; height: 20px; flex-shrink: 0;
@@ -328,6 +359,14 @@ tbody td.td-name, tbody td.num { max-width: none; }
   text-transform: uppercase; letter-spacing: .07em;
   color: var(--dim); background: var(--surface2);
 }
+.sg-col-hdr {
+  cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.sg-col-hdr:hover { color: var(--text); }
+.sg-col-hdr.sorted { color: var(--accent); }
+.sg-sort-arrow { font-size: 8px; opacity: .5; }
+.sg-col-hdr.sorted .sg-sort-arrow { opacity: 1; }
 
 /* ── Вкладки внутри группы ── */
 .sg-tabs {
@@ -484,6 +523,16 @@ tbody td.td-name, tbody td.num { max-width: none; }
 }
 .nf-val:focus { border-color: var(--accent); }
 .nf-op.active, .nf-val.active { border-color: var(--accent); background: var(--accent-bg); }
+
+.sg-ad-img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+.sg-ad-img-placeholder { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.sg-ad-title-wrap { flex: 1; min-width: 0; }
+.sg-ad-link { color: var(--blue); text-decoration: none; font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg-ad-link:hover { text-decoration: underline; }
+.btn-set-date { height:28px; padding:0 12px; border:none; border-radius:4px; background:var(--accent); color:#fff; font-size:11px; font-weight:500; cursor:pointer; }
+.btn-set-date:hover { background:#b33d09; }
+.sg-ad-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.sg-ad-sub { font-family: DM Mono,monospace; font-size: 10px; color: var(--dim); margin-top: 2px; }
 
 /* ── Column resize ── */
 table { table-layout: fixed; }
@@ -1240,9 +1289,20 @@ function renderRow(r) {
   const fmtF  = (n, dec=2) => n == null ? `<span class="no-data-dot"></span>` : Number(n).toFixed(dec);
   const zero  = (n) => (!n || n == 0) ? 'num-zero' : 'num-pos';
 
-  const stBadge = r.campaign_state === 'ENABLED'
+  const isEnabled = r.campaign_state === 'ENABLED';
+  const stBadge = isEnabled
     ? `<span class="badge badge-enabled">Enabled</span>`
     : `<span class="badge badge-paused">Paused</span>`;
+
+  const ctrlBtn = `<button
+    class="state-toggle ${isEnabled ? 'on' : 'off'}"
+    title="${isEnabled ? 'Enabled · нажми чтобы поставить на паузу' : 'Paused · нажми чтобы запустить'}"
+    data-entity-type="campaign"
+    data-entity-id="${r.campaign_id}"
+    data-marketplace="${r.marketplace}"
+    data-current="${r.campaign_state}"
+    onclick="toggleStatePending(event,this)">
+  </button>`;
 
   const tgtBadge = r.targeting_type === 'AUTO'
     ? `<span class="badge badge-auto">Auto</span>`
@@ -1263,14 +1323,28 @@ function renderRow(r) {
     ? `<span style="font-size:12px;color:var(--muted)" title="${r.portfolio_id||''}">${r.portfolio_name || '— ' + r.portfolio_id}</span>`
     : `<span style="color:var(--dim);font-size:11px">—</span>`;
 
-  return `<tr class="campaign-row" data-id="${r.campaign_id}" data-acct="${state.acct}">
+  return `<tr class="campaign-row" data-id="${r.campaign_id}" data-acct="${state.acct}" data-end-date="${(r.end_date||'').slice(0,10)}">
     <td class="td-name">
-      <button class="expand-btn" onclick="toggleStructure(event,'${r.campaign_id}')" data-name="${r.campaign_name||''}" data-acct="${state.acct}">+</button>
+      <button class="expand-btn" onclick="toggleStructure(event,'${r.campaign_id}')" data-name="${r.campaign_name||''}" data-acct="${state.acct}" data-mkt="${r.marketplace||''}" >+</button>
       <span class="td-name-text" style="display:inline-block;max-width:220px;vertical-align:middle" title="${r.campaign_name || ''}">${r.campaign_name || '—'}</span>
-      <div class="td-name-sub" style="padding-left:26px">${r.campaign_id || ''}</div>
+      <div class="td-name-sub" style="padding-left:26px">
+        ${r.campaign_id || ''}
+        ${(() => {
+          const today = new Date().toISOString().slice(0,10);
+          const start = r.start_date ? r.start_date.slice(0,10) : null;
+          const end   = r.end_date   ? r.end_date.slice(0,10)   : null;
+          let dateStr = start ? start : '';
+          if (end) dateStr += ' → ' + end;
+          let statusStr = '';
+          if (end && end < today) statusStr = '<span style="color:var(--red);margin-left:6px">✕ Завершена</span>';
+          else if (start && start > today) statusStr = '<span style="color:var(--blue);margin-left:6px">⏳ Запланирована</span>';
+          else if (r.campaign_state === 'ENABLED') statusStr = '<span style="color:var(--green);margin-left:6px">● Идёт</span>';
+          return (dateStr ? '<span style="margin-left:8px">' + dateStr + '</span>' : '') + statusStr;
+        })()}
+      </div>
     </td>
     <td><span class="badge" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)">${r.marketplace || '—'}</span></td>
-    <td>${stBadge}</td>
+    <td style="white-space:nowrap">${ctrlBtn}<span class="pending-dot"></span></td>
     <td>${tgtBadge}</td>
     <td>${portfolio}</td>
     <td class="num ${zero(r.impressions)}">${fmt(r.impressions)}</td>
@@ -1409,6 +1483,12 @@ async function toggleStructure(e, campaignId) {
         const tr2 = btn.closest('tr');
         data.campaign_name = tr2?.querySelector('.td-name-text')?.title || '';
       }
+      // Передаём campaign_id и marketplace в data для кнопок управления групп
+      data._campaign_id  = campaignId;
+      data._marketplace  = btn.dataset.mkt || tr?.querySelector('.badge')?.textContent?.trim() || '';
+      // end_date из строки таблицы
+      const nameSubEl = tr?.querySelector('.td-name-sub');
+      data.campaign_end_date = tr?.dataset.endDate || null;
     }
     if (data.error) throw new Error(data.error);
     structRow.querySelector('td').innerHTML = renderStructure(data, data.campaign_name || '');
@@ -1418,12 +1498,231 @@ async function toggleStructure(e, campaignId) {
   }
 }
 
+// ── Сортировка внутри группы ─────────────────────────────
+const _sgSort = {};  // gid → {field, dir}
+
+function sortSgArray(items, gid, type) {
+  const sort = _sgSort[gid];
+  if (!sort) return items;
+  const { field, dir } = sort;
+
+  return items.sort((a, b) => {
+    let va, vb;
+    if (field === 'bid') {
+      va = type === 'kw' ? (a.bid || 0) : (a.bid || 0);
+    } else {
+      const sa = a.stats || {};
+      const sb = b.stats || {};
+      if (field === 'acos') {
+        va = sa.cost && sa.sales_14d ? sa.cost/sa.sales_14d*100 : null;
+        vb = sb.cost && sb.sales_14d ? sb.cost/sb.sales_14d*100 : null;
+      } else if (field === 'ctr') {
+        va = sa.impressions ? sa.clicks/sa.impressions*100 : null;
+        vb = sb.impressions ? sb.clicks/sb.impressions*100 : null;
+      } else {
+        va = sa[field] ?? null;
+        vb = sb[field] ?? null;
+      }
+    }
+    // null в конец
+    if (va === null && vb === null) return 0;
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    return dir === 'desc' ? vb - va : va - vb;
+  });
+}
+
+function sortSgItems(gid, e) {
+  e.stopPropagation();
+  const el = e.target.closest('[data-field]');
+  if (!el) return;
+  const field = el.dataset.field;
+  const cur   = _sgSort[gid];
+  let dir = 'desc';
+  if (cur && cur.field === field) dir = cur.dir === 'desc' ? 'asc' : 'desc';
+  _sgSort[gid] = { field, dir };
+
+  // Найти данные группы в кэше
+  let targetData = null, targetGroup = null;
+  for (const key of Object.keys(_structureCache)) {
+    const d = _structureCache[key];
+    if (!d.groups) continue;
+    const g = d.groups.find(g => g.id.replace(/[^a-z0-9]/gi,'_') === gid);
+    if (g) { targetData = d; targetGroup = g; break; }
+  }
+  if (!targetData || !targetGroup) return;
+
+  const body = el.closest('.sg-group-body');
+  if (!body) return;
+  const panel0 = body.querySelector('.sg-tab-panel[data-panel="0"]');
+  if (!panel0) return;
+
+  const $ = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
+  const bidFmt = v => v != null ? '$' + Number(v).toFixed(2) : '—';
+  const acosClass = v => v > 40 ? 'acos-high' : v < 15 ? 'acos-ok' : '';
+
+  function statCells(s) {
+    const acos = s.acos != null ? s.acos : (s.cost && s.sales_14d ? s.cost/s.sales_14d*100 : null);
+    const ctr  = s.ctr  != null ? s.ctr  : (s.impressions ? s.clicks/s.impressions*100 : null);
+    return [
+      '<span class="num">' + $(s.impressions, v => Number(v).toLocaleString('ru')) + '</span>',
+      '<span class="num">' + $(s.clicks, v => Number(v).toLocaleString('ru')) + '</span>',
+      '<span class="num">' + (ctr  != null ? ctr.toFixed(2)+'%' : '<span style="color:var(--dim)">—</span>') + '</span>',
+      '<span class="num">' + $(s.cost, v => '$'+Number(v).toFixed(2)) + '</span>',
+      '<span class="num">' + $(s.sales_14d, v => '$'+Number(v).toFixed(2)) + '</span>',
+      '<span class="num">' + (acos != null ? '<span class="'+acosClass(acos)+'">'+acos.toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>') + '</span>',
+    ].join('');
+  }
+
+  function toggleBtn(et, eid, mkt, cur_state, cid) {
+    const cls = cur_state === 'ENABLED' ? 'on' : 'off';
+    return '<button class="state-toggle ' + cls + '" data-entity-type="' + et + '" data-entity-id="' + eid
+      + '" data-campaign-id="' + (cid||'') + '" data-marketplace="' + (mkt||'') + '" data-current="' + (cur_state||'ENABLED')
+      + '" onclick="toggleStatePending(event,this)"></button>';
+  }
+
+  const cid = targetData._campaign_id || '';
+  const mkt = targetData._marketplace || '';
+
+  const sortedKw  = sortSgArray([...targetGroup.keywords], gid, 'kw');
+  const sortedTgt = sortSgArray([...targetGroup.targets],  gid, 'tgt');
+
+  let newHtml = '';
+  sortedKw.forEach(kw => {
+    const s = kw.stats || {};
+    newHtml += '<div class="sg-item sg-item-10col">'
+      + toggleBtn('keyword', kw.id, mkt, kw.state, cid)
+      + '<span class="sg-item-text">' + (kw.text||'—') + '</span>'
+      + '<span class="sg-item-match">' + (kw.match_type||'') + '</span>'
+      + '<span class="sg-item-bid">' + bidFmt(kw.bid) + '</span>'
+      + statCells(s)
+      + '</div>';
+  });
+  sortedTgt.forEach(t => {
+    const s = t.stats || {};
+    newHtml += '<div class="sg-item sg-item-10col">'
+      + toggleBtn('target', t.id, mkt, t.state, cid)
+      + '<span class="sg-item-text">' + (t.expression||'—') + '</span>'
+      + '<span></span>'
+      + '<span class="sg-item-bid">' + bidFmt(t.bid) + '</span>'
+      + statCells(s)
+      + '</div>';
+  });
+
+  // Заменить rows в DOM
+  const allItems = panel0.querySelectorAll('.sg-item.sg-item-10col');
+  const headerItem = [...allItems].find(el => el.style.background || el.querySelector('.sg-col-hdr'));
+  const dataItems  = [...allItems].filter(el => !el.style.background && !el.querySelector('.sg-col-hdr'));
+  if (dataItems.length && dataItems[0].parentNode) {
+    const parent = dataItems[0].parentNode;
+    dataItems.forEach(el => el.remove());
+    const temp = document.createElement('div');
+    temp.innerHTML = newHtml;
+    while (temp.firstChild) parent.appendChild(temp.firstChild);
+  }
+
+  // Обновить стрелки
+  panel0.querySelectorAll('.sg-col-hdr').forEach(el => {
+    const f = el.dataset.field;
+    el.classList.toggle('sorted', f === field);
+    const arrow = el.querySelector('.sg-sort-arrow');
+    if (arrow) arrow.textContent = f === field ? (dir==='desc'?'↓':'↑') : '↕';
+  });
+}
+
 function toggleSgGroup(el) {
   const body   = el.nextElementSibling;
   const toggle = el.querySelector('.sg-group-toggle');
   const isOpen = body.classList.contains('open');
   body.classList.toggle('open', !isOpen);
   if (toggle) toggle.classList.toggle('open', !isOpen);
+}
+
+// ── Сортировка поисковых запросов ────────────────────────
+function sortStItems(e, gid, field) {
+  e.stopPropagation();
+  const key = gid + '_st';
+  const cur = _sgSort[key] || {field: 'clicks', dir: 'desc'};
+  _sgSort[key] = { field, dir: (cur.field === field && cur.dir === 'desc') ? 'asc' : 'desc' };
+
+  // Найти panel 1 (поисковые запросы)
+  const panel = document.querySelector(
+    '.sg-tab-panel[data-group="' + gid + '"][data-panel="1"]'
+  );
+  if (!panel) return;
+
+  // Найти данные группы в кэше
+  let groupData = null, cacheData = null;
+  for (const key2 of Object.keys(_structureCache)) {
+    const d = _structureCache[key2];
+    if (!d.groups) continue;
+    const g = d.groups.find(g => g.id.replace(/[^a-z0-9]/gi, '_') === gid);
+    if (g) { groupData = g; cacheData = d; break; }
+  }
+  if (!groupData) return;
+
+  const sort = _sgSort[gid + '_st'];
+  const allSt = [
+    ...(groupData.search_terms || []),
+    ...groupData.keywords.flatMap(kw => kw.search_terms || []),
+  ];
+  const sorted = [...allSt].sort((a, b) => {
+    const val = (s) => {
+      if (sort.field === 'acos') return (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
+      if (sort.field === 'ctr')  return s.impressions ? s.clicks/s.impressions*100 : null;
+      return s[sort.field] != null ? s[sort.field] : null;
+    };
+    const va = val(a), vb = val(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1; if (vb == null) return -1;
+    return sort.dir === 'desc' ? vb - va : va - vb;
+  });
+
+  // Перестроить rows (все кроме заголовка)
+  const allItems = panel.querySelectorAll('.sg-item.sg-item-st');
+  const header   = [...allItems].find(el => el.querySelector('.sg-col-hdr') || el.style.background);
+  const rows     = [...allItems].filter(el => el !== header);
+  if (!rows.length || !rows[0].parentNode) return;
+  const parent = rows[0].parentNode;
+  rows.forEach(el => el.remove());
+
+  const z = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
+
+  sorted.forEach(st => {
+    const s = st;
+    const acos = (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
+    const ctr  = s.impressions ? s.clicks/s.impressions*100 : null;
+    const kwLabel = s.keyword
+      ? (s.keyword.length > 25 ? s.keyword.slice(0,25) + '…' : s.keyword)
+      : (s.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED'
+          ? '<span style="color:var(--dim);font-size:10px">auto</span>'
+          : '<span style="color:var(--dim)">—</span>');
+    const div = document.createElement('div');
+    div.className = 'sg-item sg-item-st';
+    div.innerHTML =
+      '<span class="sg-item-text" title="' + (st.term||'') + '">' + (st.term||'—') + '</span>'
+      + '<span class="sg-item-text" style="color:var(--muted);font-size:11px">' + kwLabel + '</span>'
+      + '<span class="sg-item-match">' + (st.match_type || (st.keyword_type ? st.keyword_type.replace('TARGETING_EXPRESSION_PREDEFINED','AUTO') : '')) + '</span>'
+      + '<span class="num">' + z(s.impressions, v => Number(v).toLocaleString('ru')) + '</span>'
+      + '<span class="num">' + z(s.clicks, v => Number(v).toLocaleString('ru')) + '</span>'
+      + '<span class="num">' + (ctr  != null ? ctr.toFixed(2)+'%'  : '<span style="color:var(--dim)">—</span>') + '</span>'
+      + '<span class="num">' + z(s.cost, v => '$'+Number(v).toFixed(2)) + '</span>'
+      + '<span class="num">' + z(s.sales_14d, v => '$'+Number(v).toFixed(2)) + '</span>'
+      + '<span class="num">' + (acos != null
+          ? '<span class="'+(acos>40?'acos-high':acos<15?'acos-ok':'')+'">'+acos.toFixed(1)+'%</span>'
+          : '<span style="color:var(--dim)">—</span>') + '</span>';
+    parent.appendChild(div);
+  });
+
+  // Обновить стрелки в заголовке
+  if (header) {
+    header.querySelectorAll('.sg-col-hdr').forEach(el => {
+      const f = el.dataset.stfield;
+      el.classList.toggle('sorted', f === field);
+      const arrow = el.querySelector('.sg-sort-arrow');
+      if (arrow) arrow.textContent = f === field ? (sort.dir === 'desc' ? '↓' : '↑') : '↕';
+    });
+  }
 }
 
 function switchSgTab(e, gid, idx) {
@@ -1477,6 +1776,21 @@ function renderStructure(data, campaignName) {
 
   // Название кампании (только если отличается от того что видно в таблице)
   // Убрано — дублирует строку таблицы
+
+  // Дата окончания — редактирование
+  if (data.campaign_end_date !== undefined) {
+    const today = new Date().toISOString().slice(0,10);
+    const endVal = data.campaign_end_date ? data.campaign_end_date.slice(0,10) : '';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;margin-bottom:10px;font-size:12px">
+      <span style="color:var(--muted);font-family:DM Mono,monospace;font-size:10px">ДАТА ОКОНЧАНИЯ</span>
+      <input type="date" id="endDateInput_${data._campaign_id||''}"
+        value="${endVal}"
+        min="${today}"
+        style="height:28px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:DM Mono,monospace;font-size:11px;padding:0 8px;outline:none">
+      <button onclick="setEndDate('${data._campaign_id||''}','${data._marketplace||''}')" class="btn-set-date">Изменить</button>
+      ${endVal ? '<button onclick="clearEndDate(\''+data._campaign_id+'\'\,\''+data._marketplace+'\')" style="height:28px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--muted);font-size:11px;cursor:pointer">Убрать дату</button>' : ''}
+    </div>`;
+  }
 
   // Суммарная статистика кампании
   if (cs && cs.clicks != null) {
@@ -1548,6 +1862,24 @@ function renderStructure(data, campaignName) {
     html += '</div></div>';
   }
 
+  // Campaign-level негативы
+  const campNegs = data.campaign_negatives || [];
+  if (campNegs.length) {
+    html += '<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden">'
+      + '<div style="padding:6px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">'
+      + '🚫 Минус слова кампании (' + campNegs.length + ')'
+      + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;max-height:150px;overflow-y:auto">'
+      + campNegs.map(n => {
+          const icon = n.type === 'product' ? '📦 ' : '';
+          return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border:1px solid var(--border);border-radius:99px;font-size:11px;background:var(--surface2);font-style:italic;color:var(--muted)">'
+            + icon + (n.text||'—')
+            + (n.match_type ? ' <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--dim);margin-left:3px">'+n.match_type+'</span>' : '')
+            + '</span>';
+        }).join('')
+      + '</div></div>';
+  }
+
   if (!groups.length) {
     html += '<div style="color:var(--dim);font-size:12px;padding:8px">Нет групп объявлений</div></div>';
     return html;
@@ -1571,28 +1903,51 @@ function renderStructure(data, campaignName) {
 
     const gid = g.id.replace(/[^a-z0-9]/gi,'_');
 
+    const agIsEnabled = g.state === 'ENABLED';
+    const agCtrlBtn = `<button
+      class="state-toggle ${agIsEnabled ? 'on' : 'off'}"
+      title="${agIsEnabled ? 'Поставить на паузу' : 'Запустить'} (добавить в очередь)"
+      data-entity-type="ad_group"
+      data-entity-id="${g.id}"
+      data-campaign-id="${data._campaign_id||''}"
+      data-marketplace="${data._marketplace||''}"
+      data-current="${g.state||'ENABLED'}"
+      onclick="toggleStatePending(event,this)"
+      style="margin-left:6px">
+    </button>`;
+
     html += `<div class="sg-group">
       <div class="sg-group-header" onclick="toggleSgGroup(this)">
         <span class="sg-group-toggle">▶</span>
         <span class="sg-group-name">${g.name || g.id}</span>
         ${stateChip(g.state)}
+        ${agCtrlBtn}
         <span class="sg-group-meta">${bidStr(g.bid)}${meta ? ' · ' + meta : ''}</span>
         ${statsBlock(g.stats)}
       </div>
       <div class="sg-group-body">`;
 
     // Заголовок таблицы
+    // Генератор заголовка с сортировкой
+    const mkSgHdr = (field, label) => {
+      const sorted = _sgSort[gid] && _sgSort[gid].field === field;
+      const dir    = sorted ? _sgSort[gid].dir : 'desc';
+      const arrow  = sorted ? (dir === 'desc' ? '↓' : '↑') : '↕';
+      const cls    = 'sg-col-hdr' + (sorted ? ' sorted' : '');
+      return '<span class="' + cls + '" onclick="sortSgItems(\'' + gid + '\',event)" data-field="' + field + '" style="text-align:right;display:block">' + label + ' <span class="sg-sort-arrow">' + arrow + '</span></span>';
+    };
+
     const colHeader = `<div class="sg-item sg-item-10col" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
       <span></span>
       <span>Таргет / Ключевое слово</span>
       <span>Match</span>
-      <span>Бид</span>
-      <span style="text-align:right">Показы</span>
-      <span style="text-align:right">Клики</span>
-      <span style="text-align:right">CTR</span>
-      <span style="text-align:right">Расход</span>
-      <span style="text-align:right">Продажи</span>
-      <span style="text-align:right">ACOS</span>
+      ${mkSgHdr('bid','Бид')}
+      ${mkSgHdr('impressions','Показы')}
+      ${mkSgHdr('clicks','Клики')}
+      ${mkSgHdr('ctr','CTR')}
+      ${mkSgHdr('cost','Расход')}
+      ${mkSgHdr('sales_14d','Продажи')}
+      ${mkSgHdr('acos','ACOS')}
     </div>`;
 
     const renderStatCells = (s) => {
@@ -1613,6 +1968,7 @@ function renderStructure(data, campaignName) {
     const tab1 = g.keywords.length + g.targets.length;
     const tab2 = allSearchTerms.length;
     const tab3 = g.negatives.length;
+    const tab4 = (g.ads || []).length;
 
     html += `<div class="sg-tabs">
       <span class="sg-tab active" onclick="switchSgTab(event,'${gid}',0)">
@@ -1624,25 +1980,29 @@ function renderStructure(data, campaignName) {
       <span class="sg-tab" onclick="switchSgTab(event,'${gid}',2)">
         Минус слова<span class="sg-tab-badge">${tab3}</span>
       </span>
+      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',3)">
+        Объявления<span class="sg-tab-badge">${tab4}</span>
+      </span>
     </div>`;
 
-    // ── Панель 0: Таргеты + Ключевые слова ──
     html += `<div class="sg-tab-panel active" data-group="${gid}" data-panel="0">`;
     html += colHeader;
-    g.keywords.forEach(kw => {
+    const sortedKw = sortSgArray([...g.keywords], gid, 'kw');
+    sortedKw.forEach(kw => {
       const s = kw.stats || {};
       html += `<div class="sg-item sg-item-10col">
-        ${stateChip(kw.state)}
+        <button class="state-toggle ${kw.state === 'ENABLED' ? 'on' : 'off'}" data-entity-type="keyword" data-entity-id="${kw.id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${kw.state||'ENABLED'}" onclick="toggleStatePending(event,this)" style="flex-shrink:0"></button>
         <span class="sg-item-text">${kw.text || '—'}</span>
         <span class="sg-item-match">${kw.match_type || ''}</span>
         <span class="sg-item-bid">${bidStr(kw.bid)}</span>
         ${renderStatCells(s)}
       </div>`;
     });
-    g.targets.forEach(t => {
+    const sortedTgt = sortSgArray([...g.targets], gid, 'tgt');
+    sortedTgt.forEach(t => {
       const s = t.stats || {};
       html += `<div class="sg-item sg-item-10col">
-          ${stateChip(t.state)}
+          <button class="state-toggle ${t.state === 'ENABLED' ? 'on' : 'off'}" title="Переключить таргет (в очередь)" data-entity-type="target" data-entity-id="${t.id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${t.state||'ENABLED'}" onclick="toggleStatePending(event,this)" style="flex-shrink:0"></button>
           <span class="sg-item-text">${t.expression || '—'}</span>
         <span></span>
         <span class="sg-item-bid">${bidStr(t.bid)}</span>
@@ -1658,18 +2018,38 @@ function renderStructure(data, campaignName) {
     html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="1">`;
     if (allSearchTerms.length) {
       // Поисковые запросы: свой заголовок без колонок Бид и Статус
+      // Сортировка поисковых запросов
+      const _stSortKey = gid + '_st';
+      const _stSort = _sgSort[_stSortKey] || {field: 'clicks', dir: 'desc'};
+      const _stHdr = (field, label) => {
+        const active = _stSort.field === field;
+        const arrow  = active ? (_stSort.dir === 'desc' ? '↓' : '↑') : '↕';
+        const cls = 'sg-col-hdr' + (active ? ' sorted' : '');
+        return `<span class="${cls}" onclick="sortStItems(event,'${gid}','${field}')" data-stfield="${field}" style="text-align:right;display:block">${label} <span class="sg-sort-arrow">${arrow}</span></span>`;
+      };
+      const _sortedSt = [...allSearchTerms].sort((a, b) => {
+        const val = (s) => {
+          if (_stSort.field === 'acos')  return (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
+          if (_stSort.field === 'ctr')   return s.impressions ? s.clicks/s.impressions*100 : null;
+          return s[_stSort.field] != null ? s[_stSort.field] : null;
+        };
+        const va = val(a), vb = val(b);
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1; if (vb == null) return -1;
+        return _stSort.dir === 'desc' ? vb - va : va - vb;
+      });
       html += `<div class="sg-item sg-item-st" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
         <span>Поисковый запрос</span>
         <span>Ключевое слово / Таргет</span>
         <span>Match</span>
-        <span style="text-align:right">Показы</span>
-        <span style="text-align:right">Клики</span>
-        <span style="text-align:right">CTR</span>
-        <span style="text-align:right">Расход</span>
-        <span style="text-align:right">Продажи</span>
-        <span style="text-align:right">ACOS</span>
+        ${_stHdr('impressions','Показы')}
+        ${_stHdr('clicks','Клики')}
+        ${_stHdr('ctr','CTR')}
+        ${_stHdr('cost','Расход')}
+        ${_stHdr('sales_14d','Продажи')}
+        ${_stHdr('acos','ACOS')}
       </div>`;
-      allSearchTerms.forEach(st => {
+      _sortedSt.forEach(st => {
         const s = st;
         const z = (v,fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
         html += `<div class="sg-item sg-item-st">
@@ -1698,14 +2078,94 @@ function renderStructure(data, campaignName) {
     // ── Панель 2: Минус слова ──
     html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="2">`;
     if (g.negatives.length) {
+      // Заголовок
+      html += `<div style="display:grid;grid-template-columns:16px 1fr 80px;gap:8px;padding:5px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+        <span></span><span>Текст</span><span>Тип</span>
+      </div>`;
       g.negatives.forEach(n => {
-        html += `<div class="sg-item">
-          <span class="sg-item-text sg-item-neg">${n.text || '—'}</span>
-          <span class="sg-item-match">${n.match_type || ''}</span>
+        const icon = n.type === 'product' ? '📦' : '🚫';
+        // PRODUCT_EXACT / PRODUCT_AND_TARGETING — это matchType а не ASIN
+        // Реальный ASIN выглядит как B0XXXXXXXX
+        const isRealAsin = n.text && /^B0[A-Z0-9]{8}$/i.test(n.text.trim());
+        const isMatchType = n.text && ['PRODUCT_EXACT','PRODUCT_AND_TARGETING','BROAD','EXACT','PHRASE'].includes(n.text.toUpperCase());
+        const displayText = isMatchType
+          ? `<span style="color:var(--dim);font-style:italic">ASIN (требует синхронизации)</span>`
+          : (n.text || '—');
+        const matchLabel = n.match_type
+          ? `<span class="sg-item-match">${n.match_type}</span>`
+          : (n.type === 'product' ? `<span style="font-size:10px;color:var(--muted)">ASIN</span>` : '');
+        html += `<div class="sg-item" style="grid-template-columns:16px 1fr 80px">
+          <span style="font-size:11px">${icon}</span>
+          <span class="sg-item-text sg-item-neg">${displayText}</span>
+          ${matchLabel}
         </div>`;
       });
     } else {
       html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет минус слов</div>`;
+    }
+    html += `</div>`;
+
+    // ── Панель 3: Объявления ──
+    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="3">`;
+    const ads = g.ads || [];
+    if (ads.length) {
+      // Заголовок
+      html += `<div style="display:grid;grid-template-columns:44px 1fr 70px 55px 60px 75px 75px 65px 28px;gap:8px;padding:6px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+        <span></span><span>Товар</span>
+        <span style="text-align:right">Показы</span>
+        <span style="text-align:right">Клики</span>
+        <span style="text-align:right">CTR</span>
+        <span style="text-align:right">Расход</span>
+        <span style="text-align:right">Продажи</span>
+        <span style="text-align:right">ACOS</span>
+        <span></span>
+      </div>`;
+      html += '<div class="sg-ads">';
+      ads.forEach(ad => {
+        const imgHtml = ad.image_url
+          ? `<img class="sg-ad-img" src="${ad.image_url}" alt="" loading="lazy">`
+          : `<div class="sg-ad-img-placeholder">📦</div>`;
+
+        // Ссылка на товар
+        const mkt = data._marketplace || 'US';
+        const domain = {'UK':'amazon.co.uk','DE':'amazon.de','FR':'amazon.fr','IT':'amazon.it','ES':'amazon.es','CA':'amazon.ca','AU':'amazon.com.au'}[mkt] || 'amazon.com';
+        const titleText = ad.title || ad.sku || ad.asin || '—';
+        const titleEl = ad.asin
+          ? `<a href="https://${domain}/dp/${ad.asin}" target="_blank" class="sg-ad-link" title="${titleText}">${titleText.length>55 ? titleText.slice(0,55)+'…' : titleText}</a>`
+          : `<span class="sg-ad-title" title="${titleText}">${titleText.length>55 ? titleText.slice(0,55)+'…' : titleText}</span>`;
+
+        const sub = [
+          ad.asin ? `ASIN: ${ad.asin}` : null,
+          ad.product_type || null,
+          ad.price != null ? `$${Number(ad.price).toFixed(2)}` : null,
+          ad.status ? ad.status : null,
+        ].filter(Boolean).join(' · ');
+
+        // Статистика
+        const s = ad.stats || {};
+        const z = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
+        const acos = s.cost && s.sales_14d ? (s.cost / s.sales_14d * 100) : null;
+        const ctr  = s.impressions && s.clicks ? (s.clicks / s.impressions * 100) : null;
+
+        const isOn = ad.state === 'ENABLED';
+        html += `<div style="display:grid;grid-template-columns:44px 1fr 70px 55px 60px 75px 75px 65px 28px;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)">
+          ${imgHtml}
+          <div class="sg-ad-title-wrap">
+            ${titleEl}
+            <div class="sg-ad-sub">${sub || (ad.sku ? 'SKU: '+ad.sku : '—')}</div>
+          </div>
+          <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
+          <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
+          <span class="num">${ctr != null ? ctr.toFixed(2)+'%' : '<span style="color:var(--dim)">—</span>'}</span>
+          <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
+          <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
+          <span class="num">${acos != null ? '<span class="'+(acos>40?'acos-high':acos<15?'acos-ok':'')+'">' + acos.toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>'}</span>
+          <button class="state-toggle ${isOn ? 'on' : 'off'}" title="${isOn ? 'Выключить' : 'Включить'} объявление (в очередь)" data-entity-type="product_ad" data-entity-id="${ad.ad_id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${ad.state||'ENABLED'}" onclick="toggleStatePending(event,this)"></button>
+        </div>`;
+      });
+      html += '</div>';
+    } else {
+      html += `<div style="padding:14px;color:var(--dim);font-size:12px">Нет объявлений в этой группе</div>`;
     }
     html += `</div>`;
 
@@ -1714,6 +2174,147 @@ function renderStructure(data, campaignName) {
 
   html += '</div>';
   return html;
+}
+
+// ── Универсальный toggle → pending_changes ───────────────
+async function toggleStatePending(e, btn) {
+  e.stopPropagation();
+  if (btn.dataset.loading === '1') return;
+
+  const entityType = btn.dataset.entityType;
+  const entityId   = btn.dataset.entityId;
+  const marketplace= btn.dataset.marketplace;
+  const current    = btn.dataset.current;
+  const pendingId  = btn.dataset.pendingId;
+
+  // Повторный клик — отменяем изменение
+  if (pendingId) {
+    btn.dataset.loading = '1';
+    try {
+      await fetch('/control/reject', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ account_type: state.acct, ids: [pendingId] })
+      });
+      btn.classList.remove('pending');
+      btn.classList.add(current === 'ENABLED' ? 'on' : 'off');
+      delete btn.dataset.pendingId;
+      btn.title = current === 'ENABLED'
+        ? 'Enabled · нажми чтобы поставить на паузу'
+        : 'Paused · нажми чтобы запустить';
+    } catch(err) {}
+    btn.dataset.loading = '0';
+    return;
+  }
+
+  const newState = current === 'ENABLED' ? 'PAUSED' : 'ENABLED';
+  btn.classList.remove('on', 'off');
+  btn.classList.add('pending');
+  btn.title = 'В очереди · нажми ещё раз чтобы отменить';
+  btn.dataset.loading = '1';
+
+  try {
+    const profileId = getProfileId(state.acct, marketplace);
+    const resp = await fetch('/control/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        account_type: state.acct,
+        marketplace,
+        profile_id:  profileId,
+        entity_type: entityType,
+        entity_id:   entityId,
+        field_name:  'state',
+        old_value:   current,
+        new_value:   newState,
+      })
+    });
+    const d = await resp.json();
+    if (resp.status === 409) {
+      btn.dataset.pendingId = 'dup';
+    } else if (d.error) {
+      throw new Error(d.error);
+    } else {
+      btn.dataset.pendingId = d.id;
+      btn.dataset.current   = newState;
+    }
+  } catch(err) {
+    btn.classList.remove('pending');
+    btn.classList.add(current === 'ENABLED' ? 'on' : 'off');
+    delete btn.dataset.pendingId;
+    btn.title = current === 'ENABLED'
+      ? 'Enabled · нажми чтобы поставить на паузу'
+      : 'Paused · нажми чтобы запустить';
+  }
+  btn.dataset.loading = '0';
+}
+
+// ── Получить profile_id по аккаунту и маркетплейсу ───────
+function getProfileId(acct, marketplace) {
+  // Маппинг из amazon_secrets.json (хранится в window._profiles если загружен)
+  const profiles = window._profileMap || {};
+  return profiles[acct + '_' + marketplace] || '';
+}
+
+
+
+// ── Изменение даты окончания кампании ────────────────────
+async function setEndDate(campaignId, marketplace) {
+  const input = document.getElementById('endDateInput_' + campaignId);
+  if (!input || !input.value) return;
+  const newDate = input.value;
+  const profileId = getProfileId(state.acct, marketplace);
+  try {
+    const r = await fetch('/control/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        account_type: state.acct, marketplace, profile_id: profileId,
+        entity_type: 'campaign', entity_id: campaignId,
+        field_name: 'end_date', old_value: input.dataset.original || '', new_value: newDate,
+      })
+    });
+    const d = await r.json();
+    if (d.error && r.status !== 409) throw new Error(d.error);
+    input.style.borderColor = 'var(--green)';
+    setTimeout(() => { input.style.borderColor = ''; }, 2000);
+  } catch(err) {
+    input.style.borderColor = 'var(--red)';
+    alert('Ошибка: ' + err.message);
+  }
+}
+
+async function clearEndDate(campaignId, marketplace) {
+  const profileId = getProfileId(state.acct, marketplace);
+  try {
+    const r = await fetch('/control/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        account_type: state.acct, marketplace, profile_id: profileId,
+        entity_type: 'campaign', entity_id: campaignId,
+        field_name: 'end_date', old_value: '', new_value: '',
+      })
+    });
+    const d = await r.json();
+    if (d.error && r.status !== 409) throw new Error(d.error);
+  } catch(err) { alert('Ошибка: ' + err.message); }
+}
+
+// ── Загрузить profile_map (нужен для pending_changes) ────
+fetch('/control/profiles')
+  .then(r => r.json())
+  .then(d => { window._profileMap = d.profiles || {}; })
+  .catch(() => { window._profileMap = {}; });
+
+// Сброс всех pending-toggles при перезагрузке данных
+function resetPendingToggles() {
+  document.querySelectorAll('.state-toggle.pending').forEach(btn => {
+    const cur = btn.dataset.current || 'ENABLED';
+    btn.classList.remove('pending');
+    btn.classList.add(cur === 'ENABLED' ? 'on' : 'off');
+    delete btn.dataset.pendingId;
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────

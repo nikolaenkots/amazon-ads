@@ -174,6 +174,7 @@ def analytics_campaigns_data():
             COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
             c.daily_budget,
             c.start_date,
+            c.end_date,
             COALESCE(SUM(s.impressions),   0) AS impressions,
             COALESCE(SUM(s.clicks),        0) AS clicks,
             COALESCE(SUM(s.cost),          0) AS cost,
@@ -197,7 +198,8 @@ def analytics_campaigns_data():
         GROUP BY
             c.campaign_id, c.campaign_name, c.marketplace,
             c.campaign_state, c.targeting_type, c.portfolio_id,
-            pl.portfolio_name, c.portfolio_name, c.daily_budget, c.start_date
+            pl.portfolio_name, c.portfolio_name, c.daily_budget, c.start_date,
+            c.end_date
     )
     """
 
@@ -380,10 +382,12 @@ def analytics_campaign_structure():
         target_id, targeting_expression,
         target_bid, target_state,
         placement, placement_percentage,
-        campaign_name
+        campaign_name,
+        ad_id, sku, asin, ad_state,
+        targeting_type
     FROM `{camp_table}`
     WHERE campaign_id = '{campaign_id}'
-      AND entity_type IN ('ad_group','keyword','negative_keyword','product_targeting','bidding_adjustment')
+      AND entity_type IN ('ad_group','keyword','negative_keyword','negative_product_targeting','product_targeting','bidding_adjustment','product_ad')
     ORDER BY entity_type, ad_group_id, keyword_text, targeting_expression
     """
 
@@ -456,6 +460,26 @@ def analytics_campaign_structure():
         struct_rows    = list(client.query(struct_sql).result())
         stats_rows     = list(client.query(stats_sql).result())
         search_rows    = list(client.query(search_sql).result())
+
+        # Статистика по ASIN объявлений
+        asin_stat_table = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
+        asin_stats_sql = f"""
+        SELECT
+            ad_group_id, advertised_asin,
+            SUM(impressions)   AS impressions,
+            SUM(clicks)        AS clicks,
+            SUM(cost)          AS cost,
+            SUM(purchases_14d) AS purchases_14d,
+            SUM(sales_14d)     AS sales_14d
+        FROM `{asin_stat_table}`
+        WHERE campaign_id = '{campaign_id}'
+        {date_where}
+        GROUP BY ad_group_id, advertised_asin
+        """
+        try:
+            asin_stats_rows = list(client.query(asin_stats_sql).result())
+        except Exception:
+            asin_stats_rows = []
         placement_rows = list(client.query(placement_sql).result())
 
         campaign_stats = {}
@@ -566,6 +590,23 @@ def analytics_campaign_structure():
                 # Auto и неизвестные — к группе
                 st_by_ag.setdefault(ag, []).append(entry)
 
+        # Индексируем статистику по ASIN
+        asin_stats_map  = {}  # (ad_group_id, asin) → stats
+        asin_stats_by_ag = {}  # ad_group_id → суммарные stats (если asin неизвестен)
+        for r in asin_stats_rows:
+            s = to_stat(r)
+            ag   = s.get('ad_group_id') or ''
+            asin = s.get('advertised_asin') or ''
+            if asin:
+                asin_stats_map[(ag, asin)] = s
+            # Суммируем по группе для fallback
+            if ag not in asin_stats_by_ag:
+                asin_stats_by_ag[ag] = {'impressions':0,'clicks':0,'cost':0,'purchases_14d':0,'sales_14d':0,'_asins':[]}
+            for m in ('impressions','clicks','cost','purchases_14d','sales_14d'):
+                asin_stats_by_ag[ag][m] = round(asin_stats_by_ag[ag].get(m,0) + (s.get(m) or 0), 4)
+            if asin:
+                asin_stats_by_ag[ag]['_asins'].append(asin)
+
         # Добавляем ACOS/CTR к суммам группы и таргетов
         for ag, s in ag_stats.items():
             s['ctr']  = round(s['clicks']/s['impressions']*100, 3) if s['impressions'] > 0 else None
@@ -579,6 +620,7 @@ def analytics_campaign_structure():
         # ── Группируем структуру ──────────────────────────
         groups = {}
         adjustments = []
+        campaign_negatives = []  # негативы уровня кампании
 
         for row in struct_rows:
             r = dict(row)
@@ -595,7 +637,14 @@ def analytics_campaign_structure():
                 })
                 continue
 
-            if ag_id not in groups:
+            # Campaign-level негативы (ad_group_id IS NULL) — не создаём группу
+            if ag_id == '__none__' and et in ('negative_keyword', 'negative_product_targeting'):
+                if 'campaign_negatives' not in groups:
+                    pass  # будет добавлено ниже
+                # Добавим напрямую в campaign_negatives
+                # (обрабатываем ниже)
+                pass
+            elif ag_id not in groups:
                 gs = ag_stats.get(ag_id, {})
                 groups[ag_id] = {
                     'id':           ag_id,
@@ -607,6 +656,7 @@ def analytics_campaign_structure():
                     'keywords':     [],
                     'targets':      [],
                     'negatives':    [],
+                    'ads':          [],
                 }
 
             if et == 'keyword':
@@ -622,21 +672,82 @@ def analytics_campaign_structure():
                     'search_terms': st_by_kw.get((ag_id, kw_id), []),
                 })
             elif et == 'negative_keyword':
-                groups[ag_id]['negatives'].append({
-                    'text':       r.get('keyword_text'),
-                    'match_type': r.get('match_type'),
+                entry = {
+                    'text':       r.get('keyword_text') or r.get('targeting_expression') or '',
+                    'match_type': r.get('match_type') or '',
+                    'type':       'keyword',
+                }
+                if ag_id == '__none__':
+                    campaign_negatives.append(entry)
+                else:
+                    groups[ag_id]['negatives'].append(entry)
+            elif et == 'negative_product_targeting':
+                tgt_expr = r.get('targeting_expression') or r.get('keyword_text') or ''
+                # PRODUCT_EXACT/PRODUCT_AND_TARGETING — это matchType, не ASIN
+                # Реальный ASIN выглядит как B0XXXXXXXX (10 символов)
+                is_match_type = tgt_expr.upper() in (
+                    'PRODUCT_EXACT', 'PRODUCT_AND_TARGETING', 'EXACT', 'BROAD', 'PHRASE', ''
+                )
+                entry = {
+                    'text':       '' if is_match_type else tgt_expr,
+                    'match_type': '',
+                    'type':       'product',
+                    'raw':        tgt_expr,  # для отладки
+                }
+                if ag_id == '__none__':
+                    campaign_negatives.append(entry)
+                else:
+                    groups[ag_id]['negatives'].append(entry)
+            elif et == 'product_ad':
+                if 'ads' not in groups[ag_id]:
+                    groups[ag_id]['ads'] = []
+                # asin из campaigns_merch часто null — берём из asin_stats если есть
+                ad_asin = r.get('asin') or ''
+                ad_stats = asin_stats_map.get((ag_id, ad_asin), {})
+                if not ad_stats and not ad_asin:
+                    # Fallback: берём stats и asin из asin_stats_by_ag
+                    ag_data = asin_stats_by_ag.get(ag_id, {})
+                    ad_stats = ag_data
+                    if not ad_asin and ag_data.get('_asins'):
+                        ad_asin = ag_data['_asins'][0]
+                groups[ag_id]['ads'].append({
+                    'ad_id':  r.get('ad_id'),
+                    'sku':    r.get('sku'),
+                    'asin':   ad_asin,
+                    'state':  r.get('ad_state'),
+                    'stats':  ad_stats,
                 })
-            elif et == 'product_targeting':
+            elif et in ('product_targeting', 'negative_product_targeting'):
                 tgt_expr = r.get('targeting_expression') or ''
-                # Ищем по targeting_expression (уже нормализовано при индексации)
-                st = tgt_stats.get((ag_id, tgt_expr)) or {}
-                groups[ag_id]['targets'].append({
-                    'id':         r.get('target_id'),
-                    'expression': tgt_expr,
-                    'bid':        r.get('target_bid'),
-                    'state':      r.get('target_state'),
-                    'stats':      st,
-                })
+                # Определяем негативный ли это таргет
+                # negative_product_targeting — явно негативный
+                # product_targeting без bid и с matchType выражением — тоже негативный (старые данные)
+                is_neg_expr = tgt_expr.upper() in (
+                    'PRODUCT_EXACT', 'PRODUCT_AND_TARGETING', 'NEGATIVE_EXACT',
+                    'NEGATIVE_PHRASE', 'NEGATIVE_BROAD'
+                )
+                # Если нет target_id — это негативный таргет записанный в старом формате
+                has_target_id = bool(r.get('target_id'))
+                is_negative_pt = (et == 'negative_product_targeting') or (is_neg_expr and not has_target_id)
+
+                if is_negative_pt:
+                    # Негативный product targeting — идёт в negatives
+                    neg_text = '' if is_neg_expr else tgt_expr
+                    groups[ag_id]['negatives'].append({
+                        'text':       neg_text,
+                        'match_type': '',
+                        'type':       'product',
+                        'raw':        tgt_expr,
+                    })
+                else:
+                    st = tgt_stats.get((ag_id, tgt_expr)) or {}
+                    groups[ag_id]['targets'].append({
+                        'id':         r.get('target_id'),
+                        'expression': tgt_expr,
+                        'bid':        r.get('target_bid'),
+                        'state':      r.get('target_state'),
+                        'stats':      st,
+                    })
 
         # Берём campaign_name из первой строки структуры
         campaign_name = ''
@@ -646,10 +757,68 @@ def analytics_campaign_structure():
                 campaign_name = n
                 break
 
+        # Подтянуть названия и изображения из catalog
+        # Берём asins из объявлений И из asin_stats (т.к. asin в campaigns может быть null)
+        all_asins = list({
+            *[a['asin'] for g in groups.values() for a in g.get('ads', []) if a.get('asin')],
+            *[asin for (ag, asin) in asin_stats_map.keys() if asin],
+        })
+        catalog_map = {}
+        if all_asins:
+            catalog_table = f"{PROJECT_ID}.{DATASET}.catalog"
+            asin_list = ','.join(f"'{a}'" for a in all_asins[:200])
+            try:
+                cat_rows = list(client.query(f"""
+                    SELECT asin, title, image_url, product_type, price, status
+                    FROM `{catalog_table}`
+                    WHERE asin IN ({asin_list})
+                """).result())
+                for row in cat_rows:
+                    catalog_map[row.asin] = {
+                        'title':        row.title,
+                        'image_url':    row.image_url,
+                        'product_type': row.product_type,
+                        'price':        float(row.price) if row.price else None,
+                        'status':       row.status,
+                    }
+            except Exception:
+                pass
+
+        # Добавить info из catalog к объявлениям
+        for g in groups.values():
+            for ad in g.get('ads', []):
+                asin = ad.get('asin')
+                if asin and asin in catalog_map:
+                    ad.update(catalog_map[asin])
+                elif not asin:
+                    # Попробовать найти по первому asin из asin_stats для этой группы
+                    ag = next((gid for gid, gv in groups.items() if ad in gv.get('ads', [])), None)
+                    if ag:
+                        ag_asins = asin_stats_by_ag.get(ag, {}).get('_asins', [])
+                        for candidate in ag_asins:
+                            if candidate in catalog_map:
+                                ad['asin'] = candidate
+                                ad.update(catalog_map[candidate])
+                                break
+
+        # Берём end_date кампании из первой строки структуры
+        campaign_end_date = None
+        for row in struct_rows:
+            d = dict(row)
+            if d.get('end_date'):
+                v = d['end_date']
+                campaign_end_date = v.isoformat() if hasattr(v,'isoformat') else str(v)
+                break
+
+        # Убрать __none__ группу если она появилась
+        clean_groups = [g for g in groups.values() if g['id'] != '__none__']
+
         return jsonify({
-            'campaign_name': campaign_name,
-            'groups':        list(groups.values()),
-            'adjustments':   adjustments,
+            'campaign_name':       campaign_name,
+            'campaign_end_date':   campaign_end_date,
+            'groups':              clean_groups,
+            'adjustments':         adjustments,
+            'campaign_negatives':  campaign_negatives,
         })
 
     except Exception as e:
@@ -657,43 +826,70 @@ def analytics_campaign_structure():
 
 @analytics_bp.route('/analytics/debug/targeting')
 def debug_targeting():
-    """Debug: посмотреть что лежит в targets_stats для кампании"""
+    """Debug: посмотреть что лежит в targets_stats и product_ads для кампании"""
     campaign_id  = request.args.get('campaign_id', '')
     account_type = request.args.get('account_type', 'MERCH').upper()
     date_from    = request.args.get('date_from', '')
     date_to      = request.args.get('date_to', '')
 
     suffix     = account_type.lower()
-    stat_table = f"{PROJECT_ID}.{DATASET}.targets_stats_{suffix}"
-    camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
+    stat_table  = f"{PROJECT_ID}.{DATASET}.targets_stats_{suffix}"
+    asin_table  = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
+    camp_table  = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
 
     date_conds = []
     if date_from: date_conds.append(f"date >= '{date_from}'")
     if date_to:   date_conds.append(f"date <= '{date_to}'")
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
 
-    sql_stats = f"""
-    SELECT DISTINCT keyword_type, targeting, keyword_id,
-           SUM(clicks) as clicks, SUM(impressions) as impressions
-    FROM `{stat_table}`
-    WHERE campaign_id = '{campaign_id}' {date_where}
-    GROUP BY keyword_type, targeting, keyword_id
-    ORDER BY clicks DESC
-    LIMIT 20
-    """
-
-    sql_struct = f"""
-    SELECT DISTINCT entity_type, targeting_expression, keyword_text, keyword_id, ad_group_id
-    FROM `{camp_table}`
-    WHERE campaign_id = '{campaign_id}'
-      AND entity_type IN ('product_targeting','keyword')
-    LIMIT 20
-    """
-
     try:
         client = bigquery.Client(project=PROJECT_ID)
-        stats  = [dict(r) for r in client.query(sql_stats).result()]
-        struct = [dict(r) for r in client.query(sql_struct).result()]
-        return jsonify({'stats_rows': stats, 'struct_rows': struct})
+
+        # product_ads из campaigns
+        ads = [dict(r) for r in client.query(f"""
+            SELECT ad_id, asin, sku, ad_state, ad_group_id
+            FROM `{camp_table}`
+            WHERE campaign_id = '{campaign_id}' AND entity_type = 'product_ad'
+            LIMIT 10
+        """).result()]
+
+        # asin_stats за период
+        asin_stats = [dict(r) for r in client.query(f"""
+            SELECT advertised_asin, ad_group_id,
+                   SUM(impressions) as imp, SUM(clicks) as clicks
+            FROM `{asin_table}`
+            WHERE campaign_id = '{campaign_id}' {date_where}
+            GROUP BY advertised_asin, ad_group_id
+            ORDER BY clicks DESC
+            LIMIT 20
+        """).result()]
+
+        # Негативные таргеты — все entity_type для этой кампании
+        neg_targets = [dict(r) for r in client.query(f"""
+            SELECT entity_type, targeting_expression, keyword_text, match_type,
+                   keyword_id, target_id, ad_group_id,
+                   target_bid, target_state
+            FROM `{camp_table}`
+            WHERE campaign_id = '{campaign_id}'
+            ORDER BY entity_type, targeting_expression
+            LIMIT 50
+        """).result()]
+
+        # catalog check
+        all_asins = [a.get('asin') for a in ads if a.get('asin')]
+        catalog_rows = []
+        if all_asins:
+            asin_list = ','.join(f"'{a}'" for a in all_asins)
+            catalog_rows = [dict(r) for r in client.query(f"""
+                SELECT asin, title, product_type FROM `{PROJECT_ID}.{DATASET}.catalog`
+                WHERE asin IN ({asin_list}) LIMIT 10
+            """).result()]
+
+        return jsonify({
+            'ads_in_campaigns': ads,
+            'asin_stats': asin_stats,
+            'neg_targets': neg_targets,
+            'catalog': catalog_rows
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

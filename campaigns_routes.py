@@ -220,11 +220,22 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
             entity = "negative_keyword"
         elif target_type == "KEYWORD":
             entity = "keyword"
+        elif is_negative:
+            entity = "negative_product_targeting"
         else:
             entity = "product_targeting"
 
-        expr = (pt.get("matchType") or pt.get("productId") or
-                pt.get("categoryId") or (str(pt) if pt else None))
+        if is_negative:
+            # Для негативных product таргетов ASIN хранится в product.productId
+            # структура: {"productTarget": {"matchType": "PRODUCT_EXACT", "product": {"productId": "B09X..."}, "productIdType": "ASIN"}}
+            asin_from_product = pt.get("product", {}).get("productId")
+            expr = (asin_from_product or pt.get("productId") or
+                    pt.get("categoryId") or pt.get("matchType") or
+                    (str(pt) if pt else None))
+        else:
+            expr = (pt.get("matchType") or pt.get("productId") or
+                    pt.get("product", {}).get("productId") or
+                    pt.get("categoryId") or (str(pt) if pt else None))
 
         rows.append({
             "entity_type": entity,
@@ -241,10 +252,10 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
             "match_type":    kw.get("matchType"),
             "keyword_bid":   bid_val if entity in ("keyword", "negative_keyword") else None,
             "keyword_state": t.get("state") if entity in ("keyword", "negative_keyword") else None,
-            "target_id":     t.get("targetId") if entity == "product_targeting" else None,
+            "target_id":     t.get("targetId") if entity in ("product_targeting", "negative_product_targeting") else None,
             "targeting_expression": expr,
             "target_bid":    bid_val if entity == "product_targeting" else None,
-            "target_state":  t.get("state") if entity == "product_targeting" else None,
+            "target_state":  t.get("state") if entity in ("product_targeting", "negative_product_targeting") else None,
             "ad_id": None, "sku": None, "asin": None,
             "ad_state": None, "synced_at": synced_at,
         })
