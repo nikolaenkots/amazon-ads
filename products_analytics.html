@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6; --surface:#fff; --surface2:#f0f0f3; --border:#e2e2e8; --border2:#ccccd4;
+  --text:#18181c; --muted:#6b6b7a; --dim:#aaaaB8;
+  --accent:#c84b14; --accent-bg:rgba(200,75,20,.07); --accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c; --green-bg:rgba(26,143,92,.08); --green-bd:rgba(26,143,92,.2);
+  --red:#d94040; --red-bd:rgba(217,64,64,.22);
+  --amber:#b07800;
+  --blue:#1a6fd4; --blue-bg:rgba(26,111,212,.07); --blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-anchor:none} /* prevent browser scroll anchoring */
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+
+/* ── Layout ── */
+main{padding:18px 32px;max-width:1640px;margin:0 auto}
+
+/* ── Filters ── */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Portfolio dropdown ── */
+.pdw{position:relative}
+.pdt{height:34px;min-width:200px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:300px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+
+/* ── Stats ── */
+.sr{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
+
+/* ── Table ── */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.s{color:var(--accent)}
+thead th.ns{cursor:default}
+thead th.ns:hover{color:var(--muted)}
+tr.dr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+tr.dr.exp{background:var(--accent-bg)}
+td{padding:9px 11px;vertical-align:middle}
+
+/* ── ASIN cell ── */
+.ac{display:flex;align-items:center;gap:10px}
+.ai{width:42px;height:42px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.ap{width:42px;height:42px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--dim)}
+.ak{font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);font-weight:500}
+.at2{font-size:12px;color:var(--muted);margin-top:1px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.abs{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+
+/* ── Badges ── */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.bu{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.ba{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+.btype{background:rgba(108,63,201,.07);color:var(--purple);border:1px solid rgba(108,63,201,.15)}
+
+/* ── Num ── */
+.n{font-family:'DM Mono',monospace;font-size:12px}
+td.r{text-align:right}
+.gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
+.ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
+
+/* ── Expand panel ── */
+tr.er td{padding:0}
+.ei{background:#f7f7fb;border-top:2px solid var(--accent-bd)}
+
+/* ── Camp panel ── */
+.cpp{padding:14px 18px}
+.cpt{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.cpc{display:flex;flex-direction:column;gap:8px}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:border-color .15s}
+.cc.co{border-color:var(--accent);border-width:1.5px}
+.cch{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .1s}
+.cch:hover{background:var(--surface2)}
+.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sd.en{background:var(--green)}.sd.pa{background:var(--dim)}
+.cn{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.cs2{display:flex;flex-direction:column;align-items:flex-end}
+.csl{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase}
+.csv{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.cchev{color:var(--muted);flex-shrink:0;transition:transform .2s}
+.cchev.op{transform:rotate(180deg)}
+
+/* ── Structure ── */
+.cst{display:none;border-top:1px solid var(--border)}
+.cst.op{display:block}
+.stl{padding:18px;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* ── Groups ── */
+.gg{margin:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.ggh{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface2);cursor:pointer;transition:background .1s}
+.ggh:hover{background:#e8e8ee}
+.ggn{flex:1;font-size:12px;font-weight:500}
+.ggs{display:flex;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.ggb{display:none}
+.ggb.op{display:block}
+.gga{color:var(--dim);transition:transform .2s;flex-shrink:0}
+.gga.op{transform:rotate(180deg)}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px}
+.tab{padding:5px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tbb{display:inline-block;min-width:15px;padding:0 3px;margin-left:3px;border-radius:99px;font-size:9px;background:var(--surface2);color:var(--dim);text-align:center}
+.tab.on .tbb{background:var(--accent-bg);color:var(--accent)}
+.tp{display:none}.tp.on{display:block}
+
+/* ── Items ── */
+.ih{display:grid;grid-template-columns:1fr 65px 65px 80px 70px 90px 90px 80px;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
+.ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
+.ih span:first-child{text-align:left}
+.ii{display:grid;grid-template-columns:1fr 65px 65px 80px 70px 90px 90px 80px;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
+.ii:last-child{border-bottom:none}
+.ii:hover{background:var(--surface2)}
+.it{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted)}
+.in2{display:flex;align-items:center;gap:6px;padding:5px 11px;border-bottom:1px solid var(--border);font-size:12px}
+.in2:last-child{border-bottom:none}
+.nt{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.nb{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
+.ge{padding:12px;text-align:center;color:var(--dim);font-size:11px}
+
+/* ── etc ── */
+.eb{background:rgba(217,64,64,.07);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border)}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+.pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pbb:hover{background:var(--surface2)}.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbb:disabled{opacity:.4;cursor:not-allowed}
+.sa{opacity:.3;margin-left:2px}
+thead th.s .sa{opacity:1;color:var(--accent)}
+.rchev{color:var(--dim);transition:transform .2s}
+.rchev.op{transform:rotate(180deg)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/analytics/campaigns">Кампании</a>
+    <a href="/analytics/products" class="active">Products</a>
+    <a href="/portfolios">Портфолио</a>
+    <a href="/control">Изменения</a>
+  </nav>
+</header>
+
+<main>
+  <div class="fp">
+    <div class="fr">
+      <div class="fg"><div class="fl">Аккаунт</div>
+        <div class="at">
+          <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+          <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="fg"><div class="fl">Дата от</div><input type="date" id="df" style="width:148px"></div>
+      <div class="fg"><div class="fl">Дата до</div><input type="date" id="dt" style="width:148px"></div>
+      <div class="fg"><div class="fl">Маркетплейс</div><select id="mkt" style="width:100px"></select></div>
+      <div class="fg"><div class="fl">Портфолио</div>
+        <div class="pdw" id="pdw">
+          <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
+          <svg class="pda" width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+          <div class="pdd" id="pdd">
+            <input class="pds" type="text" placeholder="Поиск..." id="pdsrch" oninput="pfSearch(this.value)">
+            <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fg"><div class="fl">ASIN</div><input type="text" id="fasin" placeholder="B0H1..." style="width:148px" onkeydown="if(event.key==='Enter')go()"></div>
+      <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
+        <button class="btn btn-p" id="btnGo" onclick="go()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Применить
+        </button>
+        <button class="btn btn-s" onclick="rst()">Сброс</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="eb" id="eb" style="display:none"></div>
+
+  <div class="sr" id="sr" style="display:none">
+    <div class="sc"><div class="sl">ASIN</div><div class="sv" id="s0">—</div></div>
+    <div class="sc"><div class="sl">Показы</div><div class="sv b" id="s1">—</div></div>
+    <div class="sc"><div class="sl">Клики</div><div class="sv" id="s2">—</div></div>
+    <div class="sc"><div class="sl">CTR</div><div class="sv" id="s3">—</div></div>
+    <div class="sc"><div class="sl">Расходы</div><div class="sv a" id="s4">—</div></div>
+    <div class="sc"><div class="sl">Продажи 14d</div><div class="sv g" id="s5">—</div></div>
+    <div class="sc"><div class="sl">Заказы 14d</div><div class="sv" id="s6">—</div></div>
+    <div class="sc"><div class="sl">ACOS</div><div class="sv" id="s7">—</div></div>
+  </div>
+
+  <div class="tw">
+    <div class="thr">
+      <div class="tt">Рекламируемые товары</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="tc" id="tc">—</div>
+        <div id="lsp" style="display:none"><div class="sp"></div></div>
+      </div>
+    </div>
+    <div class="tsx"><div id="tbl"><div class="te">Выберите период и нажмите <b>Применить</b></div></div></div>
+    <div class="pg" id="pg" style="display:none">
+      <div class="pi" id="pi"></div>
+      <div class="pb" id="pb"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+const S = {
+  acct:'MERCH', page:1, pp:50, total:0,
+  sb:'clicks', sd:'desc',
+  rows:[], pfs:[], sel:[],
+  eKey:null,    // expanded ASIN row key (asin|mkt)
+  eC:{},        // camp expand state {campId: bool}
+  sc:{},        // struct cache {campId: data}
+};
+
+// ── Init ──────────────────────────────────────────────────
+(()=>{
+  const to=new Date(), fr=new Date();
+  fr.setDate(fr.getDate()-30);
+  document.getElementById('dt').value=to.toISOString().slice(0,10);
+  document.getElementById('df').value=fr.toISOString().slice(0,10);
+  setMkts('MERCH');
+  loadPfs();
+})();
+
+function setMkts(a){
+  const opts=a==='KDP'?['','US','CA','UK','DE','FR','IT','ES','AU']:['','US','UK','DE','FR','IT','ES'];
+  document.getElementById('mkt').innerHTML=opts.map(v=>`<option value="${v}">${v||'Все'}</option>`).join('');
+}
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('tbM').classList.toggle('on',a==='MERCH');
+  document.getElementById('tbK').classList.toggle('on',a==='KDP');
+  setMkts(a); S.sel=[]; pfLabel(); loadPfs();
+}
+
+// ── Portfolio ─────────────────────────────────────────────
+function pfToggle(e){
+  e.stopPropagation();
+  const d=document.getElementById('pdd'), t=document.getElementById('pdt');
+  const o=d.classList.toggle('on'); t.classList.toggle('on',o);
+  if(o) setTimeout(()=>document.getElementById('pdsrch').focus(),10);
+}
+document.addEventListener('click',()=>{
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdt').classList.remove('on');
+});
+document.getElementById('pdd').addEventListener('click',e=>e.stopPropagation());
+
+function pfSearch(q){
+  document.querySelectorAll('#pdlist .pdi').forEach(el=>{
+    el.style.display=!q||el.dataset.n.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+function pfLabel(){
+  const el=document.getElementById('pdl');
+  if(!S.sel.length){el.textContent='Все';return;}
+  if(S.sel.length===1){const f=S.pfs.find(p=>p.id===S.sel[0]);el.textContent=(f?f.name:S.sel[0]).slice(0,26);}
+  else el.textContent=S.sel.length+' выбрано';
+}
+function pfCk(cb){
+  if(cb.checked){if(!S.sel.includes(cb.value))S.sel.push(cb.value);}
+  else{S.sel=S.sel.filter(x=>x!==cb.value);}
+  pfLabel();
+}
+function pfRender(){
+  const el=document.getElementById('pdlist');
+  if(!S.pfs.length){el.innerHTML='<div class="pd-empty">Нет портфолио</div>';return;}
+  el.innerHTML=S.pfs.map(p=>`<label class="pdi" data-n="${xe(p.name)}"><input type="checkbox" value="${xe(p.id)}" ${S.sel.includes(p.id)?'checked':''} onchange="pfCk(this)"><span>${p.name}</span></label>`).join('');
+}
+async function loadPfs(){
+  document.getElementById('pdlist').innerHTML='<div class="pd-empty">Загрузка...</div>';
+  const urls=[
+    `/analytics/campaigns/portfolios?account_type=${S.acct}`,
+    `/portfolios/list`
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url); const d=await r.json();
+      let pfs=[];
+      if(Array.isArray(d.portfolios)&&d.portfolios.length){
+        const first=d.portfolios[0];
+        if(first.portfolio_id!==undefined){
+          // /portfolios/list format
+          pfs=d.portfolios.filter(p=>p.account_type===S.acct&&(p.portfolio_name||p.portfolio_id))
+            .map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+        } else if(first.id!==undefined){
+          // /analytics/campaigns/portfolios format
+          pfs=d.portfolios.filter(p=>p.id&&p.name);
+        }
+      }
+      if(pfs.length>0){S.pfs=pfs;pfRender();return;}
+    }catch(e){}
+  }
+  document.getElementById('pdlist').innerHTML='<div class="pd-empty" style="color:var(--red)">Не удалось загрузить</div>';
+}
+
+// ── Params ────────────────────────────────────────────────
+function params(page){
+  const p=new URLSearchParams();
+  p.set('account_type',S.acct); p.set('page',page||S.page); p.set('per_page',S.pp);
+  p.set('sort_by',S.sb); p.set('sort_dir',S.sd);
+  const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
+  const mkt=document.getElementById('mkt').value, asin=document.getElementById('fasin').value.trim();
+  if(df)p.set('date_from',df); if(dt)p.set('date_to',dt);
+  if(mkt)p.set('marketplace',mkt); if(asin)p.set('asin',asin);
+  if(S.sel.length===1)p.set('portfolio_ids',S.sel[0]);
+  else if(S.sel.length>1)p.set('portfolio_ids',S.sel.join(','));
+  return p;
+}
+
+function go(){S.page=1;closeExpand();fetchData();}
+function rst(){
+  const to=new Date(),fr=new Date(); fr.setDate(fr.getDate()-30);
+  document.getElementById('dt').value=to.toISOString().slice(0,10);
+  document.getElementById('df').value=fr.toISOString().slice(0,10);
+  document.getElementById('mkt').value='';
+  document.getElementById('fasin').value='';
+  S.sel=[]; pfLabel(); pfRender(); S.page=1; fetchData();
+}
+
+async function fetchData(){
+  document.getElementById('btnGo').disabled=true;
+  document.getElementById('lsp').style.display='inline-block';
+  document.getElementById('eb').style.display='none';
+  try{
+    const r=await fetch('/analytics/products/data?'+params(S.page));
+    const d=await r.json(); if(d.error)throw new Error(d.error);
+    S.rows=d.rows||[]; S.total=d.total||0;
+    fillStats(d.summary||{}); buildTable(); buildPg();
+    document.getElementById('sr').style.display='grid';
+    document.getElementById('tc').textContent=S.total.toLocaleString('ru')+' товаров';
+  }catch(e){
+    document.getElementById('eb').textContent='Ошибка: '+e.message;
+    document.getElementById('eb').style.display='block';
+  }finally{
+    document.getElementById('btnGo').disabled=false;
+    document.getElementById('lsp').style.display='none';
+  }
+}
+
+function fillStats(s){
+  const f=(v,d=0)=>v==null?'—':+v==0&&d===0?'0':Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});
+  document.getElementById('s0').textContent=f(s.total_asins);
+  document.getElementById('s1').textContent=f(s.impressions);
+  document.getElementById('s2').textContent=f(s.clicks);
+  document.getElementById('s3').textContent=s.ctr!=null?s.ctr.toFixed(2)+'%':'—';
+  document.getElementById('s4').textContent=s.cost!=null?'$'+f(s.cost,2):'—';
+  document.getElementById('s5').textContent=s.sales_14d!=null?'$'+f(s.sales_14d,2):'—';
+  document.getElementById('s6').textContent=f(s.purchases_14d);
+  const ae=document.getElementById('s7');
+  if(s.acos!=null){ae.textContent=s.acos.toFixed(1)+'%';ae.className='sv '+(s.acos<25?'g':s.acos<50?'':'a');}
+  else{ae.textContent='—';ae.className='sv';}
+}
+
+// ── Build table ───────────────────────────────────────────
+function buildTable(){
+  const el=document.getElementById('tbl');
+  if(!S.rows.length){el.innerHTML='<div class="te">Нет данных</div>';return;}
+  const cols=[
+    {k:'asin',l:'Товар',s:1,w:'340px'},{k:'marketplace',l:'Маркет',s:1,w:'80px'},
+    {k:'campaign_count',l:'Кампании',s:0,w:'80px'},{k:'impressions',l:'Показы',s:1,w:'100px'},
+    {k:'clicks',l:'Клики',s:1,w:'76px'},{k:'ctr',l:'CTR %',s:1,w:'76px'},
+    {k:'cost',l:'Расходы',s:1,w:'100px'},{k:'sales_14d',l:'Продажи 14d',s:1,w:'108px'},
+    {k:'purchases_14d',l:'Заказы',s:1,w:'76px'},{k:'acos',l:'ACOS %',s:1,w:'80px'},
+  ];
+  const arr=k=>S.sb===k?`<span class="sa">${S.sd==='desc'?'↓':'↑'}</span>`:'<span class="sa">↕</span>';
+  let h=`<table><thead><tr>`;
+  cols.forEach(c=>{
+    h+=`<th class="${S.sb===c.k?'s':''} ${c.s?'':'ns'}" style="width:${c.w}" ${c.s?`onclick="sort('${c.k}')"`:''}>${c.l}${c.s?arr(c.k):''}</th>`;
+  });
+  h+=`<th style="width:32px" class="ns"></th></tr></thead><tbody>`;
+
+  S.rows.forEach(row=>{
+    const key=row.asin+'|'+row.marketplace;
+    const isE=S.eKey===key;
+    const acC=row.acos==null?'dv':row.acos<25?'ok':row.acos<50?'hi':'cr';
+    const mB=row.marketplace==='US'?'bu':'bm';
+    const img=row.image_url?`<img class="ai" src="${xe(row.image_url)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:'';
+    const ph=`<div class="ap"${row.image_url?' style="display:none"':''}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    const pub=row.status?`<span class="b ${row.status==='Live'||row.status==='PUBLISHED'?'be':'bp'}">${row.status}</span>`:'';
+    const typ=row.product_type?`<span class="b btype">${row.product_type}</span>`:'';
+    const pr=row.price?`<span class="b bm">$${row.price}</span>`:'';
+    h+=`<tr class="dr${isE?' exp':''}" data-key="${key}" onclick="rowClick('${je(key)}','${je(row.asin)}','${je(row.marketplace)}')">
+      <td><div class="ac">${img}${ph}<div><div class="ak">${row.asin}</div><div class="at2">${row.title||'—'}</div><div class="abs">${pub}${typ}${pr}</div></div></div></td>
+      <td><span class="b ${mB}">${row.marketplace}</span></td>
+      <td class="r"><span class="n bn">${row.campaign_count||0}</span></td>
+      <td class="r"><span class="n bn">${f(row.impressions)}</span></td>
+      <td class="r"><span class="n">${f(row.clicks)}</span></td>
+      <td class="r"><span class="n">${row.ctr!=null?row.ctr.toFixed(2)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n an">${row.cost!=null?'$'+f(row.cost,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n gn">${row.sales_14d!=null?'$'+f(row.sales_14d,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n">${f(row.purchases_14d)}</span></td>
+      <td class="r"><span class="n ${acC}">${row.acos!=null?row.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+      <td style="text-align:center"><svg class="rchev${isE?' op':''}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+
+  // Re-attach expand row if state says something is open
+  if(S.eKey){
+    const tr=document.querySelector(`tr.dr[data-key="${S.eKey}"]`);
+    if(tr) insertExpand(tr, S.eKey);
+  }
+}
+
+// ── Row click — no scroll jump ────────────────────────────
+function rowClick(key, asin, mkt){
+  if(S.eKey===key){ closeExpand(); return; }
+  closeExpand();
+  S.eKey=key; S.eC={}; S.sc={};
+
+  const tr=document.querySelector(`tr.dr[data-key="${key}"]`);
+  if(!tr)return;
+  tr.classList.add('exp');
+  tr.querySelector('.rchev')?.classList.add('op');
+  insertExpand(tr, key);
+  loadCamps(asin, mkt);
+}
+
+function closeExpand(){
+  S.eKey=null; S.eC={}; S.sc={};
+  document.querySelectorAll('tr.er').forEach(t=>t.remove());
+  document.querySelectorAll('tr.dr.exp').forEach(t=>{
+    t.classList.remove('exp');
+    t.querySelector('.rchev')?.classList.remove('op');
+  });
+}
+
+function insertExpand(tr, key){
+  const sk=key.replace(/[|.]/g,'_');
+  const et=document.createElement('tr');
+  et.className='er';
+  et.innerHTML=`<td colspan="11"><div class="ei" id="ei_${sk}"><div class="stl"><div class="sp"></div> Загрузка...</div></div></td>`;
+  tr.after(et);
+}
+
+// ── Load campaigns ────────────────────────────────────────
+async function loadCamps(asin, mkt){
+  const key=asin+'|'+mkt; const sk=key.replace(/[|.]/g,'_');
+  const el=document.getElementById('ei_'+sk); if(!el)return;
+  try{
+    const p=params(); p.set('asin',asin); p.set('marketplace',mkt);
+    const r=await fetch('/analytics/products/campaigns?'+p);
+    const d=await r.json(); if(d.error)throw new Error(d.error);
+    const camps=d.campaigns||[];
+    if(!camps.length){el.innerHTML='<div class="stl" style="color:var(--muted)">Нет кампаний в выбранный период</div>';return;}
+
+    let h=`<div class="cpp"><div class="cpt">Кампании · ${camps.length} шт</div><div class="cpc">`;
+    camps.forEach(c=>{
+      const cid=c.campaign_id;
+      const enC=(c.campaign_state||'').toLowerCase()==='enabled';
+      const acC=c.acos==null?'dv':c.acos<25?'ok':c.acos<50?'hi':'cr';
+      h+=`<div class="cc" id="cc_${cid}">
+        <div class="cch" onclick="campClick('${je(cid)}','${je(asin)}')">
+          <span class="sd ${enC?'en':'pa'}"></span>
+          <span class="cn">${c.campaign_name||cid}</span>
+          <div class="cm">
+            ${c.targeting_type?`<span class="b ${c.targeting_type==='AUTO'?'ba':'bman'}">${c.targeting_type}</span>`:''}
+            <span class="b ${enC?'be':'bp'}">${c.campaign_state||'—'}</span>
+            <span class="cs2"><span class="csl">Показы</span><span class="csv bn">${f(c.impressions)}</span></span>
+            <span class="cs2"><span class="csl">Клики</span><span class="csv">${f(c.clicks)}</span></span>
+            <span class="cs2"><span class="csl">Расходы</span><span class="csv an">$${f(c.cost||0,2)}</span></span>
+            <span class="cs2"><span class="csl">Продажи</span><span class="csv gn">$${f(c.sales_14d||0,2)}</span></span>
+            <span class="cs2"><span class="csl">Заказы</span><span class="csv">${f(c.purchases_14d)}</span></span>
+            <span class="cs2"><span class="csl">ACOS</span><span class="csv ${acC}">${c.acos!=null?c.acos.toFixed(1)+'%':'—'}</span></span>
+            ${c.portfolio_name?`<span class="cs2"><span class="csl">Портфолио</span><span class="csv" style="color:var(--muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.portfolio_name}</span></span>`:''}
+          </div>
+          <svg class="cchev" id="chev_${cid}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="cst" id="cs_${cid}"></div>
+      </div>`;
+    });
+    h+='</div></div>';
+    el.innerHTML=h;
+  }catch(e){
+    if(el)el.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
+  }
+}
+
+// ── Camp click ────────────────────────────────────────────
+async function campClick(cid, asin){
+  const isO=S.eC[cid];
+  S.eC[cid]=!isO;
+  const cs=document.getElementById('cs_'+cid);
+  const chev=document.getElementById('chev_'+cid);
+  const cc=document.getElementById('cc_'+cid);
+  if(!cs)return;
+  if(!isO){
+    cs.classList.add('op'); cc?.classList.add('co'); chev?.classList.add('op');
+    if(S.sc[cid]){
+      cs.innerHTML=buildStruct(S.sc[cid], asin);
+    }else{
+      cs.innerHTML='<div class="stl"><div class="sp"></div> Загрузка структуры...</div>';
+      const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
+      try{
+        const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}`);
+        const d=await r.json(); if(d.error)throw new Error(d.error);
+        S.sc[cid]=d;
+        if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin);
+      }catch(e){
+        if(cs.classList.contains('op')) cs.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
+      }
+    }
+  }else{
+    cs.classList.remove('op'); cc?.classList.remove('co'); chev?.classList.remove('op');
+  }
+}
+
+// ── Build structure ───────────────────────────────────────
+function buildStruct(data, filterAsin){
+  let groups=data.groups||[];
+
+  // Filter groups: only those containing this ASIN
+  if(filterAsin){
+    const fa=filterAsin.toUpperCase();
+    // Check if any group has explicit ASIN in ads (MANUAL campaigns store ASIN)
+    const anyHasAsin=groups.some(g=>(g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa));
+    groups=groups.filter(g=>{
+      const ads=g.ads||[];
+      // Case 1: group explicitly contains this ASIN in ads
+      if(ads.some(a=>(a.asin||'').toUpperCase()===fa)) return true;
+      // Case 2: no explicit ASIN match (AUTO campaign or asin null in campaigns table)
+      // Show only groups with actual clicks in the selected period
+      if(!anyHasAsin&&(g.stats||{}).clicks>0) return true;
+      // Case 3: group has ads but none with matching ASIN — still show if has clicks
+      // (happens when ASIN in campaigns table is null but asin_stats knows it)
+      if(ads.length>0&&ads.every(a=>!a.asin)&&(g.stats||{}).clicks>0) return true;
+      return false;
+    });
+  }
+
+  if(!groups.length) return '<div class="ge" style="padding:16px">Нет групп с активностью для данного ASIN</div>';
+
+  let h='';
+  groups.forEach((g,gi)=>{
+    const gid='g'+gi;
+    const st=g.stats||{};
+    const enC=(g.state||'').toLowerCase()==='enabled';
+    const kwN=(g.keywords||[]).length+(g.targets||[]).length;
+    // Collect ALL search terms: group-level (auto) + per-keyword (manual)
+    const allSt=[
+      ...(g.search_terms||[]),
+      ...(g.keywords||[]).flatMap(kw=>kw.search_terms||[]),
+      ...(g.targets||[]).flatMap(t=>t.search_terms||[]),
+    ];
+    const stN=allSt.length;
+    const ngN=(g.negatives||[]).length;
+
+    h+=`<div class="gg">
+      <div class="ggh" onclick="grpClick(this)">
+        <span class="sd ${enC?'en':'pa'}"></span>
+        <span class="ggn">${g.name||g.id}</span>
+        <div class="ggs">
+          ${st.impressions!=null?`<span class="bn">${f(st.impressions)} пок</span>`:''}
+          ${st.clicks!=null?`<span>${f(st.clicks)} кл</span>`:''}
+          ${st.cost!=null?`<span class="an">$${f(st.cost,2)}</span>`:''}
+          ${st.sales_14d!=null&&st.sales_14d>0?`<span class="gn">$${f(st.sales_14d,2)}</span>`:''}
+          ${st.purchases_14d!=null&&st.purchases_14d>0?`<span>${f(st.purchases_14d)} зак</span>`:''}
+          ${st.acos!=null?`<span class="${st.acos<25?'ok':st.acos<50?'hi':'cr'}">${st.acos.toFixed(1)}%</span>`:''}
+        </div>
+        <svg class="gga" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="ggb">
+        <div class="tabs">
+          <span class="tab on" onclick="tabClick(event,0)">Таргеты<span class="tbb">${kwN}</span></span>
+          <span class="tab" onclick="tabClick(event,1)">Поисковые запросы<span class="tbb">${stN}</span></span>
+          <span class="tab" onclick="tabClick(event,2)">Минус слова<span class="tbb">${ngN}</span></span>
+        </div>
+        <div class="tp on">`;
+
+    // Tab 0: keywords + targets
+    if(kwN){
+      h+=`<div class="ih" style="grid-template-columns:1fr 65px 65px 80px 70px 70px 90px 80px 80px"><span>Ключевое слово / Таргет</span><span>Тип</span><span>Ставка</span><span>Показы</span><span>Клики</span><span>Заказы</span><span>Расходы</span><span>Продажи</span><span>ACOS</span></div>`;
+      [...(g.keywords||[]),...(g.targets||[])].forEach(it=>{
+        const s=it.stats||{};
+        const ac=s.acos==null?'dv':s.acos<25?'ok':s.acos<50?'hi':'cr';
+        h+=`<div class="ii" style="grid-template-columns:1fr 65px 65px 80px 70px 70px 90px 80px 80px">
+          <span class="it" title="${xe(it.text||it.expression||'')}">${it.text||it.expression||'—'}</span>
+          <span class="ir">${it.match_type||''}</span>
+          <span class="ir" style="color:var(--accent)">${it.bid?'$'+Number(it.bid).toFixed(2):'—'}</span>
+          <span class="ir">${f(s.impressions)}</span>
+          <span class="ir">${f(s.clicks)}</span>
+          <span class="ir">${f(s.purchases_14d)}</span>
+          <span class="ir an">${s.cost!=null?'$'+f(s.cost,2):'—'}</span>
+          <span class="ir gn">${s.sales_14d!=null?'$'+f(s.sales_14d,2):'—'}</span>
+          <span class="ir ${ac}">${s.acos!=null?s.acos.toFixed(1)+'%':'—'}</span>
+        </div>`;
+      });
+    }else{h+='<div class="ge">Нет таргетов</div>';}
+    h+=`</div><div class="tp">`;
+
+    // Tab 1: search terms
+    if(stN){
+      h+=`<div class="ih" style="grid-template-columns:1fr 110px 80px 70px 70px 90px 80px 80px"><span>Поисковый запрос</span><span>Таргет / тип</span><span>Показы</span><span>Клики</span><span>Заказы</span><span>Расходы</span><span>Продажи</span><span>ACOS</span></div>`;
+      allSt.forEach(st=>{
+        const ac=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
+        const isAuto=st.keyword_type&&st.keyword_type.includes('EXPRESSION');
+        const mt=isAuto?'AUTO':(st.match_type||'');
+        const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
+        const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+        h+=`<div class="ii" style="grid-template-columns:1fr 110px 80px 70px 70px 90px 80px 80px">
+          <span class="it" title="${xe(st.term||'')}">${st.term||'—'}</span>
+          <span class="ir" style="font-size:10px;text-align:right" title="${xe(mt+' '+kw)}">${combined}</span>
+          <span class="ir">${f(st.impressions)}</span>
+          <span class="ir">${f(st.clicks)}</span>
+          <span class="ir">${f(st.purchases_14d)}</span>
+          <span class="ir an">${st.cost!=null?'$'+f(st.cost,2):'—'}</span>
+          <span class="ir gn">${st.sales_14d!=null?'$'+f(st.sales_14d,2):'—'}</span>
+          <span class="ir ${ac}">${st.acos!=null?st.acos.toFixed(1)+'%':'—'}</span>
+        </div>`;
+      });
+    }else{h+='<div class="ge">Нет поисковых запросов</div>';}
+    h+=`</div><div class="tp">`;
+
+    // Tab 2: negatives
+    if(ngN){
+      (g.negatives||[]).forEach(n=>{
+        h+=`<div class="in2"><span class="nt">${n.text||n.raw||'—'}</span>${n.match_type?`<span class="nb">${n.match_type}</span>`:''}${n.type?`<span class="nb">${n.type}</span>`:''}</div>`;
+      });
+    }else{h+='<div class="ge">Нет минус слов</div>';}
+    h+='</div></div></div>';
+  });
+  return h;
+}
+
+// ── Group toggle — NO scroll jump ─────────────────────────
+function grpClick(hdr){
+  // hdr = the .ggh div that was clicked
+  // body and arrow are siblings/children — no ID lookup needed
+  const gg=hdr.closest('.gg');
+  if(!gg)return;
+  const body=gg.querySelector('.ggb');
+  const arrow=hdr.querySelector('.gga');
+  if(!body)return;
+  const sy=window.scrollY;
+  const isO=body.classList.toggle('op');
+  arrow?.classList.toggle('op',isO);
+  // Double rAF: layout applied first frame, scroll restored second
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,sy)));
+}
+
+function tabClick(e,idx){
+  e.stopPropagation();
+  const grp=e.target.closest('.ggb'); if(!grp)return;
+  grp.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===idx));
+  grp.querySelectorAll('.tp').forEach((p,i)=>p.classList.toggle('on',i===idx));
+}
+
+// ── Sort ──────────────────────────────────────────────────
+function sort(col){
+  S.sd=S.sb===col?(S.sd==='desc'?'asc':'desc'):'desc';
+  S.sb=col; S.page=1; fetchData();
+}
+
+// ── Pagination ────────────────────────────────────────────
+function buildPg(){
+  const tot=Math.ceil(S.total/S.pp);
+  const pgEl=document.getElementById('pg');
+  if(tot<=1){pgEl.style.display='none';return;}
+  pgEl.style.display='flex';
+  const fr=(S.page-1)*S.pp+1, to=Math.min(S.page*S.pp,S.total);
+  document.getElementById('pi').textContent=`${fr}–${to} из ${S.total.toLocaleString('ru')}`;
+  let pages=[];
+  if(tot<=7) pages=Array.from({length:tot},(_,i)=>i+1);
+  else{
+    pages=[1,2]; if(S.page>4)pages.push('…');
+    for(let i=Math.max(3,S.page-1);i<=Math.min(tot-2,S.page+1);i++)pages.push(i);
+    if(S.page<tot-3)pages.push('…'); pages.push(tot-1,tot);
+  }
+  let h=`<button class="pbb" onclick="goP(${S.page-1})" ${S.page===1?'disabled':''}>‹</button>`;
+  pages.forEach(p=>{
+    if(p==='…'){h+=`<button class="pbb" style="cursor:default;opacity:.4">…</button>`;return;}
+    h+=`<button class="pbb${p===S.page?' on':''}" onclick="goP(${p})">${p}</button>`;
+  });
+  h+=`<button class="pbb" onclick="goP(${S.page+1})" ${S.page===tot?'disabled':''}>›</button>`;
+  document.getElementById('pb').innerHTML=h;
+}
+function goP(p){
+  const t=Math.ceil(S.total/S.pp); if(p<1||p>t)return;
+  S.page=p; closeExpand(); fetchData(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function f(v,d=0){if(v==null||v==='')return'—';return Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function xe(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function je(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
