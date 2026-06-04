@@ -95,8 +95,28 @@ def _paginate(token, endpoint, client_id, profile_id, path, body_base, result_ke
             break
     return results
 
-def _dt_to_date(dt_str):
-    return dt_str[:10] if dt_str else None
+def _dt_to_date(dt_str, marketplace=None):
+    """
+    Конвертирует ISO datetime → дату в локальном времени маркетплейса.
+    Amazon Console показывает даты в local time, API хранит в UTC.
+    Например: "2026-07-01T04:59:59Z" для US → 2026-06-30 (EST = UTC-5).
+    """
+    if not dt_str:
+        return None
+    MKT_OFFSET = {
+        "US":-5,"CA":-5,"MX":-6,"UK":0,"GB":0,
+        "DE":1,"FR":1,"IT":1,"ES":1,"NL":1,"BE":1,"PL":1,"SE":1,
+        "TR":3,"AU":10,"JP":9,"IN":5,"SG":8,"AE":4,"SA":3,"BR":-3,
+    }
+    offset_h = MKT_OFFSET.get((marketplace or "US").upper(), 0)
+    try:
+        from datetime import datetime, timedelta
+        s = dt_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        local_dt = dt + timedelta(hours=offset_h)
+        return local_dt.strftime("%Y-%m-%d")
+    except Exception:
+        return dt_str[:10]
 
 def _fetch_portfolios(token, endpoint, client_id, profile_id):
     """Получает все портфолио профиля → dict {portfolio_id: portfolio_name}."""
@@ -151,8 +171,8 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
             "targeting_type": "AUTO" if auto_cfg.get("autoCreateTargets") else "MANUAL",
             "bidding_strategy": bid_cfg.get("bidStrategy"),
             "daily_budget": bv.get("value"),
-            "start_date": _dt_to_date(c.get("startDateTime")),
-            "end_date":   _dt_to_date(c.get("endDateTime")),
+            "start_date": _dt_to_date(c.get("startDateTime"), marketplace),
+            "end_date":   _dt_to_date(c.get("endDateTime"), marketplace),
             "campaign_state": c.get("state"),
             "portfolio_id": pid,
             "portfolio_name": (portfolio_map or {}).get(str(pid)) if pid else None,

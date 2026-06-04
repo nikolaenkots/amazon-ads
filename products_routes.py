@@ -42,6 +42,27 @@ def analytics_products_data():
     if sort_dir not in ('ASC', 'DESC'):
         sort_dir = 'DESC'
 
+    # Числовые фильтры (HAVING на with_metrics)
+    NUM_FIELDS = ['impressions','clicks','cost','ctr','sales_14d','purchases_14d','acos']
+    OP_MAP = {'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<=', 'eq': '='}
+    having_parts = []
+    for fld in NUM_FIELDS:
+        op  = request.args.get(fld + '_op', '')
+        val = request.args.get(fld + '_val', '')
+        mn  = request.args.get(fld + '_min', '')
+        mx  = request.args.get(fld + '_max', '')
+        if op and val and op in OP_MAP:
+            try: having_parts.append(f'{fld} {OP_MAP[op]} {float(val)}')
+            except ValueError: pass
+        if mn:
+            try: having_parts.append(f'{fld} >= {float(mn)}')
+            except ValueError: pass
+        if mx:
+            try: having_parts.append(f'{fld} <= {float(mx)}')
+            except ValueError: pass
+    having_clause = ('HAVING ' + ' AND '.join(having_parts)) if having_parts else ''
+    where_clause  = ('WHERE ' + ' AND '.join(having_parts)) if having_parts else ''
+
     suffix     = account_type.lower()
     asin_table = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
     camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
@@ -109,6 +130,7 @@ def analytics_products_data():
     FROM with_metrics s
     LEFT JOIN `{cat_table}` cat
         ON cat.asin = s.asin AND cat.marketplace = s.marketplace
+    {where_clause}
     ORDER BY {sort_by} {sort_dir} NULLS LAST
     LIMIT {per_page} OFFSET {(page-1)*per_page}
     """
@@ -119,13 +141,23 @@ def analytics_products_data():
         FROM `{camp_table}` camp
         {camp_where}
     )
-    SELECT COUNT(DISTINCT CONCAT(a.advertised_asin, a.marketplace)) AS total
-    FROM `{asin_table}` a
-    INNER JOIN camp_filter cf
-        ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
-    WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
-    {date_where}
-    {asin_cond}
+    SELECT COUNT(*) AS total FROM (
+        SELECT
+            a.advertised_asin AS asin, a.marketplace,
+            SUM(a.impressions) AS impressions, SUM(a.clicks) AS clicks,
+            ROUND(SUM(a.cost),2) AS cost, ROUND(SUM(a.sales_14d),2) AS sales_14d,
+            SUM(a.purchases_14d) AS purchases_14d,
+            CASE WHEN SUM(a.impressions)>0 THEN ROUND(SUM(a.clicks)/SUM(a.impressions)*100,3) ELSE NULL END AS ctr,
+            CASE WHEN SUM(a.sales_14d)>0 THEN ROUND(SUM(a.cost)/SUM(a.sales_14d)*100,1) ELSE NULL END AS acos
+        FROM `{asin_table}` a
+        INNER JOIN camp_filter cf
+            ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
+        WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
+        {date_where}
+        {asin_cond}
+        GROUP BY a.advertised_asin, a.marketplace
+    ) t
+    {where_clause}
     """
 
     summary_sql = f"""
@@ -133,20 +165,35 @@ def analytics_products_data():
         SELECT DISTINCT camp.campaign_id, camp.marketplace
         FROM `{camp_table}` camp
         {camp_where}
+    ),
+    agg AS (
+        SELECT
+            a.advertised_asin AS asin,
+            a.marketplace,
+            SUM(a.impressions)   AS impressions,
+            SUM(a.clicks)        AS clicks,
+            ROUND(SUM(a.cost),2) AS cost,
+            ROUND(SUM(a.sales_14d),2) AS sales_14d,
+            SUM(a.purchases_14d) AS purchases_14d,
+            CASE WHEN SUM(a.impressions)>0 THEN ROUND(SUM(a.clicks)/SUM(a.impressions)*100,3) ELSE NULL END AS ctr,
+            CASE WHEN SUM(a.sales_14d)>0 THEN ROUND(SUM(a.cost)/SUM(a.sales_14d)*100,1) ELSE NULL END AS acos
+        FROM `{asin_table}` a
+        INNER JOIN camp_filter cf
+            ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
+        WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
+        {date_where}
+        {asin_cond}
+        GROUP BY a.advertised_asin, a.marketplace
     )
     SELECT
-        COUNT(DISTINCT a.advertised_asin)  AS total_asins,
-        SUM(a.impressions)                 AS impressions,
-        SUM(a.clicks)                      AS clicks,
-        ROUND(SUM(a.cost), 2)              AS cost,
-        ROUND(SUM(a.sales_14d), 2)         AS sales_14d,
-        SUM(a.purchases_14d)               AS purchases_14d
-    FROM `{asin_table}` a
-    INNER JOIN camp_filter cf
-        ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
-    WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
-    {date_where}
-    {asin_cond}
+        COUNT(DISTINCT asin)   AS total_asins,
+        SUM(impressions)       AS impressions,
+        SUM(clicks)            AS clicks,
+        ROUND(SUM(cost), 2)    AS cost,
+        ROUND(SUM(sales_14d),2) AS sales_14d,
+        SUM(purchases_14d)     AS purchases_14d
+    FROM agg
+    {where_clause}
     """
 
     try:
@@ -211,11 +258,13 @@ def analytics_product_campaigns():
     sql = f"""
     SELECT
         a.campaign_id,
-        MAX(camp.campaign_name)   AS campaign_name,
-        MAX(camp.campaign_state)  AS campaign_state,
-        MAX(camp.targeting_type)  AS targeting_type,
-        MAX(camp.portfolio_id)    AS portfolio_id,
+        MAX(camp.campaign_name)    AS campaign_name,
+        MAX(camp.campaign_state)   AS campaign_state,
+        MAX(camp.targeting_type)   AS targeting_type,
+        MAX(camp.portfolio_id)     AS portfolio_id,
         COALESCE(MAX(pl.portfolio_name), MAX(camp.portfolio_name)) AS portfolio_name,
+        MAX(camp.daily_budget)     AS daily_budget,
+        MAX(camp.end_date)         AS campaign_end_date,
         a.marketplace,
         SUM(a.impressions)           AS impressions,
         SUM(a.clicks)                AS clicks,

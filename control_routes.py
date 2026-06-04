@@ -49,8 +49,11 @@ ALLOWED_OPS = {
     "target":         ["state", "bid"],   # авто-таргеты (KEYWORDS_CLOSE_MATCH и т.д.)
     "keyword_add":    ["—"],   # new_value = JSON {text, match_type, bid, ad_group_id, campaign_id}
     "negative_add":   ["—"],   # new_value = JSON {text, match_type, ad_group_id, campaign_id}
-    "negative_delete":["—"],   # entity_id = keyword_id минус слова
-    "product_ad":     ["state"],  # включить/выключить объявление
+    "negative_delete":    ["—"],   # entity_id = keyword_id минус слова
+    "negative_product_add":["—"], # new_value = JSON {asin, ad_group_id, campaign_id}
+    "ad_group_add":       ["—"],  # new_value = JSON {name, default_bid, campaign_id}
+    "product_ad_add":     ["—"],  # new_value = JSON {asin, campaign_id, ad_group_id?, ad_group_name?}
+    "product_ad":         ["state"],
 }
 
 LABELS = {
@@ -69,7 +72,10 @@ LABELS = {
     ("keyword_add",    "—"):       lambda nv: f'➕ Добавить kw: {nv[:60]}',
     ("negative_add",   "—"):       lambda nv: f'🚫 Добавить минус: {nv[:60]}',
     ("negative_delete","—"):       lambda nv: '🗑️ Удалить минус слово',
+    ("negative_product_add","—"):  lambda nv: f'🚫 Минус ASIN: {nv[:60]}',
+    ("ad_group_add","—"):          lambda nv: f'➕ Новая группа: {nv[:60]}',
     ("product_ad",  "state"):       lambda nv: "▶ Включить объявление" if nv == "ENABLED" else "⏸ Выключить объявление",
+    ("product_ad_add","—"):         lambda nv: f'🖼 Объявление ASIN: {nv[:60]}',
 }
 
 
@@ -135,20 +141,23 @@ def add_change():
     if not new_value and not (entity_type == "campaign" and field_name == "end_date"):
         return jsonify({"error": "new_value обязателен"}), 400
 
-    # Проверка дублей — не добавляем если уже есть PENDING для того же объекта+поля
     bq = bigquery.Client(project=PROJECT_ID)
     table = PENDING_TABLES[account_type]
-    fn_clause = f"AND field_name = '{field_name}'" if field_name != '—' else ''
-    dup_sql = f"""
-    SELECT COUNT(*) as cnt FROM `{table}`
-    WHERE entity_id = '{entity_id}'
-      AND entity_type = '{entity_type}'
-      {fn_clause}
-      AND status IN ('PENDING', 'APPROVED')
-    """
-    dup_count = list(bq.query(dup_sql).result())[0].cnt
-    if dup_count > 0:
-        return jsonify({"error": "Уже есть ожидающее изменение для этого объекта"}), 409
+
+    # Для операций добавления разрешаем несколько записей (несколько минусов/ключей в одну группу)
+    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add'}
+    if entity_type not in NO_DUP_CHECK:
+        fn_clause = f"AND field_name = '{field_name}'" if field_name != '—' else ''
+        dup_sql = f"""
+        SELECT COUNT(*) as cnt FROM `{table}`
+        WHERE entity_id = '{entity_id}'
+          AND entity_type = '{entity_type}'
+          {fn_clause}
+          AND status IN ('PENDING', 'APPROVED')
+        """
+        dup_count = list(bq.query(dup_sql).result())[0].cnt
+        if dup_count > 0:
+            return jsonify({"error": "Уже есть ожидающее изменение для этого объекта"}), 409
 
     row = {
         "id":          str(uuid.uuid4()),
