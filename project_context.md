@@ -30,14 +30,16 @@
 | `campaigns_routes.py` | `campaigns_bp` | `/campaigns` — синхронизация структуры кампаний из SP API |
 | `portfolios.py` | `portfolios_bp` | `/portfolios` — управление именами портфолио |
 | `analytics_routes.py` | `analytics_bp` | `/analytics/campaigns` — аналитика кампаний |
+| `products_routes.py` | `products_bp` | `/analytics/products` — аналитика по рекламируемым ASIN ← НОВЫЙ |
 | `control_routes.py` | `control_bp` | `/control` — управление рекламой через pending_changes |
 
 ### HTML страницы
 
 | Файл | URL | Описание |
 |---|---|---|
-| `index.html` | `/` | Главная — навигация |
+| `index.html` | `/` | Главная — навигация по всем разделам |
 | `campaigns_analytics.html` | `/analytics/campaigns` | Аналитика кампаний с фильтрами, структурой, управлением |
+| `products_analytics.html` | `/analytics/products` | Аналитика по рекламируемым ASIN ← НОВЫЙ |
 | `control.html` | `/control` | Очередь изменений: Ожидают / Одобрено / История |
 | `catalog.html` | `/catalog` | Импорт каталога |
 | `earnings.html` | `/earnings` | Импорт продаж |
@@ -71,6 +73,7 @@ app.py
 ├── campaigns_routes.py → campaigns_bp
 ├── portfolios.py       → portfolios_bp
 ├── analytics_routes.py → analytics_bp
+├── products_routes.py  → products_bp      ← НОВЫЙ
 └── control_routes.py   → control_bp
 ```
 
@@ -79,6 +82,12 @@ app.py
 def _get_progress_store():
     import app
     return app.progress_store
+```
+
+Регистрация `products_bp` в `app.py`:
+```python
+from products_routes import products_bp
+app.register_blueprint(products_bp)
 ```
 
 ---
@@ -99,6 +108,12 @@ def _get_progress_store():
 ### GET /analytics/campaigns/portfolios
 Уникальные портфолио из `campaigns_merch/kdp` с JOIN на `portfolio_labels`
 
+Параметры: `account_type`, `marketplace`, `targeting_type`, `campaign_state`
+
+Возвращает: `{"portfolios": [{"id": "...", "name": "..."}]}`
+
+**Важно:** endpoint зарегистрирован дважды в `analytics_routes.py` (баг). Flask использует первую функцию.
+
 ### GET /analytics/campaigns/structure
 Структура кампании: группы → таргеты + ключевые слова + поисковые запросы + минус слова + объявления + статистика
 
@@ -111,9 +126,13 @@ def _get_progress_store():
   "campaign_end_date": "2026-06-30",
   "groups": [{
     "id": "...", "name": "...", "bid": 0.5, "state": "ENABLED",
-    "stats": {"impressions": 1000, "clicks": 10, ...},
-    "keywords": [{"id": "...", "text": "...", "match_type": "BROAD", "bid": 0.5, "state": "ENABLED", "stats": {...}}],
-    "targets": [...],
+    "stats": {"impressions": 1000, "clicks": 10, "cost": 5.0, "sales_14d": 20.0, "purchases_14d": 2, "acos": 25.0},
+    "keywords": [{
+      "id": "...", "text": "...", "match_type": "BROAD", "bid": 0.5, "state": "ENABLED",
+      "stats": {...},
+      "search_terms": [{"term": "...", "keyword_type": "...", "impressions": ..., "clicks": ..., "purchases_14d": ...}]
+    }],
+    "targets": [{...}],
     "negatives": [{"text": "...", "match_type": "EXACT", "type": "keyword"}],
     "search_terms": [...],
     "ads": [{"ad_id": "...", "asin": "...", "title": "...", "image_url": "...", "stats": {...}}]
@@ -123,8 +142,90 @@ def _get_progress_store():
 }
 ```
 
+**Важно про search_terms:**
+- Для **авто-кампаний**: `search_terms` на уровне группы (`st_by_ag[(ag_id)]` → `group['search_terms']`)
+- Для **мануальных кампаний**: `search_terms` на уровне ключевого слова (`st_by_kw[(ag_id, keyword_id)]` → `keyword['search_terms']`)
+- В JS нужно собирать из обоих источников:
+  ```js
+  const allSt = [
+    ...(g.search_terms || []),
+    ...(g.keywords || []).flatMap(kw => kw.search_terms || []),
+    ...(g.targets || []).flatMap(t => t.search_terms || []),
+  ];
+  ```
+
 ### GET /analytics/debug/targeting
 Debug: структура кампании в BigQuery. Параметры: `campaign_id`, `account_type`, `date_from`, `date_to`
+
+---
+
+## Products API (products_routes.py) ← НОВЫЙ
+
+### GET /analytics/products
+Возвращает `products_analytics.html`
+
+### GET /analytics/products/data
+Список рекламируемых ASIN с агрегированной статистикой.
+
+Параметры: `account_type`, `date_from`, `date_to`, `marketplace`, `portfolio_ids`, `asin`,
+`sort_by`, `sort_dir`, `page`, `per_page`
+
+SQL: JOIN `asin_stats_{suffix}` с `campaigns_{suffix}` (фильтр по портфолио/маркетплейсу),
+LEFT JOIN `catalog` для названия, изображения, статуса, цены.
+
+**Алиасы в SQL:** CTE использует алиас `camp` (не `c`) чтобы не конфликтовать с `cat` (catalog).
+
+Возвращает:
+```json
+{
+  "rows": [{"asin": "...", "marketplace": "US", "impressions": ..., "clicks": ...,
+            "cost": ..., "sales_14d": ..., "purchases_14d": ..., "campaign_count": ...,
+            "ctr": ..., "acos": ..., "title": "...", "image_url": "...",
+            "product_type": "STANDARD_TSHIRT", "price": "19.95", "status": "PUBLISHED"}],
+  "total": 5752, "page": 1, "per_page": 50,
+  "summary": {"total_asins": ..., "impressions": ..., "clicks": ..., "cost": ...,
+               "sales_14d": ..., "purchases_14d": ..., "acos": ..., "ctr": ...}
+}
+```
+
+### GET /analytics/products/campaigns
+Кампании для конкретного ASIN за период.
+
+Параметры: `asin`, `marketplace`, `account_type`, `date_from`, `date_to`
+
+Возвращает список кампаний с `impressions`, `clicks`, `cost`, `sales_14d`, `purchases_14d`, `ctr`, `acos`, `portfolio_name`.
+
+---
+
+## Products Analytics HTML (products_analytics.html) ← НОВЫЙ
+
+Светлая тема (`--bg: #f4f4f6`). Аналог Amazon Ads Console → Products.
+
+**Функциональность:**
+- Фильтры: Аккаунт (MERCH/KDP), дата от/до, маркетплейс, мультивыбор портфолио, поиск по ASIN
+- Сводная статистика: ASIN, Показы, Клики, CTR, Расходы, Продажи 14d, Заказы 14d, ACOS
+- Таблица с фото из каталога, названием, статусом, типом, ценой; сортировка, пагинация 50/страница
+- Клик по строке → inline-панель кампаний (без перенаправления)
+- Клик по кампании → структура групп (Таргеты / Поисковые запросы / Минус слова)
+- Колонки ключевых слов: Тип · Ставка (оранжевая) · Показы · Клики · Заказы · Расходы · Продажи · ACOS
+- Колонки хедера кампании: Показы · Клики · Расходы · Продажи · Заказы · ACOS · Портфолио
+- Колонки хедера группы: Показы · Клики · Расходы · Продажи · Заказы · ACOS
+
+**Портфолио dropdown:** пробует `/analytics/campaigns/portfolios`, fallback на `/portfolios/list`.
+
+**Фильтрация групп по ASIN:**
+```js
+const anyHasAsin = groups.some(g => g.ads.some(a => a.asin === filterAsin));
+// MANUAL: показываем только группы с совпадающим ASIN в ads
+// AUTO: нет ASIN в ads → показываем группы с clicks > 0
+// Если ads есть но asin null → показываем с clicks > 0
+```
+
+**Scroll без прыжков:**
+- `html { overflow-anchor: none }` — отключает браузерный scroll anchoring
+- `rowClick` — вставляет expand-строку через `tr.after()`, не перерисовывает таблицу
+- `grpClick(this)` — передаёт header-элемент, навигация через `closest('.gg')` + `querySelector('.ggb')`, двойной `requestAnimationFrame` для восстановления `scrollY`
+- Вкладки через `tabClick(event, idx)` без ID групп — `closest('.ggb')` для точного контейнера
 
 ---
 
@@ -257,18 +358,18 @@ keyword_id, keyword_text, match_type, keyword_bid, keyword_state
 target_id, targeting_expression, target_bid, target_state
 ad_id, sku, asin, ad_state
 placement, placement_percentage
-synced_at
+marketplace, synced_at
 ```
 
 **Важно:** негативные product targeting (ASIN) хранятся как `entity_type = "negative_product_targeting"`,
-`targeting_expression` = ASIN (например `B09X4YHJ2B`).
-ASIN извлекается из `targetDetails.productTarget.product.productId` в API ответе.
+`targeting_expression` = ASIN. ASIN из `targetDetails.productTarget.product.productId` в API ответе.
 
 ### targets_stats_merch / targets_stats_kdp
 ```sql
 date, campaign_id, ad_group_id, keyword_id, keyword, keyword_type, targeting
 impressions, clicks, cost, top_of_search_impression_share
 purchases_1d/7d/14d, sales_1d/7d/14d
+marketplace
 ```
 PARTITION BY date, CLUSTER BY marketplace, campaign_id
 
@@ -277,6 +378,7 @@ PARTITION BY date, CLUSTER BY marketplace, campaign_id
 date, campaign_id, ad_group_id, advertised_asin, advertised_sku
 impressions, clicks, cost
 purchases_1d/7d/14d, sales_1d/7d/14d
+marketplace
 ```
 
 ### search_terms_merch / search_terms_kdp
@@ -285,6 +387,7 @@ date, campaign_id, ad_group_id, keyword_id, keyword, keyword_type
 targeting, match_type, search_term
 impressions, clicks, cost
 purchases_1d/7d/14d, sales_1d/7d/14d
+marketplace
 ```
 
 ### pending_changes_merch / pending_changes_kdp
@@ -336,37 +439,22 @@ purchased, royalties, revenue, currency
 
 ---
 
-## Скрипт выгрузки каталога из Productor (IndexedDB → CSV)
+## Portfolios API (portfolios.py)
 
-Запускается в консоли браузера на странице Merch by Amazon при активном Productor:
-
-```javascript
-const dbName = "prettymerch_tmp";
-const storeName = "products";
-const fromDate = new Date("2026-05-10").getTime() / 1000;
-const req = indexedDB.open(dbName);
-req.onsuccess = function(e) {
-  const db = e.target.result;
-  db.transaction(storeName, "readonly").objectStore(storeName).getAll().onsuccess = function(e) {
-    const data = e.target.result;
-    const filtered = data.filter(row => row.createdDate >= fromDate);
-    if (!filtered.length) { console.log("Нет товаров после указанной даты"); return; }
-    const keys = ["asin","brandName","createdDate","currencyCode","deleteReasonType",
-      "designId","estimatedExpirationDate","listPrice","listingId","lockReasonType",
-      "marketplace","productImageUrn","productTitle","productType","searchableOnRetail",
-      "status","updatedDate","pm_data"];
-    const csv = [keys.join(","), ...filtered.map(row => keys.map(k => JSON.stringify(row[k] ?? "")).join(","))].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
-    a.download = "prettymerch_products.csv";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    console.log(`Выгружено: ${filtered.length} из ${data.length}`);
-  };
-};
+```
+GET  /portfolios             → HTML страница
+POST /portfolios/sync        → сканирует campaigns_*, добавляет новые в portfolio_labels
+POST /portfolios/update      → обновляет одну запись
+POST /portfolios/bulk-update → обновляет массив {changes: [...]}
+GET  /portfolios/list        → все портфолио из portfolio_labels
+POST /portfolios/import-csv  → импорт имён из CSV через MERGE
 ```
 
----
+### Импорт CSV (два формата)
+- **Amazon Bulk CSV** (разделитель `;`) — колонки `Portfolio ID`, `Portfolio Name`
+- **Простой CSV** (разделитель `,`) — колонки `portfolio_id`, `portfolio_name`
 
+---
 
 ## Логика импорта каталога
 
@@ -470,23 +558,6 @@ python3 collect.py 2026-05-31 all                     # все профили
 
 ---
 
-## Portfolios API (portfolios.py)
-
-```
-GET  /portfolios             → HTML страница
-POST /portfolios/sync        → сканирует campaigns_*, добавляет новые в portfolio_labels
-POST /portfolios/update      → обновляет одну запись
-POST /portfolios/bulk-update → обновляет массив {changes: [...]}
-GET  /portfolios/list        → все портфолио из portfolio_labels
-POST /portfolios/import-csv  → импорт имён из CSV через MERGE
-```
-
-### Импорт CSV (два формата)
-- **Amazon Bulk CSV** (разделитель `;`) — колонки `Portfolio ID`, `Portfolio Name`
-- **Простой CSV** (разделитель `,`) — колонки `portfolio_id`, `portfolio_name`
-
----
-
 ## Файлы которые есть в репо (не удалять)
 
 | Файл | Описание |
@@ -496,7 +567,6 @@ POST /portfolios/import-csv  → импорт имён из CSV через MERGE
 | `get_merch_eu_profiles.py` | Получение EU профилей |
 | `reports_log.json` | Лог отчётов — активный файл |
 | `.gitignore` | Настройки git |
-| `debug_negative_targets.py` | Debug скрипт для проверки негативных таргетов |
 
 ---
 
@@ -544,3 +614,33 @@ __pycache__/
 ### Дата окончания кампании не меняется
 Причина: Amazon SP API v1 использует поле `endDateTime` в формате ISO 8601 (`2026-06-30T23:59:59Z`)
 Решение: исправлено в `send.py` — конвертируем YYYY-MM-DD → ISO 8601
+
+### Marketplace-scoped DELETE при синхронизации
+Причина: `TRUNCATE TABLE` удаляет данные для всех маркетплейсов
+Решение: `DELETE FROM table WHERE marketplace = 'US'` перед синхронизацией конкретного маркетплейса
+
+### Портфолио dropdown пустой на Products странице
+Причина: `/analytics/campaigns/portfolios` зарегистрирован дважды в `analytics_routes.py`
+Решение: `products_analytics.html` пробует два endpoint и берёт первый с данными
+
+### Scroll прыгает при раскрытии групп
+Причина: изменение `display: none → block` меняет высоту страницы, браузер применяет scroll anchoring
+Решение: `html { overflow-anchor: none }` + `grpClick(this)` через `closest()`/`querySelector()` + двойной `requestAnimationFrame`
+
+### SQL алиас конфликт в products_routes.py
+Причина: алиас `c` для `campaigns` конфликтовал с `c` для `catalog` в одном запросе
+Решение: CTE использует алиас `camp` — `FROM campaigns camp WHERE camp.entity_type = 'campaign'`
+
+### Поисковые запросы пустые в мануальных кампаниях на Products странице
+Причина: `search_terms` для мануальных кампаний хранятся в `keyword['search_terms']`, не в `group['search_terms']`
+Решение: в JS собирать из `g.search_terms + g.keywords[].search_terms + g.targets[].search_terms`
+
+---
+
+## На горизонте (следующие задачи)
+
+- **Pending changes UI** — страница `/control` для просмотра и одобрения изменений из очереди
+- **Search Term Harvesting** — таблица `keyword_queue`, автоматическое добавление новых ключей
+- **analyze.py** — автоматический bid optimization loop (минимум 10 кликов за 14 дней, ACOS пороги)
+- **Looker Studio** — дашборды для аналитики
+- **Retool** — управление через готовый UI

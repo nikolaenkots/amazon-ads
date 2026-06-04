@@ -4,58 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Amazon Ads Automation</title>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f5f2ed;
-  --surface: #ffffff;
-  --surface2: #f0ece5;
-  --border: #e4dfd7;
-  --border2: #d4cec5;
-  --text: #1c1a17;
-  --muted: #7a756d;
-  --dim: #b5b0a8;
-  --accent: #c8440a;
-  --accent-bg: rgba(200,68,10,0.07);
-  --accent-border: rgba(200,68,10,0.2);
-  --green: #2d7a4f;
-  --green-bg: rgba(45,122,79,0.07);
-  --green-border: rgba(45,122,79,0.2);
-  --blue: #1a5fa8;
-  --blue-bg: rgba(26,95,168,0.07);
-  --blue-border: rgba(26,95,168,0.2);
-  --purple: #6b3fa0;
-  --purple-bg: rgba(107,63,160,0.07);
-  --purple-border: rgba(107,63,160,0.2);
+  --bg:          #0f0f11;
+  --surface:     #18181c;
+  --surface2:    #1f1f24;
+  --border:      #2a2a30;
+  --border2:     #38383f;
+  --text:        #e8e8ec;
+  --muted:       #888892;
+  --dim:         #555560;
+  --accent:      #c84b14;
+  --accent-bg:   rgba(200,75,20,.1);
+  --green:       #3ecf8e;
+  --green-bg:    rgba(62,207,142,.1);
+  --blue:        #4c9fff;
+  --blue-bg:     rgba(76,159,255,.08);
+  --purple:      #a78bfa;
+  --purple-bg:   rgba(167,139,250,.08);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
+  font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 40px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 52px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 500;
-}
+.logo { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
 .logo-dot {
-  width: 22px; height: 22px;
+  width: 26px; height: 26px; border-radius: 7px;
   background: var(--accent);
-  border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
 }
 .header-tag {
@@ -74,9 +61,7 @@ main {
   width: 100%;
   padding: 60px 40px;
 }
-.hero {
-  margin-bottom: 50px;
-}
+.hero { margin-bottom: 50px; }
 .hero-label {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
@@ -284,6 +269,48 @@ main {
         <div class="card-tag green">Портфолио</div>
         <div class="card-title">Управление портфолио</div>
         <div class="card-desc">Переименование портфолио для MERCH и KDP аккаунтов. Синхронизация из кампаний.</div>
+      </div>
+      <div class="card-arrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+    </a>
+
+    <a href="/analytics/campaigns" class="nav-card blue">
+      <div class="card-icon blue">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="2" y1="21" x2="22" y2="21"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tag blue">Аналитика</div>
+        <div class="card-title">Аналитика кампаний</div>
+        <div class="card-desc">Статистика по кампаниям с фильтрами, сортировкой и drill-down по группам и ключевым словам.</div>
+      </div>
+      <div class="card-arrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+    </a>
+
+    <a href="/analytics/products" class="nav-card blue">
+      <div class="card-icon blue">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="9.5" r="2"/><path d="M14 9h4M14 12h2M2 15l5-5 4 4 3-3 5 4"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tag blue">Аналитика</div>
+        <div class="card-title">Products</div>
+        <div class="card-desc">Статистика по рекламируемым ASIN. Клики, расходы, ACOS по товарам с разбивкой по кампаниям.</div>
+      </div>
+      <div class="card-arrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+    </a>
+
+    <a href="/control" class="nav-card accent">
+      <div class="card-icon accent">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-tag accent">Управление</div>
+        <div class="card-title">Очередь изменений</div>
+        <div class="card-desc">Просмотр, одобрение и отправка изменений ставок и статусов через pending_changes.</div>
       </div>
       <div class="card-arrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
