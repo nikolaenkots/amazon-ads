@@ -63,6 +63,8 @@
 - **DM Sans** — основной текст, кнопки, навигация
 - **DM Mono** — числа, ID, бейджи, лейблы колонок, моно-значения
 
+> **Важно:** старые страницы (`earnings.html`, `portfolios.html`, `catalog.html`) использовали дополнительно `Instrument Serif` и другие CSS токены (`--bg:#f5f2ed`). Новые страницы — только DM Sans + DM Mono, токены из таблицы выше.
+
 ### Header (одинаковый на всех страницах)
 
 ```css
@@ -114,6 +116,7 @@ nav a.active { color:var(--accent); background:var(--accent-bg); }
 ```css
 main { padding:18px 32px; max-width:1400px; margin:0 auto; }
 /* Для узких страниц (portfolios, campaigns sync): max-width:1200px или 900px */
+/* Для страниц импорта: grid 2 колонки 1fr + 360px, max-width:1060px */
 ```
 
 ### Кнопки
@@ -134,6 +137,44 @@ main { padding:18px 32px; max-width:1400px; margin:0 auto; }
 .btn-g:hover:not(:disabled) { background:#157a4d; }
 .btn-d  { background:var(--red-bg); color:var(--red); border:1px solid var(--red-bd); }
 ```
+
+### Страницы импорта (паттерн)
+
+Layout: двухколоночный grid `1fr 360px`, `max-width:1060px`, `padding:32px`, `gap:24px`.
+
+**Левая колонка:** заголовок, описание, drop-zone, file-info, steps, progress bar, кнопка импорта.
+**Правая колонка:** stats-grid (2×2 + span 2), done-banner, error-card, log-card.
+
+```css
+/* Drop zone */
+.drop-zone { border:1.5px dashed var(--border2); border-radius:12px; padding:36px 24px; text-align:center; cursor:pointer; transition:all .2s; background:var(--surface); }
+.drop-zone:hover, .drop-zone.over { border-color:var(--accent); background:var(--accent-bg); }
+
+/* Steps */
+.step-circle { width:24px; height:24px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface); display:flex; align-items:center; justify-content:center; font-family:'DM Mono',monospace; font-size:10px; color:var(--dim); transition:all .3s; }
+.step-circle.done     { border-color:var(--green); background:var(--green-bg); color:var(--green); }
+.step-circle.spinning { border-color:var(--accent); background:var(--accent-bg); color:var(--accent); animation:pulse .8s ease infinite alternate; }
+
+/* Import button */
+.btn-import { width:100%; height:42px; margin-top:18px; background:var(--accent); color:white; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
+.btn-import:hover:not(:disabled) { background:#b33d09; }
+.btn-import:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Stat cards */
+.stat-val { font-size:26px; font-weight:600; letter-spacing:-.02em; }
+```
+
+**Polling (JS паттерн для всех import страниц):**
+```js
+function startPolling(jobId) {
+  pollTimer = setInterval(async function() {
+    const r = await fetch('/BLUEPRINT/progress/' + jobId);
+    const msgs = await r.json();
+    msgs.forEach(handleMsg);
+  }, 1500);
+}
+```
+Endpoint `/BLUEPRINT/progress/<job_id>` возвращает JSON-массив событий и **очищает** очередь.
 
 ### Таблица (стандартная)
 
@@ -316,9 +357,10 @@ function toast(msg, ok=true){
 
 | Файл | Blueprint | Описание |
 |---|---|---|
-| `app.py` | — | Flask init, регистрация blueprints, `progress_store = {}` |
+| `app.py` | — | Flask init, регистрация blueprints, `progress_store = {}`, HTTP Basic Auth |
 | `catalog_routes.py` | `catalog_bp` | `/catalog` — импорт каталога из Productor CSV |
-| `earnings_routes.py` | `earnings_bp` | `/earnings` — импорт отчётов продаж MBA |
+| `earnings_routes.py` | `earnings_bp` | `/earnings` — импорт отчётов продаж MBA (CSV) |
+| `kdp_earnings_routes.py` | `kdp_earnings_bp` | `/earnings-kdp` — импорт продаж KDP (Excel) |
 | `ads_routes.py` | `ads_bp` | `/ads` — сбор рекламной статистики |
 | `campaigns_routes.py` | `campaigns_bp` | `/campaigns` — синхронизация структуры кампаний из SP API |
 | `portfolios.py` | `portfolios_bp` | `/portfolios` — управление именами портфолио |
@@ -337,7 +379,8 @@ function toast(msg, ok=true){
 | `campaigns.html` | `/campaigns` | Синхронизация кампаний из SP API |
 | `portfolios.html` | `/portfolios` | Управление портфолио |
 | `catalog.html` | `/catalog` | Импорт каталога |
-| `earnings.html` | `/earnings` | Импорт продаж |
+| `earnings.html` | `/earnings` | Импорт продаж Merch (CSV) |
+| `earnings_kdp.html` | `/earnings-kdp` | Импорт продаж KDP (Excel, вкладка Combined Sales) |
 | `ads.html` | `/ads` | Сбор статистики |
 
 ### CLI скрипты
@@ -360,14 +403,15 @@ function toast(msg, ok=true){
 
 ```
 app.py
-├── catalog_routes.py   → catalog_bp
-├── earnings_routes.py  → earnings_bp
-├── ads_routes.py       → ads_bp
-├── campaigns_routes.py → campaigns_bp
-├── portfolios.py       → portfolios_bp
-├── analytics_routes.py → analytics_bp
-├── products_routes.py  → products_bp
-└── control_routes.py   → control_bp
+├── catalog_routes.py      → catalog_bp
+├── earnings_routes.py     → earnings_bp
+├── kdp_earnings_routes.py → kdp_earnings_bp
+├── ads_routes.py          → ads_bp
+├── campaigns_routes.py    → campaigns_bp
+├── portfolios.py          → portfolios_bp
+├── analytics_routes.py    → analytics_bp
+├── products_routes.py     → products_bp
+└── control_routes.py      → control_bp
 ```
 
 `progress_store = {}` — shared dict в `app.py`, используется всеми blueprints:
@@ -375,6 +419,38 @@ app.py
 def _get_progress_store():
     import app
     return app.progress_store
+```
+
+---
+
+## KDP Earnings (kdp_earnings_routes.py)
+
+### Источник данных
+**KDP Sales Report** — Excel файл (.xlsx), скачивается из KDP Reports → Sales Dashboard.
+Используется вкладка **«Combined Sales»** — содержит все типы: Paperback, Hardcover, eBook.
+
+### Endpoints
+
+| Метод | URL | Описание |
+|---|---|---|
+| `POST` | `/kdp-earnings/upload` | Принимает `.xlsx`, запускает импорт в фоне, возвращает `{job_id}` |
+| `GET` | `/kdp-earnings/progress/<job_id>` | Polling: возвращает JSON-массив событий и очищает очередь |
+| `GET` | `/kdp-earnings/count` | Количество строк в таблице `earnings_kdp` |
+
+### Шаги импорта
+1. Читаем Excel (`pandas`, вкладка `Combined Sales`, `dtype=str`)
+2. Парсим строки → dict, дедупликация по MD5-хэшу `(royalty_date, asin_isbn, marketplace, transaction_type, units_sold, units_refunded, royalty, currency)`
+3. Проверяем существующие хэши в BigQuery (батчи по 10 000)
+4. Загружаем только новые строки (`WRITE_APPEND`, чанки по 1000)
+
+### Маршрут в app.py
+```python
+from kdp_earnings_routes import kdp_earnings_bp
+app.register_blueprint(kdp_earnings_bp)
+
+@app.route('/earnings-kdp')
+def earnings_kdp():
+    return send_from_directory(BASE_DIR, 'earnings_kdp.html')
 ```
 
 ---
@@ -660,7 +736,7 @@ ag_id = (ag_name_to_id.get((ag_name, camp_id))
  "budgetValue": {"monetaryBudgetValue": {
    "monetaryBudget": {"value": float(val)},
    "marketplaceSettings": [{"marketplace": mkt_code, "monetaryBudget": {"value": float(val)}}]
- }}}
+}}}
 ```
 
 **Дата окончания** (с timezone offset):
@@ -703,7 +779,7 @@ mt = raw_mt.replace("NEGATIVE_", "")
      "matchType": "PRODUCT_EXACT",
      "productIdType": "ASIN",
      "product": {"productId": val["asin"], "productIdType": "ASIN"}
- }}}
+}}}
 ```
 
 **Создание ad_group_add:**
@@ -719,7 +795,7 @@ mt = raw_mt.replace("NEGATIVE_", "")
  "adType": "PRODUCT_AD", "state": "ENABLED",
  "creative": {"productCreative": {"productCreativeSettings": {
      "advertisedProduct": {"productId": val["asin"], "productIdType": "ASIN"}
- }}}}
+}}}}
 ```
 
 ### Мёрдж изменений одной кампании
@@ -835,10 +911,33 @@ image_url, live_url, edit_url
 bullet_point_1, bullet_point_2
 ```
 
-### earnings
+### earnings (Merch)
 ```sql
-sale_date, asin, marketplace, product_type
-purchased, royalties, revenue, currency
+row_hash, sale_date, asin, marketplace, product_type
+purchased, cancelled, returned, royalties, revenue, currency
+imported_at
+```
+
+### earnings_kdp
+```sql
+row_hash          -- MD5 ключ дедупликации
+royalty_date      -- DATE, партиция по этому полю
+asin_isbn         -- ASIN или ISBN-13 (STRING)
+title             -- название книги
+author            -- имя автора
+marketplace       -- Amazon.com / Amazon.co.uk / etc.
+royalty_type      -- 60% / 50%
+transaction_type  -- Standard - Paperback / Hardcover / eBook
+units_sold        -- INT64
+units_refunded    -- INT64
+net_units_sold    -- INT64
+list_price        -- средняя цена листинга без налогов
+offer_price       -- средняя цена предложения без налогов
+delivery_cost     -- средняя стоимость доставки/производства
+royalty           -- роялти в валюте
+currency          -- USD / GBP / EUR / AUD / CAD / JPY / ...
+imported_at       -- TIMESTAMP
+-- Партиция: royalty_date; Кластеризация: marketplace, asin_isbn
 ```
 
 ---
@@ -895,40 +994,6 @@ col[17] pm_data            (JSON: буллиты, картинки, продаж
 
 Парсер читает колонки по именам из заголовка — изменение порядка не сломает импорт.
 
-### Скрипт выгрузки из Productor (IndexedDB → CSV)
-Запускается в консоли браузера на странице Merch by Amazon при активном Productor:
-```javascript
-const dbName = "prettymerch_tmp";
-const storeName = "products";
-const fromDate = new Date("2026-05-10").getTime() / 1000;
-const req = indexedDB.open(dbName);
-req.onsuccess = function(e) {
-  const db = e.target.result;
-  db.transaction(storeName, "readonly").objectStore(storeName).getAll().onsuccess = function(e) {
-    const data = e.target.result;
-    const filtered = data.filter(row => row.createdDate >= fromDate);
-    if (!filtered.length) { console.log("Нет товаров после указанной даты"); return; }
-    const keys = [
-      "asin", "brandName", "createdDate", "currencyCode", "deleteReasonType",
-      "designId", "estimatedExpirationDate", "listPrice", "listingId",
-      "lockReasonType", "marketplace", "productImageUrn", "productTitle",
-      "productType", "searchableOnRetail", "status", "updatedDate", "pm_data"
-    ];
-    const csv = [
-      keys.join(","),
-      ...filtered.map(row => keys.map(k => JSON.stringify(row[k] ?? "")).join(","))
-    ].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
-    a.download = "prettymerch_products.csv";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    console.log(`Выгружено: ${filtered.length} из ${data.length}`);
-  };
-};
-```
-
-**Важно:** строки с пустым `asin` отбрасываются при импорте.
-
 ### MERGE процесс
 1. DROP + CREATE catalog_staging
 2. INSERT данные в staging чанками по 1000 строк
@@ -962,16 +1027,64 @@ python3 collect.py 2026-05-31 all                 # все профили
 
 ---
 
-## Как обновить на сервере
+## Авторизация (app.py)
+
+HTTP Basic Auth через `@app.before_request`. Логин/пароль задаются в `app.py`.
+
+```python
+# ── Auth ──────────────────────────────────────────────────
+import base64
+from flask import Response, request  # request обязателен!
+
+AUTH_USERNAME = "Artem"
+AUTH_PASSWORD = "..."
+
+def check_auth(auth_header):
+    if not auth_header or not auth_header.startswith('Basic '):
+        return False
+    try:
+        decoded = base64.b64decode(auth_header[6:]).decode('utf-8')
+        user, pwd = decoded.split(':', 1)
+        return user == AUTH_USERNAME and pwd == AUTH_PASSWORD
+    except Exception:
+        return False
+
+@app.before_request
+def require_auth():
+    if not check_auth(request.headers.get('Authorization')):
+        return Response(
+            'Требуется авторизация',
+            401,
+            {'WWW-Authenticate': 'Basic realm="Amazon Ads"'}
+        )
+```
+
+**Важно:** `request` должен быть импортирован явно. Без него Flask упадёт с Internal Server Error.
+
+---
+
+## Как обновить на GitHub
 
 ```bash
 cd ~/amazon-ads
+
+# Посмотреть что изменилось
+git status
+
+# Добавить все изменённые файлы
 git add -A
-git commit -m "описание изменений"
-git push
+
+# Или конкретные файлы
+git add earnings_kdp.html kdp_earnings_routes.py app.py index.html project_context.md
+
+# Коммит
+git commit -m "Add KDP earnings import"
+
+# Пуш в master
+git push origin master
 ```
 
-После изменения Python файлов — перезагрузить на PythonAnywhere (Web tab → Reload).
+После изменения Python файлов — перезагрузить на PythonAnywhere: **Web tab → Reload**.
 
 ### .gitignore (никогда не пушить)
 ```
@@ -1030,43 +1143,9 @@ const _jeS = (s) => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").repl
 Причина: `/analytics/campaigns/structure` не возвращает `targeting_type` на уровне кампании
 Решение: брать из строки таблицы и передавать через `state._expandedTgt` или аргумент `tgtTypeFallback`
 
----
-
----
-
-## Авторизация (app.py)
-
-HTTP Basic Auth через `@app.before_request`. Логин/пароль задаются в `app.py`.
-
-```python
-# ── Auth ──────────────────────────────────────────────────
-import base64
-from flask import Response, request  # request обязателен!
-
-AUTH_USERNAME = "Artem"
-AUTH_PASSWORD = "..."
-
-def check_auth(auth_header):
-    if not auth_header or not auth_header.startswith('Basic '):
-        return False
-    try:
-        decoded = base64.b64decode(auth_header[6:]).decode('utf-8')
-        user, pwd = decoded.split(':', 1)
-        return user == AUTH_USERNAME and pwd == AUTH_PASSWORD
-    except Exception:
-        return False
-
-@app.before_request
-def require_auth():
-    if not check_auth(request.headers.get('Authorization')):
-        return Response(
-            'Требуется авторизация',
-            401,
-            {'WWW-Authenticate': 'Basic realm="Amazon Ads"'}
-        )
-```
-
-**Важно:** `request` должен быть импортирован явно — либо в `from flask import Flask, send_from_directory, request` вверху файла, либо в отдельном `from flask import Response, request` рядом с auth блоком. Без `request` Flask упадёт с Internal Server Error.
+### Страница импорта зависает на 0%
+Причина: использование `EventSource` вместо polling через `setInterval`.
+Решение: endpoint `/BLUEPRINT/progress/<job_id>` должен возвращать JSON-массив и очищать очередь. JS — `setInterval(fetch(...), 1500)`.
 
 ---
 

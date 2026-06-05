@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Импорт продаж KDP · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --red:#d63031;--red-bg:rgba(214,48,49,.07);--red-bd:rgba(214,48,49,.22);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.2);
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+
+/* Header */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 32px; height:52px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.logo { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; }
+.logo-dot { width:26px; height:26px; border-radius:7px; background:var(--accent); display:flex; align-items:center; justify-content:center; }
+.header-nav { display:flex; align-items:center; gap:12px; }
+.header-back {
+  display:flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--muted); text-decoration:none; transition:color .15s;
+}
+.header-back:hover { color:var(--text); }
+.header-tag {
+  font-family:'DM Mono',monospace; font-size:11px; color:var(--dim);
+  background:var(--surface2); border:1px solid var(--border);
+  padding:3px 10px; border-radius:99px;
+}
+
+/* Layout */
+main {
+  flex:1;
+  display:grid; grid-template-columns:1fr 360px;
+  max-width:1060px; margin:0 auto; width:100%;
+  padding:32px; gap:24px;
+}
+
+/* Left panel */
+.panel-title { font-size:22px; font-weight:600; letter-spacing:-.02em; margin-bottom:4px; }
+.panel-sub { font-size:13px; color:var(--muted); margin-bottom:24px; line-height:1.6; }
+
+/* Drop zone */
+.drop-zone {
+  border:1.5px dashed var(--border2);
+  border-radius:12px; padding:36px 24px;
+  text-align:center; cursor:pointer;
+  transition:all .2s; background:var(--surface);
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color:var(--accent); background:var(--accent-bg);
+}
+.drop-icon {
+  width:44px; height:44px; margin:0 auto 14px;
+  background:var(--surface2); border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .2s;
+}
+.drop-zone:hover .drop-icon, .drop-zone.over .drop-icon { background:var(--accent-bg); }
+.drop-title { font-size:15px; font-weight:600; margin-bottom:4px; }
+.drop-hint { font-size:12px; color:var(--dim); font-family:'DM Mono',monospace; }
+input[type=file] { display:none; }
+
+/* File info */
+.file-info {
+  display:none; align-items:center; gap:12px;
+  padding:12px 16px; background:var(--surface);
+  border:1px solid var(--border); border-radius:8px; margin-top:12px;
+}
+.file-ico {
+  width:34px; height:34px; background:var(--green-bg);
+  border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.file-name { font-size:13px; font-weight:500; }
+.file-size { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; }
+.file-remove {
+  margin-left:auto; font-size:12px; color:var(--muted);
+  cursor:pointer; background:none; border:1px solid var(--border);
+  border-radius:6px; padding:3px 10px; transition:all .15s;
+}
+.file-remove:hover { color:var(--red); border-color:var(--red-bd); }
+
+/* Steps */
+.steps-wrap { margin-top:24px; display:flex; flex-direction:column; }
+.step-row {
+  display:flex; align-items:center; gap:12px;
+  padding:9px 0; position:relative;
+}
+.step-row:not(:last-child)::after {
+  content:''; position:absolute;
+  left:12px; top:34px; width:1px; height:18px;
+  background:var(--border);
+}
+.step-circle {
+  width:24px; height:24px; border-radius:50%;
+  border:1.5px solid var(--border2); background:var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'DM Mono',monospace; font-size:10px; color:var(--dim);
+  flex-shrink:0; transition:all .3s; z-index:1;
+}
+.step-circle.done    { border-color:var(--green); background:var(--green-bg); color:var(--green); }
+.step-circle.spinning {
+  border-color:var(--accent); background:var(--accent-bg); color:var(--accent);
+  animation:pulse .8s ease infinite alternate;
+}
+@keyframes pulse { from{opacity:.4} to{opacity:1} }
+.step-label { font-size:13px; color:var(--muted); transition:color .3s; }
+.step-label.done     { color:var(--green); }
+.step-label.spinning { color:var(--accent); font-weight:500; }
+
+/* Progress */
+.prog-wrap { margin-top:20px; display:none; }
+.prog-label {
+  display:flex; justify-content:space-between;
+  font-size:11px; color:var(--muted); margin-bottom:6px;
+  font-family:'DM Mono',monospace;
+}
+.prog-track { height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+.prog-fill  { height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .4s ease; }
+
+/* Button */
+.btn-import {
+  width:100%; height:42px; margin-top:18px;
+  background:var(--accent); color:white; border:none; border-radius:8px;
+  font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+  cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-import:hover:not(:disabled) { background:#b33d09; }
+.btn-import:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Right panel */
+.right-panel { display:flex; flex-direction:column; gap:14px; }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.stat-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:14px 16px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.stat-label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:.08em; text-transform:uppercase;
+  color:var(--dim); margin-bottom:6px;
+}
+.stat-val { font-size:26px; font-weight:600; color:var(--text); line-height:1; letter-spacing:-.02em; }
+.stat-val.green { color:var(--green); }
+.stat-val.red   { color:var(--red); }
+.stat-val.amber { color:var(--amber); }
+.stat-val.blue  { color:var(--blue); }
+
+/* Done banner */
+.done-banner {
+  background:var(--green-bg); border:1px solid var(--green-bd);
+  border-radius:10px; padding:14px 16px;
+  display:none; align-items:center; gap:12px;
+}
+.done-icon {
+  width:32px; height:32px; background:var(--green); border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; color:white; font-size:14px; font-weight:600;
+}
+.done-text { font-size:13px; color:var(--green); line-height:1.5; }
+.done-text strong { font-weight:600; }
+
+/* Error card */
+.error-card {
+  display:none; background:var(--red-bg);
+  border:1px solid var(--red-bd); border-radius:10px; overflow:hidden;
+}
+.error-header {
+  padding:9px 14px; border-bottom:1px solid var(--red-bd);
+  font-size:12px; font-weight:500; color:var(--red);
+  display:flex; align-items:center; gap:6px;
+}
+.error-body {
+  padding:9px 14px; font-family:'DM Mono',monospace;
+  font-size:11px; color:var(--red);
+  max-height:120px; overflow-y:auto; line-height:1.7;
+}
+
+/* Log */
+.log-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; overflow:hidden; flex:1;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.log-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--border);
+}
+.log-title { font-size:12px; font-weight:600; display:flex; align-items:center; gap:7px; }
+.log-dot { width:6px; height:6px; border-radius:50%; background:var(--dim); }
+.log-dot.live { background:var(--green); animation:blink .8s ease infinite alternate; }
+@keyframes blink { from{opacity:.3} to{opacity:1} }
+.log-clear {
+  font-size:11px; color:var(--dim); cursor:pointer;
+  background:none; border:none; font-family:'DM Mono',monospace;
+}
+.log-clear:hover { color:var(--muted); }
+.log-body {
+  padding:10px 14px; font-family:'DM Mono',monospace;
+  font-size:11px; line-height:1.7; max-height:260px;
+  overflow-y:auto; color:var(--muted);
+}
+.log-line { display:flex; gap:8px; padding:1px 0; }
+.log-time { color:var(--dim); flex-shrink:0; }
+.log-msg  { color:var(--muted); }
+.log-ok   .log-msg { color:var(--green); }
+.log-err  .log-msg { color:var(--red); }
+.log-info .log-msg { color:var(--accent); }
+.log-empty { color:var(--dim); font-size:12px; padding:20px 0; text-align:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+    </div>
+    Amazon Ads Automation
+  </div>
+  <div class="header-nav">
+    <a href="/" class="header-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Главная
+    </a>
+    <span class="header-tag">KDP · Продажи · Импорт</span>
+  </div>
+</header>
+
+<main>
+  <div>
+    <div class="panel-title">Загрузка продаж KDP</div>
+    <div class="panel-sub">KDP Sales Report · Excel файл · вкладка «Combined Sales» · Дедупликация по хэшу строки</div>
+
+    <div class="drop-zone" id="dropZone"
+         onclick="document.getElementById('fi').click()"
+         ondragover="onOver(event)"
+         ondragleave="onLeave()"
+         ondrop="onDrop(event)">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="drop-title">Перетащи XLSX сюда</div>
+      <div class="drop-hint">или нажми чтобы выбрать · только .xlsx</div>
+    </div>
+    <input type="file" id="fi" accept=".xlsx" onchange="onFile(this)">
+
+    <div class="file-info" id="fileInfo">
+      <div class="file-ico">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div class="file-name" id="fileName">—</div>
+        <div class="file-size" id="fileSize">—</div>
+      </div>
+      <button class="file-remove" onclick="removeFile()">Удалить</button>
+    </div>
+
+    <div class="steps-wrap">
+      <div class="step-row">
+        <div class="step-circle" id="s1">1</div>
+        <div class="step-label"  id="sl1">Чтение Excel (Combined Sales)</div>
+      </div>
+      <div class="step-row">
+        <div class="step-circle" id="s2">2</div>
+        <div class="step-label"  id="sl2">Проверка дублей по хэшу</div>
+      </div>
+      <div class="step-row">
+        <div class="step-circle" id="s3">3</div>
+        <div class="step-label"  id="sl3">Загрузка новых строк в BigQuery</div>
+      </div>
+    </div>
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-label">
+        <span id="progText">Обработка...</span>
+        <span id="progPct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <button class="btn-import" id="btnImport" disabled onclick="startImport()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg>
+      Импортировать в BigQuery
+    </button>
+  </div>
+
+  <div class="right-panel">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Обработано</div>
+        <div class="stat-val" id="stTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Загружено</div>
+        <div class="stat-val green" id="stInserted">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Пропущено</div>
+        <div class="stat-val blue" id="stSkipped">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ошибок</div>
+        <div class="stat-val red" id="stErrors">—</div>
+      </div>
+      <div class="stat-card" style="grid-column:span 2">
+        <div class="stat-label">В таблице итого</div>
+        <div class="stat-val amber" id="stTable">—</div>
+      </div>
+    </div>
+
+    <div class="done-banner" id="doneBanner">
+      <div class="done-icon">✓</div>
+      <div class="done-text" id="doneText">Импорт завершён</div>
+    </div>
+
+    <div class="error-card" id="errorCard">
+      <div class="error-header">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Ошибки импорта
+      </div>
+      <div class="error-body" id="errorBody"></div>
+    </div>
+
+    <div class="log-card">
+      <div class="log-header">
+        <div class="log-title">
+          <div class="log-dot" id="logDot"></div>
+          Лог
+        </div>
+        <button class="log-clear" onclick="clearLog()">очистить</button>
+      </div>
+      <div class="log-body" id="logBody">
+        <div class="log-empty">Загрузи файл и нажми Импортировать</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+let file = null, pollTimer = null;
+
+function onOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('over'); }
+function onLeave()  { document.getElementById('dropZone').classList.remove('over'); }
+function onDrop(e)  { e.preventDefault(); onLeave(); const f = e.dataTransfer.files[0]; if (f && f.name.endsWith('.xlsx')) setFile(f); }
+function onFile(i)  { if (i.files[0]) setFile(i.files[0]); }
+
+function setFile(f) {
+  file = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = (f.size/1024/1024).toFixed(1) + ' MB · ' + f.name;
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('btnImport').disabled = false;
+}
+function removeFile() {
+  file = null;
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('btnImport').disabled = true;
+  document.getElementById('fi').value = '';
+}
+
+function addLog(msg, type) {
+  type = type || '';
+  const body = document.getElementById('logBody');
+  const empty = body.querySelector('.log-empty');
+  if (empty) empty.remove();
+  const now = new Date().toLocaleTimeString('ru', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line log-' + type;
+  line.innerHTML = '<span class="log-time">' + now + '</span><span class="log-msg">' + msg + '</span>';
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+function clearLog() { document.getElementById('logBody').innerHTML = '<div class="log-empty">Лог очищен</div>'; }
+
+function setStep(n, state) {
+  const c = document.getElementById('s'  + n);
+  const l = document.getElementById('sl' + n);
+  c.className = 'step-circle ' + state;
+  l.className = 'step-label '  + state;
+  c.innerHTML = state === 'done' ? '✓' : String(n);
+}
+function resetSteps() { [1,2,3].forEach(function(n) { setStep(n, ''); }); }
+
+function setProgress(pct, text) {
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent  = pct + '%';
+  document.getElementById('progText').textContent = text;
+}
+
+function handleMsg(msg) {
+  if (msg.event === 'step') {
+    const n = msg.data.step;
+    [1,2,3].forEach(function(i) {
+      if      (i < n)  setStep(i, 'done');
+      else if (i === n) setStep(i, 'spinning');
+      else              setStep(i, '');
+    });
+    addLog(msg.data.msg, 'info');
+  } else if (msg.event === 'progress') {
+    const d = msg.data;
+    setProgress(d.pct, 'Загружено ' + d.inserted.toLocaleString() + ' из ' + d.total.toLocaleString() + '...');
+    document.getElementById('stTotal').textContent    = d.total.toLocaleString();
+    document.getElementById('stInserted').textContent = d.inserted.toLocaleString();
+    document.getElementById('stSkipped').textContent  = d.skipped.toLocaleString();
+    document.getElementById('stErrors').textContent   = d.errors;
+  } else if (msg.event === 'done') {
+    stopPolling();
+    const d = msg.data;
+    setProgress(100, 'Готово');
+    [1,2,3].forEach(function(n) { setStep(n, 'done'); });
+    document.getElementById('logDot').classList.remove('live');
+    document.getElementById('stTotal').textContent    = d.total.toLocaleString();
+    document.getElementById('stInserted').textContent = d.inserted.toLocaleString();
+    document.getElementById('stSkipped').textContent  = d.skipped.toLocaleString();
+    document.getElementById('stErrors').textContent   = d.errors;
+    document.getElementById('stTable').textContent    = (d.table_count || 0).toLocaleString();
+    addLog('✓ Готово — ' + d.inserted.toLocaleString() + ' загружено, ' + d.skipped.toLocaleString() + ' пропущено', 'ok');
+    const banner = document.getElementById('doneBanner');
+    banner.style.display = 'flex';
+    document.getElementById('doneText').innerHTML =
+      '<strong>Импорт завершён</strong><br>' +
+      d.inserted.toLocaleString() + ' новых · ' +
+      d.skipped.toLocaleString() + ' дублей · ' +
+      (d.table_count || 0).toLocaleString() + ' в таблице';
+    if (d.bq_errors && d.bq_errors.length) {
+      document.getElementById('errorCard').style.display = 'block';
+      document.getElementById('errorBody').innerHTML = d.bq_errors.map(function(e) { return '<div>' + e + '</div>'; }).join('');
+      d.bq_errors.forEach(function(e) { addLog(e, 'err'); });
+    }
+    document.getElementById('btnImport').disabled = false;
+  } else if (msg.event === 'error') {
+    stopPolling();
+    addLog('Ошибка: ' + msg.data.msg, 'err');
+    document.getElementById('logDot').classList.remove('live');
+    document.getElementById('btnImport').disabled = false;
+  }
+}
+
+function startPolling(jobId) {
+  pollTimer = setInterval(async function() {
+    try {
+      const r = await fetch('/kdp-earnings/progress/' + jobId);
+      const msgs = await r.json();
+      msgs.forEach(handleMsg);
+    } catch(e) { addLog('Ошибка опроса: ' + e.message, 'err'); }
+  }, 1500);
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+async function startImport() {
+  if (!file) return;
+  stopPolling(); resetSteps();
+  document.getElementById('btnImport').disabled       = true;
+  document.getElementById('progWrap').style.display   = 'block';
+  document.getElementById('doneBanner').style.display = 'none';
+  document.getElementById('errorCard').style.display  = 'none';
+  document.getElementById('logDot').classList.add('live');
+  setProgress(0, 'Загрузка файла...');
+  ['stTotal','stInserted','stSkipped','stErrors','stTable'].forEach(function(id) {
+    document.getElementById(id).textContent = '...';
+  });
+  addLog('Отправка файла на сервер...', 'info');
+  const form = new FormData();
+  form.append('file', file);
+  let jobId;
+  try {
+    const r = await fetch('/kdp-earnings/upload', {method:'POST', body:form});
+    const d = await r.json();
+    if (d.error) { addLog('Ошибка: ' + d.error, 'err'); document.getElementById('btnImport').disabled = false; return; }
+    jobId = d.job_id;
+    addLog('Файл принят · начинаем импорт...', 'ok');
+  } catch(e) {
+    addLog('Ошибка соединения: ' + e.message, 'err');
+    document.getElementById('btnImport').disabled = false;
+    return;
+  }
+  startPolling(jobId);
+}
+
+fetch('/kdp-earnings/count')
+  .then(function(r) { return r.json(); })
+  .then(function(d) { if (d.count !== undefined) document.getElementById('stTable').textContent = d.count.toLocaleString(); })
+  .catch(function() {});
+</script>
+</body>
+</html>
