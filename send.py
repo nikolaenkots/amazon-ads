@@ -534,9 +534,14 @@ def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
     ag_camp_id    = {}   # "GroupName" → "campaignId"
 
     ag_payloads = []
+    seen_ag_keys = set()  # deduplicate by (name, campaign_id)
     for _, change in ag_changes:
         val = json.loads(change["new_value"])
         camp_id = val.get("campaign_id") or change["entity_id"]
+        ag_key = (val["name"], camp_id)
+        if ag_key in seen_ag_keys:
+            continue
+        seen_ag_keys.add(ag_key)
         ag_payloads.append({
             "campaignId": camp_id,
             "adProduct":  "SPONSORED_PRODUCTS",
@@ -544,7 +549,7 @@ def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
             "state":      "ENABLED",
             "bid":        {"defaultBid": float(val.get("default_bid", 0.5))},
         })
-        ag_camp_id[val["name"]] = camp_id
+        ag_camp_id[(val["name"], camp_id)] = camp_id
 
     if ag_payloads:
         if dry_run:
@@ -562,12 +567,21 @@ def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
                 print(f"  [DEBUG] adGroups response: {json.dumps(rj, ensure_ascii=False)[:400]}")
                 # Извлекаем adGroupId из success ответов
                 for item in rj.get("success", []):
-                    ag = item.get("adGroup", {})
+                    ag      = item.get("adGroup", {})
                     ag_id   = ag.get("adGroupId")
                     ag_name = ag.get("name")
+                    idx     = item.get("index", -1)
                     if ag_id and ag_name:
-                        ag_name_to_id[ag_name] = ag_id
-                        print(f"    Группа создана: {ag_name} → {ag_id}")
+                        # Use index to get exact campaignId from ag_payloads
+                        if 0 <= idx < len(ag_payloads):
+                            camp_id_for_ag = ag_payloads[idx]["campaignId"]
+                        else:
+                            camp_id_for_ag = next(
+                                (cid for (n, cid) in ag_camp_id if n == ag_name), None
+                            )
+                        ag_name_to_id[(ag_name, camp_id_for_ag)] = ag_id
+                        ag_name_to_id[ag_name] = ag_id  # fallback
+                        print(f"    Группа создана: {ag_name} → {ag_id} (campaign: {camp_id_for_ag})")
             except Exception as e:
                 print(f"  [WARN] parse adGroups response: {e}")
             r = parse_multi_response(resp, "adGroups", len(ag_payloads))
@@ -581,8 +595,11 @@ def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
         for orig_i, change in kw_changes:
             val = json.loads(change["new_value"])
             ag_name = val.get("ad_group_name", "")
-            ag_id   = ag_name_to_id.get(ag_name) or val.get("ad_group_id", "")
             camp_id = val.get("campaign_id") or change["entity_id"]
+            # Prefer (name, camp_id) key to avoid cross-campaign confusion
+            ag_id   = (ag_name_to_id.get((ag_name, camp_id))
+                       or ag_name_to_id.get(ag_name)
+                       or val.get("ad_group_id", ""))
             if not ag_id:
                 print(f"  [WARN] keyword_add: не найден adGroupId для группы '{ag_name}'")
                 results[orig_i] = "SKIP: adGroupId not resolved"
@@ -630,8 +647,10 @@ def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
         for orig_i, change in ad_changes:
             val = json.loads(change["new_value"])
             ag_name = val.get("ad_group_name", "")
-            ag_id   = ag_name_to_id.get(ag_name) or val.get("ad_group_id", "")
             camp_id = val.get("campaign_id") or change["entity_id"]
+            ag_id   = (ag_name_to_id.get((ag_name, camp_id))
+                       or ag_name_to_id.get(ag_name)
+                       or val.get("ad_group_id", ""))
             if not ag_id:
                 print(f"  [WARN] product_ad_add: не найден adGroupId для группы '{ag_name}'")
                 results[orig_i] = "SKIP: adGroupId not resolved"

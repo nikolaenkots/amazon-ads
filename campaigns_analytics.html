@@ -3,662 +3,262 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Аналитика кампаний · Amazon Ads</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<title>Кампании · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:       #f5f2ed;
-  --surface:  #ffffff;
-  --surface2: #f0ece5;
-  --border:   #e4dfd7;
-  --border2:  #d4cec5;
-  --text:     #1c1a17;
-  --muted:    #7a756d;
-  --dim:      #b5b0a8;
-  --accent:   #c8440a;
-  --accent-bg: rgba(200,68,10,0.07);
-  --accent-border: rgba(200,68,10,0.2);
-  --green:    #2d7a4f;
-  --green-bg: rgba(45,122,79,0.07);
-  --green-border: rgba(45,122,79,0.2);
-  --blue:     #1a5fa8;
-  --blue-bg:  rgba(26,95,168,0.07);
-  --blue-border: rgba(26,95,168,0.2);
-  --red:      #c0392b;
-  --red-bg:   rgba(192,57,43,0.07);
+:root{
+  --bg:#f4f4f6; --surface:#fff; --surface2:#f0f0f3; --border:#e2e2e8; --border2:#ccccd4;
+  --text:#18181c; --muted:#6b6b7a; --dim:#aaaaB8;
+  --accent:#c84b14; --accent-bg:rgba(200,75,20,.07); --accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c; --green-bg:rgba(26,143,92,.08); --green-bd:rgba(26,143,92,.2);
+  --red:#d94040; --red-bd:rgba(217,64,64,.22); --red-bg:rgba(217,64,64,.07);
+  --amber:#b07800;
+  --blue:#1a6fd4; --blue-bg:rgba(26,111,212,.07); --blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+  --yellow:#d4a017;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
 
 /* ── Header ── */
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 32px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 100;
-}
-.logo { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
-.logo-dot {
-  width: 22px; height: 22px; background: var(--accent); border-radius: 5px;
-  display: flex; align-items: center; justify-content: center;
-}
-.header-nav { display: flex; align-items: center; gap: 16px; }
-.header-back {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; color: var(--muted); text-decoration: none;
-  transition: color .15s;
-}
-.header-back:hover { color: var(--text); }
-.header-tag {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: .08em; color: var(--dim);
-}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
 
 /* ── Layout ── */
-main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+main{padding:18px 32px;max-width:1640px;margin:0 auto}
 
-/* ── Filters panel ── */
-.filters-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.filters-row {
-  display: grid;
-  gap: 10px;
-  align-items: end;
-}
-.filters-row-1 { grid-template-columns: auto 160px 160px 160px 200px 200px 1fr; }
-.filters-row-2 { grid-template-columns: 160px 200px 1fr; }
-.filters-row-3 { grid-template-columns: auto auto 1fr; }
-.filter-group { display: flex; flex-direction: column; gap: 5px; }
-.filter-label {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
-}
-.filter-group input,
-.filter-group select {
-  height: 34px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  padding: 0 10px;
-  outline: none;
-  transition: border-color .15s;
-  width: 100%;
-}
-.filter-group input:focus,
-.filter-group select:focus { border-color: var(--accent); }
+/* ── Filters ── */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 
-.filter-actions { display: flex; gap: 8px; align-items: flex-end; }
-.btn {
-  height: 34px; padding: 0 16px; border-radius: 6px; border: none;
-  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-  cursor: pointer; display: flex; align-items: center; gap: 6px;
-  transition: all .15s; white-space: nowrap;
-}
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #b33d09; }
-.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-.btn-secondary:hover { background: var(--border); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+/* ── Portfolio dropdown ── */
+.pdw{position:relative}
+.pdt{height:34px;min-width:180px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:border-color .15s;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{color:var(--muted);font-size:11px;flex-shrink:0;pointer-events:none}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:240px;max-height:280px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
 
-/* ── Account type tabs ── */
-.acct-tabs { display: flex; gap: 4px; margin-bottom: 0; }
-.acct-tab {
-  height: 34px; padding: 0 14px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--bg);
-  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-  cursor: pointer; color: var(--muted); transition: all .15s;
-}
-.acct-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* ── Stats row ── */
+.sr{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
 
-/* ── Stats summary ── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-}
-.stat-label {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
-  margin-bottom: 4px;
-}
-.stat-val { font-size: 18px; font-weight: 500; }
-.stat-val.green { color: var(--green); }
-.stat-val.accent { color: var(--accent); }
-.stat-val.blue { color: var(--blue); }
+/* ── Table wrap ── */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;position:relative;overflow:visible}
+thead th.sorted{color:var(--accent)}
+.th-inner{display:flex;align-items:center;gap:4px;cursor:pointer;padding-right:20px}
+.th-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sort-arrow{opacity:.4;flex-shrink:0}
+thead th.sorted .sort-arrow{opacity:1;color:var(--accent)}
+tr.dr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+tr.dr.exp{background:var(--accent-bg)}
+td{padding:9px 11px;vertical-align:middle}
 
-/* ── Table ── */
-.table-wrap {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.table-header-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-}
-.table-title { font-size: 14px; font-weight: 500; }
-.table-count {
-  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-}
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead th {
-  text-align: left;
-  padding: 10px 14px;
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
-}
-thead th:hover { color: var(--text); }
-thead th .sort-arrow { margin-left: 4px; opacity: .4; }
-thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
-tbody tr {
-  border-bottom: 1px solid var(--border);
-  transition: background .1s;
-}
-tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--surface2); }
-tbody td { padding: 10px 14px; vertical-align: middle; }
+/* ── Badges ── */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.bu{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.ba{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
 
-.td-name { max-width: 280px; }
-.td-name-text {
-  font-size: 13px; font-weight: 400;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 260px;
-}
-.td-name-sub { font-size: 11px; color: var(--muted); margin-top: 1px; font-family: 'DM Mono', monospace; }
-/* Все td обрезаются по ширине колонки */
-tbody td {
-  max-width: 0; /* при table-layout:fixed — обрезает по ширине th */
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 10px 10px; vertical-align: middle;
-}
-tbody td.td-name, tbody td.num { max-width: none; }
+/* ── Nums ── */
+.n{font-family:'DM Mono',monospace;font-size:12px}
+td.r{text-align:right}
+.gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
+.ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
 
-.badge {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500;
-  font-family: 'DM Mono', monospace;
-}
-.badge-enabled  { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-border); }
-.badge-paused   { background: var(--surface2);  color: var(--muted);  border: 1px solid var(--border); }
-.badge-auto     { background: var(--blue-bg);   color: var(--blue);   border: 1px solid var(--blue-border); }
-.badge-manual   { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); }
+/* ── Expand row ── */
+tr.er td{padding:0}
+.ei{background:#f7f7fb;border-top:2px solid var(--accent-bd)}
+.rchev{color:var(--dim);transition:transform .2s}
+.rchev.op{transform:rotate(180deg)}
 
-.num { font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; }
-.num-zero { color: var(--dim); }
-.num-pos  { color: var(--text); }
+/* ── Campaign cards ── */
+.cpp{padding:14px 18px}
+.cpt{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.cpc{display:flex;flex-direction:column;gap:8px}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:border-color .15s}
+.cc.co{border-color:var(--accent);border-width:1.5px}
+.cch{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .1s}
+.cch:hover{background:var(--surface2)}
+.cn{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.cs2{display:flex;flex-direction:column;align-items:flex-end}
+.csl{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase}
+.csv{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.cchev{color:var(--muted);flex-shrink:0;transition:transform .2s}
+.cchev.op{transform:rotate(180deg)}
+.camp-inline-meta{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:10px;padding:0 8px;border-left:1px solid var(--border)}
+.act-lbl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.cst{display:none;border-top:1px solid var(--border)}
+.cst.op{display:block}
+.stl{padding:18px;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px}
 
-.acos-high { color: var(--red); font-weight: 500; }
-.acos-ok   { color: var(--green); }
+/* ── Groups ── */
+.gg{margin:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.ggh{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface2);cursor:pointer;transition:background .1s}
+.ggh:hover{background:#e8e8ee}
+.ggn{flex:1;font-size:12px;font-weight:500}
+.ggs{display:flex;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.ggb{display:none}
+.ggb.op{display:block}
+.gga{color:var(--dim);transition:transform .2s;flex-shrink:0}
+.gga.op{transform:rotate(180deg)}
 
-/* ── Empty / loading ── */
-.table-empty {
-  padding: 48px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 14px;
-}
-.spinner {
-  display: inline-block; width: 18px; height: 18px;
-  border: 2px solid var(--border); border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px}
+.tab{padding:5px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tbb{display:inline-block;min-width:15px;padding:0 3px;margin-left:3px;border-radius:99px;font-size:9px;background:var(--surface2);color:var(--dim);text-align:center}
+.tab.on .tbb{background:var(--accent-bg);color:var(--accent)}
+.tp{display:none}.tp.on{display:block}
+
+/* ── Items (keywords/targets) ── */
+.ih{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
+.ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
+.ih.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.ih span:first-child,.ih span:nth-child(2){text-align:left}
+.shdr{cursor:pointer;user-select:none}
+.shdr:hover{color:var(--text)}
+.son{color:var(--accent)}
+.sar{opacity:.4;margin-left:2px}
+.son .sar{opacity:1}
+.ii{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
+.ii:last-child{border-bottom:none}
+.ii:hover{background:var(--surface2)}
+.ii.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.it{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted);white-space:nowrap}
+.in2{display:flex;align-items:center;gap:6px;padding:5px 11px;border-bottom:1px solid var(--border);font-size:12px}
+.in2:last-child{border-bottom:none}
+.nt{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.nb{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
+.ge{padding:12px;text-align:center;color:var(--dim);font-size:11px}
+
+/* ── State toggle (switch style from products) ── */
+.stog{width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s;outline:none}
+.stog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .2s}
+.stog.en{background:var(--green)}
+.stog.pa{background:var(--dim)}
+.stog.en::after{transform:translateX(12px)}
+.stog.ld{opacity:.5;cursor:not-allowed}
+.stog.pend{background:var(--amber)}
+.stog.pend::after{transform:translateX(6px)}
+
+/* ── Action controls ── */
+.act-btn{height:28px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.act-btn:hover{background:var(--surface2)}
+.act-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.act-btn.pri:hover{background:#a83d10}
+.pencil-btn{background:none;border:none;cursor:pointer;color:var(--dim);padding:0 3px;opacity:0;transition:opacity .15s;flex-shrink:0;display:inline-flex;align-items:center}
+.pencil-btn:hover{color:var(--accent)}
+.cch:hover .pencil-btn,.ggh:hover .pencil-btn,.dr:hover .pencil-btn{opacity:1}
+.name-edit-wrap{display:none;align-items:center;gap:4px}
+.name-edit-wrap.on{display:inline-flex}
+.name-inp{height:24px;border:1px solid var(--accent);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:0 7px;outline:none;background:var(--surface);color:var(--text);min-width:200px}
+.bid-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);padding:1px 4px;border-radius:3px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.bid-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd)}
+.bid-edit{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+.bid-inp{width:64px;height:28px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:12px;padding:0 6px;outline:none;background:var(--surface);color:var(--text)}
+.bid-ok{height:28px;min-width:32px;padding:0 10px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bid-ok:hover{background:#a83d10}
+.bid-cx{height:28px;min-width:28px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bid-cx:hover{background:var(--surface2)}
+
+/* ── Filter popup ── */
+.filter-icon{flex-shrink:0;width:18px;height:18px;border-radius:3px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--dim);transition:all .15s;position:relative;z-index:10}
+.filter-icon:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.filter-icon.has-filter{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.filter-popup{display:none;position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);z-index:9999;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px;box-shadow:0 4px 20px rgba(0,0,0,.15);min-width:190px;white-space:normal}
+.filter-popup.open{display:block}
+.fp-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.fp-search{width:100%;height:28px;margin-bottom:6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.fp-search:focus{border-color:var(--accent)}
+.fp-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;margin-bottom:8px}
+.fp-list label{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer}
+.fp-list label:hover{background:var(--surface2)}
+.fp-list input[type=checkbox]{flex-shrink:0;accent-color:var(--accent)}
+.fp-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.fp-op{height:28px;flex:0 0 60px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;padding:0 4px;outline:none}
+.fp-val{height:28px;flex:1;min-width:0;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;padding:0 6px;outline:none}
+.fp-val:focus,.fp-op:focus{border-color:var(--accent)}
+.fp-actions{display:flex;gap:6px;margin-top:4px}
+.fp-apply{flex:1;height:28px;border:none;border-radius:4px;background:var(--accent);color:#fff;font-size:12px;font-weight:500;cursor:pointer}
+.fp-apply:hover{background:#a83d10}
+.fp-clear{height:28px;padding:0 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer}
+.fp-clear:hover{background:var(--border)}
+.col-resizer{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;z-index:2}
+.col-resizer:hover,.col-resizer.dragging{background:var(--accent);opacity:.5}
 
 /* ── Pagination ── */
-.pagination {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-}
-.pagination-info { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; }
-.page-btns { display: flex; gap: 4px; }
-.page-btn {
-  height: 30px; min-width: 30px; padding: 0 8px;
-  border: 1px solid var(--border); border-radius: 5px;
-  background: var(--bg); color: var(--text);
-  font-size: 12px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
-}
-.page-btn:hover:not(:disabled) { background: var(--surface2); }
-.page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border)}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+.pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pbb:hover{background:var(--surface2)}.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbb:disabled{opacity:.4;cursor:not-allowed}
 
-/* ── Error ── */
-.error-block {
-  background: var(--red-bg); border: 1px solid rgba(192,57,43,.2);
-  border-radius: 8px; padding: 12px 16px;
-  font-size: 13px; color: var(--red);
-  margin-bottom: 16px;
-}
+/* ── Misc ── */
+.eb{background:rgba(217,64,64,.07);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sa{opacity:.3;margin-left:2px}
+thead th.sorted .sa{opacity:1;color:var(--accent)}
 
-/* ── No data indicator ── */
-.no-data-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); display: inline-block; }
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 
-/* ── Toggle state button ── */
-.state-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 18px; border-radius: 99px; border: none;
-  cursor: pointer; transition: all .2s; flex-shrink: 0;
-  position: relative; vertical-align: middle;
-}
-.state-toggle::after {
-  content: ''; position: absolute;
-  width: 12px; height: 12px; border-radius: 50%; background: #fff;
-  top: 3px; transition: left .2s;
-}
-.state-toggle.on  { background: var(--green); }
-.state-toggle.on::after  { left: 17px; }
-.state-toggle.off { background: var(--dim); }
-.state-toggle.off::after { left: 3px; }
-.state-toggle.pending { background: var(--yellow); opacity: .8; }
-.state-toggle.pending::after { left: 10px; }
-.state-toggle:disabled { cursor: not-allowed; opacity: .5; }
-.state-toggle:hover:not(:disabled) { filter: brightness(1.1); }
-
-/* Маленький индикатор pending рядом с toggle */
-.pending-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--yellow); display: none;
-  vertical-align: middle; margin-left: 3px;
-  animation: pulse-dot 1.5s ease-in-out infinite;
-}
-.pending-dot.visible { display: inline-block; }
-@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-/* ── Campaign expand row ── */
-.expand-btn {
-  width: 20px; height: 20px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: 4px;
-  background: var(--surface2); cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: var(--muted); font-size: 10px; transition: all .15s;
-  vertical-align: middle; margin-right: 6px;
-}
-.expand-btn:hover { background: var(--border); color: var(--text); }
-.expand-btn.open { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-.structure-row td {
-  padding: 0 !important;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-.structure-panel {
-  padding: 12px 16px;
-  font-size: 12px;
-}
-.structure-loading {
-  padding: 16px; text-align: center; color: var(--muted); font-size: 12px;
-}
-
-/* Группа объявлений */
-.sg-group {
-  margin-bottom: 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.sg-group-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  font-weight: 500;
-}
-.sg-group-header:hover { background: var(--surface2); }
-.sg-group-toggle { color: var(--muted); font-size: 10px; transition: transform .15s; }
-.sg-group-toggle.open { transform: rotate(90deg); }
-.sg-group-name { flex: 1; font-size: 12px; }
-.sg-group-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
-.sg-state { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-family: 'DM Mono', monospace; white-space: nowrap; }
-.sg-state-enabled { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
-.sg-state-paused  { background: var(--surface2);  color: var(--muted);  border: 1px solid var(--border); }
-
-.sg-group-body { display: none; padding: 0; }
-.sg-group-body.open { display: block; }
-
-/* Секции внутри группы */
-.sg-section { border-top: 1px solid var(--border); }
-.sg-section-title {
-  padding: 4px 10px;
-  font-family: 'DM Mono', monospace; font-size: 9px;
-  text-transform: uppercase; letter-spacing: .07em;
-  color: var(--dim); background: var(--surface2);
-}
-.sg-col-hdr {
-  cursor: pointer; user-select: none;
-  display: inline-flex; align-items: center; gap: 3px;
-}
-.sg-col-hdr:hover { color: var(--text); }
-.sg-col-hdr.sorted { color: var(--accent); }
-.sg-sort-arrow { font-size: 8px; opacity: .5; }
-.sg-col-hdr.sorted .sg-sort-arrow { opacity: 1; }
-
-/* ── Вкладки внутри группы ── */
-.sg-tabs {
-  display: flex; gap: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  padding: 0 10px;
-}
-.sg-tab {
-  padding: 5px 10px; font-size: 11px;
-  font-family: 'DM Mono', monospace;
-  cursor: pointer; color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px; transition: all .15s;
-  white-space: nowrap;
-}
-.sg-tab:hover { color: var(--text); }
-.sg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.sg-tab-badge {
-  display: inline-block; min-width: 16px;
-  padding: 0 4px; margin-left: 4px;
-  border-radius: 99px; font-size: 9px;
-  background: var(--surface2); color: var(--dim);
-  text-align: center; vertical-align: middle;
-}
-.sg-tab.active .sg-tab-badge { background: var(--accent-bg); color: var(--accent); }
-.sg-tab-panel { display: none; }
-.sg-tab-panel.active { display: block; }
-.sg-items { }
-.sg-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 8px; align-items: center;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 11px;
-}
-.sg-item-10col {
-  grid-template-columns: 28px 1.5fr 55px 55px 75px 55px 55px 75px 80px 60px;
-}
-.sg-item-st {
-  grid-template-columns: 1.5fr 1fr 65px 75px 55px 55px 75px 80px 60px;
-}
-.sg-item:last-child { border-bottom: none; }
-.sg-item:hover { background: var(--surface2); }
-.sg-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.sg-item-match {
-  font-family: 'DM Mono', monospace; font-size: 9px;
-  padding: 1px 5px; border-radius: 3px;
-  background: var(--surface2); color: var(--muted);
-  border: 1px solid var(--border);
-}
-.sg-item-bid {
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  color: var(--blue); white-space: nowrap;
-}
-.sg-item-neg { color: var(--muted); font-style: italic; }
-
-/* Статистика строки */
-.sg-stats {
-  display: flex; gap: 10px; align-items: center;
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  white-space: nowrap;
-}
-.sg-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.sg-stat-val { font-size: 11px; color: var(--text); }
-.sg-stat-val.zero { color: var(--dim); }
-.sg-stat-val.acos-hi { color: var(--red); font-weight: 600; }
-.sg-stat-val.acos-ok { color: var(--green); }
-.sg-stat-lbl { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
-
-/* Строка статистики под заголовком группы */
-.sg-group-stats {
-  display: flex; gap: 16px;
-  padding: 5px 10px 5px 32px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  font-family: 'DM Mono', monospace;
-}
-.sg-gstat { display: flex; flex-direction: column; }
-.sg-gstat-val { font-size: 12px; }
-.sg-gstat-val.zero { color: var(--dim); }
-.sg-gstat-val.acos-hi { color: var(--red); font-weight: 600; }
-.sg-gstat-val.acos-ok { color: var(--green); }
-.sg-gstat-lbl { font-size: 9px; color: var(--dim); text-transform: uppercase; }
-
-/* Плейсменты */
-.sg-adjustments {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  padding: 6px 10px;
-}
-.sg-adj-chip {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  padding: 2px 8px; border-radius: 99px;
-  background: var(--blue-bg); color: var(--blue);
-  border: 1px solid var(--blue-border);
-}
-
-/* ── Numeric filter rows ── */
-.num-filter-row { display: flex; gap: 4px; align-items: center; }
-.num-op {
-  height: 34px; width: 90px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: var(--bg); color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: 13px;
-  padding: 0 6px; outline: none;
-}
-.num-op:focus { border-color: var(--accent); }
-.num-val {
-  height: 34px; flex: 1; min-width: 0;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: var(--bg); color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: 13px;
-  padding: 0 8px; outline: none;
-}
-.num-val:focus { border-color: var(--accent); }
-
-/* ── Inline table filters ── */
-.thead-filters td {
-  background: var(--surface2);
-  padding: 5px 6px;
-  border-bottom: 1px solid var(--border);
-}
-.tf-input, .tf-select {
-  width: 100%; height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  padding: 0 6px;
-  outline: none;
-}
-.tf-input:focus, .tf-select:focus { border-color: var(--accent); }
-
-/* числовой фильтр в thead: строка op + value [+ value2] */
-.nf-wrap { display: flex; flex-direction: column; gap: 3px; }
-.nf-row  { display: flex; gap: 3px; }
-.nf-op {
-  height: 22px; width: 46px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: 3px;
-  background: var(--surface); color: var(--text);
-  font-size: 10px; font-family: 'DM Mono', monospace;
-  padding: 0 3px; outline: none; cursor: pointer;
-}
-.nf-op:focus { border-color: var(--accent); }
-.nf-val {
-  height: 22px; min-width: 0; flex: 1;
-  border: 1px solid var(--border); border-radius: 3px;
-  background: var(--surface); color: var(--text);
-  font-size: 11px; font-family: 'DM Mono', monospace;
-  padding: 0 4px; outline: none;
-}
-.nf-val:focus { border-color: var(--accent); }
-.nf-op.active, .nf-val.active { border-color: var(--accent); background: var(--accent-bg); }
-
-.sg-ad-img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
-.sg-ad-img-placeholder { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.sg-ad-title-wrap { flex: 1; min-width: 0; }
-.sg-ad-link { color: var(--blue); text-decoration: none; font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sg-ad-link:hover { text-decoration: underline; }
-.btn-set-date { height:28px; padding:0 12px; border:none; border-radius:4px; background:var(--accent); color:#fff; font-size:11px; font-weight:500; cursor:pointer; }
-.btn-set-date:hover { background:#b33d09; }
-.sg-ad-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.sg-ad-sub { font-family: DM Mono,monospace; font-size: 10px; color: var(--dim); margin-top: 2px; }
-
-/* ── Column resize ── */
-table { table-layout: fixed; }
-thead th {
-  position: relative;
-  white-space: nowrap;
-  /* НЕТ overflow:hidden — иначе попап обрезается */
-}
-.col-resizer {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  width: 5px; cursor: col-resize;
-  background: transparent;
-  z-index: 2;
-}
-.col-resizer:hover, .col-resizer.dragging { background: var(--accent); opacity: .5; }
-
-/* ── Excel-style filter popup ── */
-.th-inner {
-  display: flex; align-items: center; gap: 4px;
-  padding-right: 6px; /* отступ от resizer */
-  cursor: pointer;
-}
-.th-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sort-arrow { opacity: .4; flex-shrink: 0; }
-thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
-
-/* Иконка фильтра — отдельный элемент, НЕ внутри th-inner с setSort */
-.filter-icon {
-  flex-shrink: 0; width: 18px; height: 18px;
-  border-radius: 3px; border: 1px solid transparent;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--dim);
-  transition: all .15s;
-  position: relative; /* для попапа */
-  z-index: 10;
-}
-.filter-icon:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
-.filter-icon.has-filter { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-
-/* Попап позиционируется относительно .filter-icon */
-.filter-popup {
-  display: none;
-  position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-  z-index: 9999;
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.15);
-  min-width: 190px;
-  white-space: normal;
-}
-.filter-popup.open { display: block; }
-.filter-popup .fp-title {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: .06em;
-  color: var(--muted); margin-bottom: 8px;
-}
-.fp-search {
-  width: 100%; height: 28px; margin-bottom: 6px;
-  border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg); color: var(--text);
-  font-size: 12px; padding: 0 8px; outline: none;
-}
-.fp-search:focus { border-color: var(--accent); }
-.fp-list {
-  max-height: 200px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 1px;
-  margin-bottom: 8px;
-}
-.fp-list label {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 6px; border-radius: 4px;
-  font-size: 12px; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.fp-list label:hover { background: var(--surface2); }
-.fp-list input[type=checkbox], .fp-list input[type=radio] { flex-shrink: 0; accent-color: var(--accent); }
-.fp-row {
-  display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
-}
-.fp-op {
-  height: 28px; flex: 0 0 60px;
-  border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg); color: var(--text);
-  font-size: 12px; padding: 0 4px; outline: none;
-}
-.fp-val {
-  height: 28px; flex: 1; min-width: 0;
-  border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg); color: var(--text);
-  font-size: 12px; padding: 0 6px; outline: none;
-}
-.fp-val:focus, .fp-op:focus { border-color: var(--accent); }
-.fp-actions { display: flex; gap: 6px; margin-top: 4px; }
-.fp-apply {
-  flex: 1; height: 28px; border: none; border-radius: 4px;
-  background: var(--accent); color: #fff;
-  font-size: 12px; font-weight: 500; cursor: pointer;
-}
-.fp-apply:hover { background: #b33d09; }
-.fp-clear {
-  height: 28px; padding: 0 10px; border-radius: 4px;
-  border: 1px solid var(--border); background: var(--surface2);
-  color: var(--text); font-size: 12px; cursor: pointer;
-}
-.fp-clear:hover { background: var(--border); }
-
-/* портфолио popup — список чекбоксов */
-.fp-list {
-  max-height: 200px; overflow-y: auto;
-  margin-bottom: 8px;
-}
-.fp-list label {
-  display: flex; align-items: center; gap: 7px;
-  padding: 4px 2px; font-size: 13px; cursor: pointer;
-  border-radius: 4px;
-}
-.fp-list label:hover { background: var(--surface2); }
-.fp-search {
-  width: 100%; height: 28px; margin-bottom: 8px;
-  border: 1px solid var(--border); border-radius: 5px;
-  background: var(--bg); color: var(--text);
-  font-size: 12px; padding: 0 7px; outline: none;
-}
-.fp-search:focus { border-color: var(--accent); }
+/* ── Modals ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:500px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;font-family:'DM Mono',monospace}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 </style>
 </head>
 <body>
@@ -670,154 +270,252 @@ thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
     </div>
     Amazon Ads Automation
   </div>
-  <div class="header-nav">
-    <a href="/" class="header-back">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      Главная
-    </a>
-    <span class="header-tag">Кампании · Аналитика</span>
-  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/campaigns">Кампании</a>
+    <a href="/analytics/campaigns" class="active">Аналитика</a>
+    <a href="/analytics/products">Продукты</a>
+    <a href="/control">Контроль</a>
+    <a href="/portfolios">Портфолио</a>
+  </nav>
 </header>
 
 <main>
 
-  <!-- Filters -->
-  <div class="filters-panel">
-
-    <!-- Ряд 1: тип, даты, маркетплейс, портфолио, таргетинг, кнопки -->
-    <div class="filters-row filters-row-1">
-      <div class="filter-group">
-        <div class="filter-label">Тип аккаунта</div>
-        <div class="acct-tabs">
-          <button class="acct-tab active" id="tabMerch" onclick="setAcct('MERCH')">Merch</button>
-          <button class="acct-tab" id="tabKdp" onclick="setAcct('KDP')">KDP</button>
+<!-- Filters -->
+<div class="fp">
+  <div class="fr">
+    <div class="fg">
+      <span class="fl">Аккаунт</span>
+      <div class="at">
+        <button class="atb on" id="tabMerch" onclick="setAcct('MERCH')">Merch</button>
+        <button class="atb" id="tabKdp" onclick="setAcct('KDP')">KDP</button>
+      </div>
+    </div>
+    <div class="fg">
+      <span class="fl">Дата от</span>
+      <input type="date" id="dateFrom">
+    </div>
+    <div class="fg">
+      <span class="fl">Дата до</span>
+      <input type="date" id="dateTo">
+    </div>
+    <div class="fg">
+      <span class="fl">Маркетплейс</span>
+      <select id="filterMkt">
+        <option value="">Все</option>
+        <option>US</option><option>UK</option><option>DE</option>
+        <option>FR</option><option>IT</option><option>ES</option>
+      </select>
+    </div>
+    <div class="fg">
+      <span class="fl">Портфолио</span>
+      <div class="pdw" id="pdw">
+        <div class="pdt" id="pdtBtn" onclick="togglePd()">
+          <span id="pdtLabel">Все</span>
+          <span class="pda">▾</span>
+        </div>
+        <div class="pdd" id="pdd">
+          <input class="pds" placeholder="Поиск..." oninput="filterPd(this.value)">
+          <div id="pdList"></div>
+          <div style="display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border)">
+            <button class="act-btn pri" style="flex:1;height:26px;font-size:11px" onclick="applyPd()">Применить</button>
+            <button class="act-btn" style="height:26px;font-size:11px" onclick="clearPd()">Снять</button>
+          </div>
         </div>
       </div>
-      <div class="filter-group">
-        <div class="filter-label">Дата от</div>
-        <input type="date" id="dateFrom">
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Дата до</div>
-        <input type="date" id="dateTo">
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Маркетплейс</div>
-        <select id="filterMkt">
-          <option value="">Все</option>
-          <option value="US">US</option>
-          <option value="UK">UK</option>
-          <option value="DE">DE</option>
-          <option value="FR">FR</option>
-          <option value="IT">IT</option>
-          <option value="ES">ES</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Портфолио</div>
-        <select id="filterPortfolio"><option value="">Все</option></select>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Тип таргетинга</div>
-        <select id="filterTargeting">
-          <option value="">Все</option>
-          <option value="AUTO">Auto</option>
-          <option value="MANUAL">Manual</option>
-        </select>
-      </div>
-      <div class="filter-group filter-actions" style="display:flex;gap:8px;align-items:flex-end">
-        <button class="btn btn-primary" id="btnApply" onclick="applyFilters()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Применить
-        </button>
-        <button class="btn btn-secondary" onclick="resetFilters()">Сброс</button>
-      </div>
     </div>
-
-    <!-- Ряд 2: статус, активность, поиск, клики, ACOS, расход -->
-    <div class="filters-row filters-row-2">
-      <div class="filter-group">
-        <div class="filter-label">Статус</div>
-        <select id="filterState">
-          <option value="">Все</option>
-          <option value="ENABLED">Enabled</option>
-          <option value="PAUSED">Paused</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Активность</div>
-        <select id="filterActivity">
-          <option value="">Все</option>
-          <option value="has_clicks">Есть клики</option>
-          <option value="has_impressions">Есть показы</option>
-          <option value="no_clicks">Нет кликов</option>
-          <option value="no_impressions">Нет показов</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Поиск по названию</div>
-        <input type="text" id="filterName" placeholder="Название кампании...">
-      </div>
-
+    <div class="fg">
+      <span class="fl">Таргетинг</span>
+      <select id="filterTargeting">
+        <option value="">Все</option>
+        <option value="AUTO">Auto</option>
+        <option value="MANUAL">Manual</option>
+      </select>
     </div>
-
-  </div>
-
-  <!-- Error -->
-  <div class="error-block" id="errorBlock" style="display:none"></div>
-
-  <!-- Summary stats -->
-  <div class="stats-row" id="statsRow" style="display:none">
-    <div class="stat-card">
-      <div class="stat-label">Кампаний</div>
-      <div class="stat-val" id="sTotalCamp">—</div>
+    <div class="fg">
+      <span class="fl">Статус</span>
+      <select id="filterState">
+        <option value="">Все</option>
+        <option value="ENABLED">Enabled</option>
+        <option value="PAUSED">Paused</option>
+      </select>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Показы</div>
-      <div class="stat-val blue" id="sImpr">—</div>
+    <div class="fg">
+      <span class="fl">Активность</span>
+      <select id="filterActivity">
+        <option value="">Все</option>
+        <option value="has_clicks">Есть клики</option>
+        <option value="has_impressions">Есть показы</option>
+        <option value="no_clicks">Нет кликов</option>
+      </select>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Клики</div>
-      <div class="stat-val" id="sClicks">—</div>
+    <div class="fg">
+      <span class="fl">Поиск</span>
+      <input type="text" id="filterName" placeholder="Название..." style="width:180px">
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Расходы</div>
-      <div class="stat-val accent" id="sCost">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Продажи 14d</div>
-      <div class="stat-val green" id="sSales">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ACOS</div>
-      <div class="stat-val" id="sAcos">—</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-left:auto">
+      <button class="btn btn-p" id="btnApply" onclick="applyFilters()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Применить
+      </button>
+      <button class="btn btn-s" onclick="resetFilters()">Сброс</button>
     </div>
   </div>
+</div>
 
-  <!-- Table -->
-  <div class="table-wrap">
-    <div class="table-header-row">
-      <div class="table-title">Кампании</div>
-      <div class="table-count" id="tableCount">—</div>
-    </div>
+<!-- Stats -->
+<div class="sr" id="statsRow" style="display:none">
+  <div class="sc"><div class="sl">Кампаний</div><div class="sv" id="sTotalCamp">—</div></div>
+  <div class="sc"><div class="sl">Показы</div><div class="sv b" id="sImpr">—</div></div>
+  <div class="sc"><div class="sl">Клики</div><div class="sv" id="sClicks">—</div></div>
+  <div class="sc"><div class="sl">Расходы</div><div class="sv a" id="sCost">—</div></div>
+  <div class="sc"><div class="sl">Продажи 14d</div><div class="sv g" id="sSales">—</div></div>
+  <div class="sc"><div class="sl">ACOS</div><div class="sv" id="sAcos">—</div></div>
+</div>
 
-    <div id="tableContainer">
-      <div class="table-empty">
-        Выберите период и нажмите <b>Применить</b>
-      </div>
-    </div>
-
-    <div class="pagination" id="paginationRow" style="display:none">
-      <div class="pagination-info" id="pageInfo"></div>
-      <div class="page-btns" id="pageBtns"></div>
-    </div>
+<!-- Table -->
+<div class="tw">
+  <div class="thr">
+    <span class="tt">Кампании</span>
+    <span class="tc" id="tableCount"></span>
   </div>
+  <div class="tsx">
+    <div id="tableContainer"><div class="te">Выберите период и нажмите <b>Применить</b></div></div>
+  </div>
+  <div class="pg" id="paginationRow" style="display:none">
+    <span class="pi" id="pageInfo"></span>
+    <div class="pb" id="pageBtns"></div>
+  </div>
+</div>
 
 </main>
 
+<!-- Toast -->
+<div class="toast" id="toastWrap"></div>
+
+
+<!-- Toast -->
+<div class="toast" id="toastWrap"></div>
+
+<!-- Modal: добавить ключевое слово -->
+<div class="modal-bg" id="modalKw" onclick="if(event.target===this)closeModal('modalKw')">
+  <div class="modal">
+    <div class="modal-title">Добавить ключевые слова</div>
+    <div class="modal-row">
+      <div class="modal-label">Ключевые слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mkwText" placeholder="basketball shirt&#10;coach gift&#10;funny tshirt"></textarea>
+    </div>
+    <div class="modal-row" style="flex-direction:row;gap:10px">
+      <div style="flex:1">
+        <div class="modal-label">Match Type</div>
+        <select class="modal-inp" id="mkwMatch">
+          <option value="BROAD">BROAD</option>
+          <option value="PHRASE">PHRASE</option>
+          <option value="EXACT">EXACT</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="modal-label">Ставка ($)</div>
+        <input type="number" class="modal-inp" id="mkwBid" value="0.50" min="0.02" step="0.01">
+      </div>
+    </div>
+    <input type="hidden" id="mkwGroupId">
+    <input type="hidden" id="mkwCampId">
+    <input type="hidden" id="mkwMkt">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalKw')">Отмена</button>
+      <button class="act-btn pri" onclick="submitAddKw()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: добавить минус-слово / продукт -->
+<div class="modal-bg" id="modalNeg" onclick="if(event.target===this)closeModal('modalNeg')">
+  <div class="modal">
+    <div class="modal-title">Добавить минусы</div>
+    <div class="modal-row">
+      <div class="modal-label">Тип</div>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="keyword" checked onchange="onNegTypeChange(this)"> Слово
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="product" onchange="onNegTypeChange(this)"> Продукт (ASIN)
+        </label>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label" id="mnegTextLabel">Слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mnegText" placeholder="free&#10;cheap"></textarea>
+    </div>
+    <div class="modal-row" id="mnegMatchRow">
+      <div class="modal-label">Match Type</div>
+      <select class="modal-inp" id="mnegMatch" style="height:34px">
+        <option value="NEGATIVE_EXACT">NEGATIVE_EXACT</option>
+        <option value="NEGATIVE_PHRASE">NEGATIVE_PHRASE</option>
+      </select>
+    </div>
+    <input type="hidden" id="mnegGroupId">
+    <input type="hidden" id="mnegCampId">
+    <input type="hidden" id="mnegMkt">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalNeg')">Отмена</button>
+      <button class="act-btn pri" onclick="submitAddNeg()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: создать группу объявлений -->
+<div class="modal-bg" id="modalGrp" onclick="if(event.target===this)closeModal('modalGrp')">
+  <div class="modal" style="width:560px">
+    <div class="modal-title" id="mgrpTitle">Создать группу объявлений</div>
+    <div class="modal-row">
+      <div class="modal-label">Название группы</div>
+      <input type="text" class="modal-inp" id="mgrpName" placeholder="B0FT63YVTW-KEYWORD-BROAD">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Ставка по умолчанию ($)</div>
+      <input type="number" class="modal-inp" id="mgrpBid" value="0.50" min="0.02" step="0.01">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">ASIN объявлений (по одному на строку)</div>
+      <textarea class="modal-inp" id="mgrpAsins" placeholder="B0FT63YVTW&#10;B0FX36C3YS" style="height:70px"></textarea>
+    </div>
+    <div id="mgrpKwBlock">
+      <div class="modal-row">
+        <div class="modal-label">Ключевые слова (по одному на строку)</div>
+        <textarea class="modal-inp" id="mgrpKwText" placeholder="coach shirt&#10;funny tshirt" style="height:70px"></textarea>
+      </div>
+      <div class="modal-row" style="flex-direction:row;gap:10px">
+        <div style="flex:1">
+          <div class="modal-label">Match Type</div>
+          <select class="modal-inp" id="mgrpKwMatch">
+            <option value="BROAD">BROAD</option>
+            <option value="PHRASE">PHRASE</option>
+            <option value="EXACT">EXACT</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div class="modal-label">Ставка KW ($)</div>
+          <input type="number" class="modal-inp" id="mgrpKwBid" value="0.50" min="0.02" step="0.01">
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="mgrpCampId">
+    <input type="hidden" id="mgrpMkt">
+    <input type="hidden" id="mgrpType">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalGrp')">Отмена</button>
+      <button class="act-btn pri" onclick="submitCreateGrp()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
-// ── State ─────────────────────────────────────────────────
-let state = {
+// ── State ────────────────────────────────────────────────
+const state = {
   acct: 'MERCH',
   page: 1,
   perPage: 25,
@@ -826,1498 +524,781 @@ let state = {
   sortDir: 'desc',
   data: [],
   portfolios: [],
+  selectedPortfolios: [],
 };
+window._nfState = {};
 
-// ── Init dates ────────────────────────────────────────────
-(function initDates() {
-  const to   = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 30);
-  document.getElementById('dateTo').value   = to.toISOString().slice(0,10);
-  document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
+// ── Init dates ───────────────────────────────────────────
+(function(){
+  const to=new Date(), from=new Date();
+  from.setDate(from.getDate()-30);
+  document.getElementById('dateTo').value=to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=from.toISOString().slice(0,10);
 })();
 
-// ── Account type toggle ───────────────────────────────────
-function setAcct(acct) {
-  state.acct = acct;
-  document.getElementById('tabMerch').classList.toggle('active', acct === 'MERCH');
-  document.getElementById('tabKdp').classList.toggle('active', acct === 'KDP');
-
-  // Update marketplace options based on account type
-  const mkt = document.getElementById('filterMkt');
-  const kdpMkts  = ['','US','CA','UK','DE','FR','IT','ES','AU'];
-  const merchMkts = ['','US','UK','DE','FR','IT','ES'];
-  const opts = acct === 'KDP' ? kdpMkts : merchMkts;
-  mkt.innerHTML = opts.map(v => `<option value="${v}">${v || 'Все'}</option>`).join('');
-
+// ── Account toggle ───────────────────────────────────────
+function setAcct(acct){
+  state.acct=acct;
+  document.getElementById('tabMerch').classList.toggle('on', acct==='MERCH');
+  document.getElementById('tabKdp').classList.toggle('on', acct==='KDP');
+  const mkt=document.getElementById('filterMkt');
+  const opts=acct==='KDP'?['','US','CA','UK','DE','FR','IT','ES','AU']:['','US','UK','DE','FR','IT','ES'];
+  mkt.innerHTML=opts.map(v=>`<option value="${v}">${v||'Все'}</option>`).join('');
   loadPortfolios();
 }
 
-// ── Load portfolios (верхний селект + попап) ─────────────
-async function loadPortfolios() {
-  try {
-    const r = await fetch('/portfolios/list');
-    const d = await r.json();
-    state.portfolios = (d.portfolios || []).filter(p => p.account_type === state.acct);
-    const sel = document.getElementById('filterPortfolio');
-    sel.innerHTML = '<option value="">Все</option>' +
-      state.portfolios.map(p =>
-        `<option value="${p.portfolio_id}">${p.portfolio_name || p.portfolio_id}</option>`
-      ).join('');
-  } catch(e) { console.warn('loadPortfolios error:', e); }
-  // Также загрузить полный список для popup (из аналитики)
+// ── Portfolio dropdown ───────────────────────────────────
+let _allPf=[], _pdOpen=false;
+document.addEventListener('click', e=>{ if(!e.target.closest('#pdw')&&_pdOpen) closePd(); });
+
+function togglePd(){
+  _pdOpen=!_pdOpen;
+  document.getElementById('pdd').classList.toggle('on',_pdOpen);
+  document.getElementById('pdtBtn').classList.toggle('on',_pdOpen);
+  if(_pdOpen) renderPdList('');
+}
+function closePd(){
+  _pdOpen=false;
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdtBtn').classList.remove('on');
+}
+function filterPd(q){ renderPdList(q); }
+function renderPdList(q){
+  const list=document.getElementById('pdList');
+  const filtered=q?_allPf.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())):_allPf;
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';return;}
+  const sel=state.selectedPortfolios||[];
+  list.innerHTML=filtered.map(p=>`<div class="pdi"><input type="checkbox" name="pdcb" value="${p.id}" ${sel.includes(p.id)?'checked':''}><span title="${p.name}">${p.name}</span></div>`).join('');
+}
+function applyPd(){
+  state.selectedPortfolios=[...document.querySelectorAll('input[name="pdcb"]:checked')].map(el=>el.value);
+  const lbl=document.getElementById('pdtLabel');
+  lbl.textContent=state.selectedPortfolios.length?state.selectedPortfolios.length+' выбрано':'Все';
+  closePd(); state.page=1; fetchData();
+}
+function clearPd(){
+  state.selectedPortfolios=[];
+  document.querySelectorAll('input[name="pdcb"]').forEach(cb=>cb.checked=false);
+  document.getElementById('pdtLabel').textContent='Все';
+}
+
+async function loadPortfolios(){
+  try{
+    const r=await fetch('/portfolios/list');
+    const d=await r.json();
+    _allPf=(d.portfolios||[]).filter(p=>p.account_type===state.acct).map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+    renderPdList('');
+  }catch(e){}
   loadPortfolioFilter();
 }
 
-// ── Build query params ────────────────────────────────────
-function buildParams(page) {
-  const p = new URLSearchParams();
-  p.set('account_type', state.acct);
-  p.set('page', page || state.page);
-  p.set('per_page', state.perPage);
-  p.set('sort_by', state.sortBy);
-  p.set('sort_dir', state.sortDir);
-
-  const df = document.getElementById('dateFrom').value;
-  const dt = document.getElementById('dateTo').value;
-  const mkt = document.getElementById('filterMkt').value;
-  const pf  = document.getElementById('filterPortfolio').value;
-  const tgt = document.getElementById('filterTargeting').value;
-  const st  = document.getElementById('filterState').value;
-  const act = document.getElementById('filterActivity').value;
-  const nm  = document.getElementById('filterName').value.trim();
-  // Числовые фильтры с операторами
-  const numFilter = (opId, valId, val2Id, prefix) => {
-    const op  = document.getElementById(opId).value;
-    const v1  = document.getElementById(valId).value;
-    const v2  = document.getElementById(val2Id).value;
-    if (!op || v1 === '') return;
-    if (op === 'range') {
-      if (v1 !== '') p.set(prefix + '_min', v1);
-      if (v2 !== '') p.set(prefix + '_max', v2);
-    } else {
-      p.set(prefix + '_op', op);
-      p.set(prefix + '_val', v1);
-    }
-  };
-
-  if (df)  p.set('date_from', df);
-  if (dt)  p.set('date_to', dt);
-  if (mkt) p.set('marketplace', mkt);
-  // Портфолио — мультивыбор
-  const selPf = state.selectedPortfolios || [];
-  if (selPf.length === 1) p.set('portfolio_id', selPf[0]);
-  else if (selPf.length > 1) p.set('portfolio_ids', selPf.join(','));
-  else if (pf) p.set('portfolio_id', pf); // fallback на верхний селект
-  if (tgt) p.set('targeting_type', tgt);
-  if (st)  p.set('campaign_state', st);
-  if (act) p.set('activity', act);
-  if (nm)  p.set('name', nm);
-
+// ── Build params ─────────────────────────────────────────
+function buildParams(page){
+  const p=new URLSearchParams();
+  p.set('account_type',state.acct);
+  p.set('page',page||state.page);
+  p.set('per_page',state.perPage);
+  p.set('sort_by',state.sortBy);
+  p.set('sort_dir',state.sortDir);
+  const df=document.getElementById('dateFrom').value;
+  const dt=document.getElementById('dateTo').value;
+  const mkt=document.getElementById('filterMkt').value;
+  const tgt=document.getElementById('filterTargeting').value;
+  const st=document.getElementById('filterState').value;
+  const act=document.getElementById('filterActivity').value;
+  const nm=document.getElementById('filterName').value.trim();
+  if(df) p.set('date_from',df);
+  if(dt) p.set('date_to',dt);
+  if(mkt) p.set('marketplace',mkt);
+  const sel=state.selectedPortfolios||[];
+  if(sel.length===1) p.set('portfolio_id',sel[0]);
+  else if(sel.length>1) p.set('portfolio_ids',sel.join(','));
+  if(tgt) p.set('targeting_type',tgt);
+  if(st) p.set('campaign_state',st);
+  if(act) p.set('activity',act);
+  if(nm) p.set('name',nm);
   buildNumParams(p);
   return p;
 }
 
-// ── Apply filters ─────────────────────────────────────────
-function applyFilters() {
-  // Сбрасываем кэш структуры при смене периода
-  Object.keys(_structureCache).forEach(k => delete _structureCache[k]);
-  state.page = 1;
-  fetchData();
+function applyFilters(){
+  Object.keys(_structureCache).forEach(k=>delete _structureCache[k]);
+  state.page=1; fetchData();
+}
+function resetFilters(){
+  const to=new Date(), from=new Date();
+  from.setDate(from.getDate()-30);
+  document.getElementById('dateTo').value=to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=from.toISOString().slice(0,10);
+  ['filterMkt','filterTargeting','filterState','filterActivity'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('filterName').value='';
+  state.selectedPortfolios=[];
+  document.getElementById('pdtLabel').textContent='Все';
+  window._nfState={};
+  state.page=1; fetchData();
 }
 
-// ── Reset filters ─────────────────────────────────────────
-function resetFilters() {
-  const to = new Date(), from = new Date();
-  from.setDate(from.getDate() - 30);
-  document.getElementById('dateTo').value   = to.toISOString().slice(0,10);
-  document.getElementById('dateFrom').value = from.toISOString().slice(0,10);
-  document.getElementById('filterMkt').value       = '';
-  document.getElementById('filterPortfolio').value = '';
-  document.getElementById('filterTargeting').value = '';
-  document.getElementById('filterState').value     = '';
-  document.getElementById('filterActivity').value  = '';
-  document.getElementById('filterName').value      = '';
-  // Сброс числовых фильтров попапов
-  window._nfState = {};
-  Object.keys(NF_FIELDS).forEach(id => {
-    ['fp_op_','fp_v1_','fp_v2_'].forEach(p => {
-      const el = document.getElementById(p + id);
-      if (el) el.value = '';
-    });
-    const row2 = document.getElementById('fp_row2_' + id);
-    if (row2) row2.style.display = 'none';
-  });
-  state.page = 1;
-  fetchData();
-}
-
-// ── Fetch data ────────────────────────────────────────────
-async function fetchData() {
-  const btn = document.getElementById('btnApply');
-  btn.disabled = true;
-  btn.innerHTML = `<span class="spinner"></span> Загрузка...`;
-  document.getElementById('errorBlock').style.display = 'none';
-  document.getElementById('tableContainer').innerHTML =
-    `<div class="table-empty"><span class="spinner"></span></div>`;
-  document.getElementById('paginationRow').style.display = 'none';
-  document.getElementById('statsRow').style.display = 'none';
-
-  try {
-    const params = buildParams(state.page);
-    const r = await fetch(`/analytics/campaigns/data?${params}`);
-    const d = await r.json();
-
-    if (d.error) throw new Error(d.error);
-
-    state.data  = d.rows || [];
-    state.total = d.total || 0;
-    renderTable(d);
-    renderStats(d.summary);
-    renderPagination(d.total, d.page, d.per_page);
-
-    document.getElementById('tableCount').textContent =
-      `${d.total.toLocaleString('ru')} кампаний`;
-    document.getElementById('statsRow').style.display = 'grid';
-
-    // Обновляем список портфолио по всему результату (не только текущей странице)
+// ── Fetch data ───────────────────────────────────────────
+async function fetchData(){
+  const btn=document.getElementById('btnApply');
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span> Загрузка...';
+  document.getElementById('tableContainer').innerHTML='<div class="te"><span class="sp"></span></div>';
+  document.getElementById('paginationRow').style.display='none';
+  document.getElementById('statsRow').style.display='none';
+  try{
+    const params=buildParams(state.page);
+    const r=await fetch('/analytics/campaigns/data?'+params);
+    const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    state.data=d.rows||[]; state.total=d.total||0;
+    renderTable(d); renderStats(d.summary); renderPagination(d.total,d.page,d.per_page);
+    document.getElementById('tableCount').textContent=(d.total||0).toLocaleString('ru')+' кампаний';
+    document.getElementById('statsRow').style.display='grid';
     loadPortfolioFilter();
-
-  } catch(e) {
-    document.getElementById('errorBlock').textContent = '✕ ' + e.message;
-    document.getElementById('errorBlock').style.display = 'block';
-    document.getElementById('tableContainer').innerHTML =
-      `<div class="table-empty">Ошибка загрузки</div>`;
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Применить`;
+  }catch(e){
+    document.getElementById('tableContainer').innerHTML=`<div class="te" style="color:var(--red)">✕ ${e.message}</div>`;
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Применить';
   }
 }
 
-// ── Render table ──────────────────────────────────────────
-function renderTable(d) {
-  if (!d.rows || !d.rows.length) {
-    document.getElementById('tableContainer').innerHTML =
-      `<div class="table-empty">Нет данных по выбранным фильтрам</div>`;
+// ── Render table ─────────────────────────────────────────
+function renderTable(d){
+  if(!d.rows||!d.rows.length){
+    document.getElementById('tableContainer').innerHTML='<div class="te">Нет данных по выбранным фильтрам</div>';
     return;
   }
-
-  const sortArrow = (col) => {
-    if (state.sortBy !== col) return `<span class="sort-arrow">↕</span>`;
-    return `<span class="sort-arrow">${state.sortDir === 'desc' ? '↓' : '↑'}</span>`;
+  const mkTh=(col,label,w)=>{
+    const arr=state.sortBy===col?(state.sortDir==='desc'?'↓':'↑'):'↕';
+    const cls=state.sortBy===col?'sorted':'';
+    return `<th class="${cls}" style="width:${w}px">
+      <div class="th-inner" onclick="setSort('${col}')"><span class="th-label">${label}</span><span class="sort-arrow">${arr}</span></div>
+      <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+    </th>`;
   };
-  const thClass = (col) => state.sortBy === col ? 'sorted' : '';
-
-  const html = `
-    <div style="overflow-x:auto">
-    <table>
-      <thead>
-        <tr>
-          ${makeThSort('campaign_name','Кампания',300)}
-          ${makeThSort('marketplace','MKT',55)}
-          ${makeThSort('campaign_state','Статус',80)}
-          ${makeThSort('targeting_type','Тип',70)}
-          ${makeThPortfolio(80)}
-          ${makeThNum('impressions','Показы','impr',90,0)}
-          ${makeThNum('clicks','Клики','clicks',80,0)}
-          ${makeThNum('cost','Расход','cost',90,0.01)}
-          ${makeThNum('ctr','CTR','ctr',70,0.001)}
-          ${makeThNum('sales_14d','Продажи','sales',90,0.01)}
-          ${makeThNum('purchases_14d','Заказы','orders',75,1)}
-          ${makeThNum('acos','ACOS','acos',75,0.1)}
-          ${makeThSort('daily_budget','Бюджет/д',80)}
-        </tr>
-
-      </thead>
-      <tbody id="tableBody">
-        ${d.rows.map(row => renderRow(row)).join('')}
-      </tbody>
-    </table>
-    </div>`;
-  document.getElementById('tableContainer').innerHTML = html;
-}
-
-// ── NF_FIELDS: числовые колонки ──────────────────────────
-const NF_FIELDS = {
-  impr:   'impressions',
-  clicks: 'clicks',
-  cost:   'cost',
-  ctr:    'ctr',
-  sales:  'sales_14d',
-  orders: 'purchases_14d',
-  acos:   'acos',
-};
-
-// Активные попапы
-let _openPopup = null;
-function closeAllPopups() {
-  document.querySelectorAll('.filter-popup.open').forEach(p => p.classList.remove('open'));
-  _openPopup = null;
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.filter-popup') && !e.target.closest('.filter-icon')) closeAllPopups();
-});
-
-// ── Генератор th с сортировкой ──────────────────────────
-function makeThSort(col, label, w) {
-  const arr = state.sortBy === col ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
-  const cls = state.sortBy === col ? 'sorted' : '';
-  return `<th class="${cls}" style="width:${w}px">
-    <div class="th-inner" onclick="setSort('${col}')">
-      <span class="th-label">${label}</span>
-      <span class="sort-arrow">${arr}</span>
-    </div>
-    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
-  </th>`;
-}
-
-// ── th для портфолио с попапом (чекбоксы) ──────────────
-function makeThPortfolio(w) {
-  const arr    = state.sortBy === 'portfolio_name' ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
-  const hasF   = (state.selectedPortfolios || []).length > 0;
-  const active = hasF ? ' has-filter' : '';
-  return `<th style="width:${w}px; min-width:130px; overflow:visible">
-    <div class="th-inner" onclick="setSort('portfolio_name')">
-      <span class="th-label">Портфолио</span>
-      <span class="sort-arrow">${arr}</span>
-    </div>
-    <span class="filter-icon${active}" onclick="togglePopup(event,'popup_portfolio')" title="Фильтр портфолио">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      <div class="filter-popup" id="popup_portfolio" onclick="event.stopPropagation()">
-        <div class="fp-title">Портфолио <span id="fp_pf_count" style="color:var(--accent)"></span></div>
-        <input class="fp-search" id="fp_pf_search" placeholder="Поиск..." oninput="filterPfList(this.value)">
-        <div class="fp-list" id="fp_pf_list"></div>
-        <div class="fp-actions">
-          <button class="fp-apply" onclick="applyPortfolioFilter()">Применить</button>
-          <button class="fp-clear" onclick="clearPortfolioFilter()">Снять все</button>
+  const mkThNum=(col,label,id,w,step)=>{
+    const arr=state.sortBy===col?(state.sortDir==='desc'?'↓':'↑'):'↕';
+    const cls=state.sortBy===col?'sorted':'';
+    const act=(window._nfState||{})[id]?' has-filter':'';
+    const sa=step>0&&step<1?`step="${step}"`:'';
+    return `<th class="${cls}" style="width:${w}px">
+      <div class="th-inner" onclick="setSort('${col}')"><span class="th-label">${label}</span><span class="sort-arrow">${arr}</span></div>
+      <span class="filter-icon${act}" onclick="togglePopup(event,'popup_${id}')">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <div class="filter-popup" id="popup_${id}" onclick="event.stopPropagation()">
+          <div class="fp-title">${label}</div>
+          <div class="fp-row">
+            <select class="fp-op" id="fp_op_${id}" onchange="onFpOpChange('${id}')">
+              <option value="">—</option><option value="gt">&gt;</option><option value="gte">&gt;=</option>
+              <option value="lt">&lt;</option><option value="lte">&lt;=</option><option value="eq">=</option>
+              <option value="range">диапазон</option>
+            </select>
+            <input type="number" class="fp-val" id="fp_v1_${id}" placeholder="значение" ${sa}>
+          </div>
+          <div class="fp-row" id="fp_row2_${id}" style="display:none">
+            <span style="font-size:11px;color:var(--dim);line-height:26px;flex-shrink:0">до</span>
+            <input type="number" class="fp-val" id="fp_v2_${id}" placeholder="до" ${sa}>
+          </div>
+          <div class="fp-actions">
+            <button class="fp-apply" onclick="applyNumFilter('${col}','${id}')">Применить</button>
+            <button class="fp-clear" onclick="clearNumFilter('${id}')">Сброс</button>
+          </div>
         </div>
-      </div>
-    </span>
-    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
-  </th>`;
-}
-
-// ── th для числовой колонки с попапом ──────────────────
-function makeThNum(col, label, id, w, step) {
-  const arr     = state.sortBy === col ? (state.sortDir === 'desc' ? '↓' : '↑') : '↕';
-  const cls     = state.sortBy === col ? 'sorted' : '';
-  const active  = (window._nfState || {})[id] ? ' has-filter' : '';
-  const stepAttr = step > 0 && step < 1 ? `step="${step}"` : '';
-  return `<th class="${cls}" style="width:${w}px">
-    <div class="th-inner" onclick="setSort('${col}')">
-      <span class="th-label">${label}</span>
-      <span class="sort-arrow">${arr}</span>
-    </div>
-    <span class="filter-icon${active}" onclick="togglePopup(event,'popup_${id}')" title="Фильтр ${label}">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      <div class="filter-popup" id="popup_${id}" onclick="event.stopPropagation()">
-        <div class="fp-title">${label}</div>
-        <div class="fp-row">
-          <select class="fp-op" id="fp_op_${id}" onchange="onFpOpChange('${id}')">
-            <option value="">—</option>
-            <option value="gt">&gt;</option>
-            <option value="gte">&gt;=</option>
-            <option value="lt">&lt;</option>
-            <option value="lte">&lt;=</option>
-            <option value="eq">=</option>
-            <option value="range">диапазон</option>
-          </select>
-          <input type="number" class="fp-val" id="fp_v1_${id}" placeholder="значение" ${stepAttr}>
+      </span>
+      <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+    </th>`;
+  };
+  const mkThPf=()=>{
+    const arr=state.sortBy==='portfolio_name'?(state.sortDir==='desc'?'↓':'↑'):'↕';
+    const cls=state.sortBy==='portfolio_name'?'sorted':'';
+    const act=(state.selectedPortfolios||[]).length?' has-filter':'';
+    return `<th class="${cls}" style="width:120px;overflow:visible">
+      <div class="th-inner" onclick="setSort('portfolio_name')"><span class="th-label">Портфолио</span><span class="sort-arrow">${arr}</span></div>
+      <span class="filter-icon${act}" onclick="togglePopup(event,'popup_portfolio')">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <div class="filter-popup" id="popup_portfolio" onclick="event.stopPropagation()">
+          <div class="fp-title">Портфолио</div>
+          <input class="fp-search" id="fp_pf_search" placeholder="Поиск..." oninput="renderPfListPopup(this.value)">
+          <div class="fp-list" id="fp_pf_list"></div>
+          <div class="fp-actions">
+            <button class="fp-apply" onclick="applyPortfolioFilter()">Применить</button>
+            <button class="fp-clear" onclick="clearPortfolioFilter()">Снять все</button>
+          </div>
         </div>
-        <div class="fp-row" id="fp_row2_${id}" style="display:none">
-          <span style="font-size:11px;color:var(--dim);line-height:26px;flex-shrink:0">до</span>
-          <input type="number" class="fp-val" id="fp_v2_${id}" placeholder="до" ${stepAttr}>
-        </div>
-        <div class="fp-actions">
-          <button class="fp-apply" onclick="applyNumFilter('${col}','${id}')">Применить</button>
-          <button class="fp-clear" onclick="clearNumFilter('${id}')">Сброс</button>
-        </div>
-      </div>
-    </span>
-    <div class="col-resizer" onmousedown="startResize(event,this)"></div>
-  </th>`;
-}
-
-function togglePopup(e, id) {
-  e.stopPropagation();
-  const popup = document.getElementById(id);
-  if (!popup) return;
-  const isOpen = popup.classList.contains('open');
-  closeAllPopups();
-  if (!isOpen) {
-    popup.classList.add('open');
-    _openPopup = id;
-    // Портфолио: заполняем список из кэша при каждом открытии
-    if (id === 'popup_portfolio') {
-      renderPfList(document.getElementById('fp_pf_search')?.value || '');
-    }
+      </span>
+      <div class="col-resizer" onmousedown="startResize(event,this)"></div>
+    </th>`;
+  };
+  const html=`<div style="overflow-x:auto"><table>
+    <thead><tr>
+      ${mkTh('campaign_name','Кампания',280)}
+      ${mkTh('marketplace','MKT',55)}
+      ${mkTh('campaign_state','Статус',88)}
+      ${mkTh('targeting_type','Тип',72)}
+      ${mkThPf()}
+      ${mkThNum('impressions','Показы','impr',80,0)}
+      ${mkThNum('clicks','Клики','clicks',72,0)}
+      ${mkThNum('cost','Расход','cost',82,0.01)}
+      ${mkThNum('ctr','CTR','ctr',65,0.001)}
+      ${mkThNum('sales_14d','Продажи','sales',82,0.01)}
+      ${mkThNum('purchases_14d','Заказы','orders',68,1)}
+      ${mkThNum('acos','ACOS','acos',68,0.1)}
+      ${mkTh('daily_budget','Бюджет/д',78)}
+    </tr></thead>
+    <tbody>${d.rows.map(r=>renderRow(r)).join('')}</tbody>
+  </table></div>`;
+  document.getElementById('tableContainer').innerHTML=html;
+  // restore open expand if any
+  if(state._expandedId){
+    const tr=document.querySelector(`tr.dr[data-id="${state._expandedId}"]`);
+    if(tr){ tr.classList.add('exp'); tr.querySelector('.rchev')?.classList.add('op'); insertExpandRow(tr); }
   }
 }
 
-function onFpOpChange(id) {
-  const op   = document.getElementById('fp_op_' + id)?.value;
-  const row2 = document.getElementById('fp_row2_' + id);
-  if (row2) row2.style.display = op === 'range' ? '' : 'none';
-}
+function renderRow(r){
+  const f=(n)=>n==null?'<span class="dv">—</span>':Number(n).toLocaleString('ru');
+  const isEn=r.campaign_state==='ENABLED';
+  const acosVal=r.acos!=null?parseFloat(r.acos):null;
+  const acosC=acosVal==null?'dv':acosVal>40?'cr':acosVal<15?'ok':'';
+  const acosStr=acosVal==null?'<span class="dv">—</span>':`<span class="${acosC}">${acosVal.toFixed(1)}%</span>`;
+  const ctrStr=r.ctr!=null?Number(r.ctr).toFixed(2)+'%':'<span class="dv">—</span>';
+  const today=new Date().toISOString().slice(0,10);
+  const end=r.end_date?r.end_date.slice(0,10):null;
+  let dateSub='';
+  if(end&&end<today) dateSub=`<span style="color:var(--red);margin-left:6px;font-size:10px">✕ Завершена</span>`;
+  else if(isEn) dateSub=`<span style="color:var(--green);margin-left:6px;font-size:10px">● Идёт</span>`;
+  const pfLabel=r.portfolio_name?`<span class="n" style="color:var(--muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block" title="${r.portfolio_name}">${r.portfolio_name}</span>`:'<span class="dv">—</span>';
+  const cid=r.campaign_id;
+  const cname=(r.campaign_name||'').replace(/"/g,'&quot;');
+  const budgVal=r.daily_budget!=null?Number(r.daily_budget).toFixed(2):'';
 
-// Сохраняем состояние фильтров попапов глобально
-window._nfState = window._nfState || {};
-
-function applyNumFilter(field, id) {
-  const op = document.getElementById('fp_op_' + id)?.value || '';
-  const v1 = document.getElementById('fp_v1_' + id)?.value || '';
-  const v2 = document.getElementById('fp_v2_' + id)?.value || '';
-  window._nfState[id] = op && v1 !== '' ? {op, v1, v2} : null;
-  closeAllPopups();
-  state.page = 1;
-  fetchData();
-}
-
-function clearNumFilter(id) {
-  ['fp_op_','fp_v1_','fp_v2_'].forEach(p => {
-    const el = document.getElementById(p + id);
-    if (el) el.value = '';
-  });
-  const row2 = document.getElementById('fp_row2_' + id);
-  if (row2) row2.style.display = 'none';
-  window._nfState[id] = null;
-  closeAllPopups();
-  state.page = 1;
-  fetchData();
-}
-
-// ── Портфолио попап (мультивыбор с чекбоксами) ──────────
-let _allPortfoliosForFilter = [];
-// state.selectedPortfolios = [] — массив выбранных portfolio_id
-
-async function loadPortfolioFilter() {
-  try {
-    const p = new URLSearchParams({account_type: state.acct});
-    const mkt = document.getElementById('filterMkt')?.value || '';
-    const tgt = document.getElementById('filterTargeting')?.value || '';
-    const st  = document.getElementById('filterState')?.value || '';
-    if (mkt) p.set('marketplace', mkt);
-    if (tgt) p.set('targeting_type', tgt);
-    if (st)  p.set('campaign_state', st);
-    const r = await fetch('/analytics/campaigns/portfolios?' + p);
-    const d = await r.json();
-    _allPortfoliosForFilter = d.portfolios || [];
-    renderPfList('');
-    // обновить счётчик
-    const cnt = document.getElementById('fp_pf_count');
-    if (cnt) cnt.textContent = _allPortfoliosForFilter.length ? `(${_allPortfoliosForFilter.length})` : '';
-  } catch(e) { console.warn('portfolio filter load error', e); }
-}
-
-function renderPfList(search) {
-  const list = document.getElementById('fp_pf_list');
-  if (!list) return;
-  const sel = state.selectedPortfolios || [];
-  const filtered = search
-    ? _allPortfoliosForFilter.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : _allPortfoliosForFilter;
-  if (!filtered.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';
-    return;
-  }
-  list.innerHTML = filtered.map(p =>
-    `<label>
-      <input type="checkbox" name="fp_pf" value="${p.id}" ${sel.includes(p.id)?'checked':''}>
-      <span style="overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</span>
-    </label>`
-  ).join('');
-}
-
-function filterPfList(search) { renderPfList(search); }
-
-function applyPortfolioFilter() {
-  const checked = [...document.querySelectorAll('input[name="fp_pf"]:checked')];
-  state.selectedPortfolios = checked.map(el => el.value);
-  // Для совместимости с buildParams — берём первое если одно, иначе спецзначение
-  closeAllPopups();
-  state.page = 1;
-  fetchData();
-}
-
-function clearPortfolioFilter() {
-  state.selectedPortfolios = [];
-  renderPfList(document.getElementById('fp_pf_search')?.value || '');
-}
-
-// ── Собрать числовые фильтры из _nfState в params ────────
-function buildNumParams(p) {
-  const NF_MAP = {impr:'impressions',clicks:'clicks',cost:'cost',ctr:'ctr',sales:'sales_14d',orders:'purchases_14d',acos:'acos'};
-  Object.entries(window._nfState || {}).forEach(([id, s]) => {
-    if (!s) return;
-    const field = NF_MAP[id]; if (!field) return;
-    if (s.op === 'range') {
-      if (s.v1 !== '') p.set(field + '_min', s.v1);
-      if (s.v2 !== '') p.set(field + '_max', s.v2);
-    } else {
-      p.set(field + '_op',  s.op);
-      p.set(field + '_val', s.v1);
-    }
-  });
-}
-
-// ── Resize столбцов ───────────────────────────────────────
-let _resizing = null;
-function startResize(e, handle) {
-  e.stopPropagation();
-  const th = handle.parentElement;
-  _resizing = { th, startX: e.pageX, startW: th.offsetWidth };
-  handle.classList.add('dragging');
-  document.addEventListener('mousemove', doResize);
-  document.addEventListener('mouseup', stopResize);
-}
-function doResize(e) {
-  if (!_resizing) return;
-  const w = Math.max(40, _resizing.startW + e.pageX - _resizing.startX);
-  _resizing.th.style.width = w + 'px';
-}
-function stopResize() {
-  if (_resizing) {
-    document.querySelector('.col-resizer.dragging')?.classList.remove('dragging');
-    _resizing = null;
-  }
-  document.removeEventListener('mousemove', doResize);
-  document.removeEventListener('mouseup', stopResize);
-}
-
-function renderRow(r) {
-  const fmt   = (n) => n == null ? `<span class="no-data-dot"></span>` : Number(n).toLocaleString('ru');
-  const fmtF  = (n, dec=2) => n == null ? `<span class="no-data-dot"></span>` : Number(n).toFixed(dec);
-  const zero  = (n) => (!n || n == 0) ? 'num-zero' : 'num-pos';
-
-  const isEnabled = r.campaign_state === 'ENABLED';
-  const stBadge = isEnabled
-    ? `<span class="badge badge-enabled">Enabled</span>`
-    : `<span class="badge badge-paused">Paused</span>`;
-
-  const ctrlBtn = `<button
-    class="state-toggle ${isEnabled ? 'on' : 'off'}"
-    title="${isEnabled ? 'Enabled · нажми чтобы поставить на паузу' : 'Paused · нажми чтобы запустить'}"
-    data-entity-type="campaign"
-    data-entity-id="${r.campaign_id}"
-    data-marketplace="${r.marketplace}"
-    data-current="${r.campaign_state}"
-    onclick="toggleStatePending(event,this)">
-  </button>`;
-
-  const tgtBadge = r.targeting_type === 'AUTO'
-    ? `<span class="badge badge-auto">Auto</span>`
-    : r.targeting_type === 'MANUAL'
-    ? `<span class="badge badge-manual">Manual</span>`
-    : `<span style="color:var(--dim);font-size:11px">—</span>`;
-
-  const acosVal = r.acos != null ? parseFloat(r.acos) : null;
-  const acosClass = acosVal == null ? '' : acosVal > 40 ? 'acos-high' : acosVal < 15 ? 'acos-ok' : '';
-  const acosStr = acosVal == null
-    ? `<span class="no-data-dot"></span>`
-    : `<span class="num ${acosClass}">${acosVal.toFixed(1)}%</span>`;
-
-  const ctrVal = r.ctr != null ? (parseFloat(r.ctr) * 100).toFixed(2) + '%' : `<span class="no-data-dot"></span>`;
-
-  const portfolioLabel = r.portfolio_name || (r.portfolio_id ? r.portfolio_id : null);
-  const portfolio = portfolioLabel
-    ? `<span style="font-size:12px;color:var(--muted)" title="${r.portfolio_id||''}">${r.portfolio_name || '— ' + r.portfolio_id}</span>`
-    : `<span style="color:var(--dim);font-size:11px">—</span>`;
-
-  return `<tr class="campaign-row" data-id="${r.campaign_id}" data-acct="${state.acct}" data-end-date="${(r.end_date||'').slice(0,10)}">
-    <td class="td-name">
-      <button class="expand-btn" onclick="toggleStructure(event,'${r.campaign_id}')" data-name="${r.campaign_name||''}" data-acct="${state.acct}" data-mkt="${r.marketplace||''}" >+</button>
-      <span class="td-name-text" style="display:inline-block;max-width:220px;vertical-align:middle" title="${r.campaign_name || ''}">${r.campaign_name || '—'}</span>
-      <div class="td-name-sub" style="padding-left:26px">
-        ${r.campaign_id || ''}
-        ${(() => {
-          const today = new Date().toISOString().slice(0,10);
-          const start = r.start_date ? r.start_date.slice(0,10) : null;
-          const end   = r.end_date   ? r.end_date.slice(0,10)   : null;
-          let dateStr = start ? start : '';
-          if (end) dateStr += ' → ' + end;
-          let statusStr = '';
-          if (end && end < today) statusStr = '<span style="color:var(--red);margin-left:6px">✕ Завершена</span>';
-          else if (start && start > today) statusStr = '<span style="color:var(--blue);margin-left:6px">⏳ Запланирована</span>';
-          else if (r.campaign_state === 'ENABLED') statusStr = '<span style="color:var(--green);margin-left:6px">● Идёт</span>';
-          return (dateStr ? '<span style="margin-left:8px">' + dateStr + '</span>' : '') + statusStr;
-        })()}
+  return `<tr class="dr" data-id="${cid}" data-mkt="${r.marketplace||''}" data-tgt="${r.targeting_type||''}" onclick="rowClick(event,'${cid}','${r.marketplace||''}','${r.targeting_type||''}')">
+    <td style="min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;min-width:0">
+        <svg class="rchev" style="flex-shrink:0" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:4px;min-width:0">
+            <span id="cn_${cid}" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;min-width:0" title="${cname}">${r.campaign_name||'—'}</span>
+            <button class="pencil-btn" title="Переименовать" onclick="event.stopPropagation();openNameEdit(event,'cn_${cid}','cne_${cid}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <span id="cne_${cid}" class="name-edit-wrap">
+              <input class="name-inp" value="${cname}" style="min-width:200px"
+                onkeydown="if(event.key==='Enter')saveName(event,'campaign','${cid}','cn_${cid}','cne_${cid}','${r.marketplace||''}');if(event.key==='Escape')closeNameEdit('cn_${cid}','cne_${cid}')" onclick="event.stopPropagation()">
+              <button class="bid-ok" onclick="event.stopPropagation();saveName(event,'campaign','${cid}','cn_${cid}','cne_${cid}','${r.marketplace||''}')">✓</button>
+              <button class="bid-cx" onclick="event.stopPropagation();closeNameEdit('cn_${cid}','cne_${cid}')">✕</button>
+            </span>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);margin-top:1px">${cid}${dateSub}</div>
+        </div>
       </div>
     </td>
-    <td><span class="badge" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)">${r.marketplace || '—'}</span></td>
-    <td style="white-space:nowrap">${ctrlBtn}<span class="pending-dot"></span></td>
-    <td>${tgtBadge}</td>
-    <td>${portfolio}</td>
-    <td class="num ${zero(r.impressions)}">${fmt(r.impressions)}</td>
-    <td class="num ${zero(r.clicks)}">${fmt(r.clicks)}</td>
-    <td class="num ${zero(r.cost)}">$${r.cost != null ? Number(r.cost).toFixed(2) : '—'}</td>
-    <td class="num">${ctrVal}</td>
-    <td class="num ${zero(r.sales_14d)}">$${r.sales_14d != null ? Number(r.sales_14d).toFixed(2) : '—'}</td>
-    <td class="num ${zero(r.purchases_14d)}">${fmt(r.purchases_14d)}</td>
-    <td>${acosStr}</td>
-    <td class="num">${r.daily_budget != null ? '$' + Number(r.daily_budget).toFixed(2) : '<span class="no-data-dot"></span>'}</td>
+    <td><span class="b bm">${r.marketplace||'—'}</span></td>
+    <td>
+      <button class="stog ${isEn?'en':'pa'}" title="${isEn?'Enabled · пауза':'Paused · запустить'}"
+        data-entity-type="campaign" data-entity-id="${cid}" data-marketplace="${r.marketplace||''}" data-current="${r.campaign_state||'ENABLED'}"
+        onclick="event.stopPropagation();toggleStatePending(event,this)"></button>
+    </td>
+    <td>${r.targeting_type==='AUTO'?'<span class="b ba">Auto</span>':r.targeting_type==='MANUAL'?'<span class="b bman">Manual</span>':'<span class="dv">—</span>'}</td>
+    <td>${pfLabel}</td>
+    <td class="r"><span class="n bn">${f(r.impressions)}</span></td>
+    <td class="r"><span class="n">${f(r.clicks)}</span></td>
+    <td class="r"><span class="n an">${r.cost!=null?'$'+Number(r.cost).toFixed(2):'<span class="dv">—</span>'}</span></td>
+    <td class="r"><span class="n">${ctrStr}</span></td>
+    <td class="r"><span class="n gn">${r.sales_14d!=null?'$'+Number(r.sales_14d).toFixed(2):'<span class="dv">—</span>'}</span></td>
+    <td class="r"><span class="n">${f(r.purchases_14d)}</span></td>
+    <td class="r">${acosStr}</td>
+    <td class="r" onclick="event.stopPropagation()">
+      <span id="budg_disp_${cid}">
+        <button class="bid-btn" onclick="openBudgetEdit(event,'budg_wrap_${cid}')">${budgVal?'$'+budgVal:'—'}</button>
+      </span>
+      <span id="budg_wrap_${cid}" class="bid-edit" style="display:none">
+        <input class="bid-inp" type="number" id="budg_${cid}" value="${budgVal}" min="1" step="1" style="width:68px"
+          onkeydown="if(event.key==='Enter')saveBudget('${cid}','${r.marketplace||''}','${budgVal}')" onclick="event.stopPropagation()">
+        <button class="bid-ok" onclick="saveBudget('${cid}','${r.marketplace||''}','${budgVal}')">✓</button>
+        <button class="bid-cx" onclick="closeBudgetEdit('budg_wrap_${cid}','budg_disp_${cid}')">✕</button>
+      </span>
+    </td>
   </tr>`;
 }
 
-// ── Render stats ──────────────────────────────────────────
-function renderStats(s) {
-  if (!s) return;
-  const n = (v, dec=0) => v == null ? '—' : Number(v).toLocaleString('ru', {maximumFractionDigits: dec});
-  document.getElementById('sTotalCamp').textContent = n(s.total_campaigns);
-  document.getElementById('sImpr').textContent      = n(s.total_impressions);
-  document.getElementById('sClicks').textContent    = n(s.total_clicks);
-  document.getElementById('sCost').textContent      = '$' + n(s.total_cost, 2);
-  document.getElementById('sSales').textContent     = '$' + n(s.total_sales_14d, 2);
-  const acos = s.total_cost && s.total_sales_14d
-    ? (s.total_cost / s.total_sales_14d * 100).toFixed(1) + '%'
-    : '—';
-  const acosEl = document.getElementById('sAcos');
-  acosEl.textContent = acos;
-  const acosNum = parseFloat(acos);
-  acosEl.className = 'stat-val' + (acosNum > 40 ? ' acos-high' : acosNum < 15 ? ' acos-ok' : '');
+// ── Row click ────────────────────────────────────────────
+function rowClick(e, campId, mkt, tgtType){
+  if(e.target.closest('button')) return;
+  const tr=e.currentTarget;
+  if(state._expandedId===campId){ closeExpand(); return; }
+  closeExpand();
+  state._expandedId=campId; state._expandedMkt=mkt; state._expandedTgt=tgtType||'';
+  // Store campaign name and budget from the row's dataset
+  state._expandedName=tr.dataset.name||'';
+  state._expandedBudget=tr.dataset.budget||'';
+  tr.classList.add('exp'); tr.querySelector('.rchev')?.classList.add('op');
+  insertExpandRow(tr);
+  loadCampStructure(campId, mkt);
 }
-
-// ── Pagination ────────────────────────────────────────────
-function renderPagination(total, page, perPage) {
-  if (total <= perPage) {
-    document.getElementById('paginationRow').style.display = 'none';
-    return;
-  }
-  const totalPages = Math.ceil(total / perPage);
-  const from = (page - 1) * perPage + 1;
-  const to   = Math.min(page * perPage, total);
-
-  document.getElementById('pageInfo').textContent =
-    `${from.toLocaleString('ru')}–${to.toLocaleString('ru')} из ${total.toLocaleString('ru')}`;
-
-  // Build page buttons: prev, up to 7 pages around current, next
-  let pages = [];
-  if (totalPages <= 7) {
-    pages = Array.from({length: totalPages}, (_,i) => i+1);
-  } else {
-    const delta = 2;
-    const left  = Math.max(1, page - delta);
-    const right = Math.min(totalPages, page + delta);
-    if (left > 1)  pages.push(1, left > 2 ? '…' : null);
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < totalPages) pages.push(right < totalPages - 1 ? '…' : null, totalPages);
-    pages = pages.filter(p => p !== null);
-  }
-
-  const btns = document.getElementById('pageBtns');
-  btns.innerHTML = `
-    <button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>
-    ${pages.map(p => p === '…'
-      ? `<button class="page-btn" disabled>…</button>`
-      : `<button class="page-btn${p===page?' active':''}" onclick="goPage(${p})">${p}</button>`
-    ).join('')}
-    <button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>
-  `;
-  document.getElementById('paginationRow').style.display = 'flex';
-}
-
-function goPage(p) {
-  const totalPages = Math.ceil(state.total / state.perPage);
-  if (p < 1 || p > totalPages) return;
-  state.page = p;
-  fetchData();
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-
-// ── Sort ──────────────────────────────────────────────────
-function setSort(col) {
-  if (state.sortBy === col) {
-    state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
-  } else {
-    state.sortBy  = col;
-    state.sortDir = 'desc';
-  }
-  state.page = 1;
-  fetchData();
-}
-
-// ── Enter key on name filter ──────────────────────────────
-document.getElementById('filterName').addEventListener('keydown', e => {
-  if (e.key === 'Enter') applyFilters();
-});
-
-// ── Expand / collapse структуры кампании ─────────────────
-const _structureCache = {};
-
-async function toggleStructure(e, campaignId) {
-  e.stopPropagation();
-  const btn  = e.currentTarget;
-  const tr   = btn.closest('tr');
-  const acct = btn.dataset.acct || tr?.dataset.acct || state.acct;
-
-  // Убрать уже открытую строку этой кампании
-  const existingRow = document.getElementById('struct_' + campaignId);
-  if (existingRow) {
-    existingRow.remove();
-    btn.classList.remove('open');
-    btn.textContent = '+';
-    return;
-  }
-
-  btn.classList.add('open');
-  btn.textContent = '−';
-
-  // Вставить строку-заглушку
-  const structRow = document.createElement('tr');
-  structRow.id = 'struct_' + campaignId;
-  structRow.className = 'structure-row';
-  structRow.innerHTML = `<td colspan="13"><div class="structure-loading"><span class="spinner"></span> Загрузка структуры...</div></td>`;
-  tr.insertAdjacentElement('afterend', structRow);
-
-  try {
-    let data = _structureCache[campaignId];
-    if (!data) {
-      const df = document.getElementById('dateFrom')?.value || '';
-    const dt = document.getElementById('dateTo')?.value || '';
-    const sp = new URLSearchParams({campaign_id: campaignId, account_type: acct});
-    if (df) sp.set('date_from', df);
-    if (dt) sp.set('date_to', dt);
-    const r = await fetch(`/analytics/campaigns/structure?${sp}`);
-      data = await r.json();
-      if (!data.error) _structureCache[campaignId] = data;
-      if (!data.campaign_name) {
-        const tr2 = btn.closest('tr');
-        data.campaign_name = tr2?.querySelector('.td-name-text')?.title || '';
-      }
-      // Передаём campaign_id и marketplace в data для кнопок управления групп
-      data._campaign_id  = campaignId;
-      data._marketplace  = btn.dataset.mkt || tr?.querySelector('.badge')?.textContent?.trim() || '';
-      // end_date из строки таблицы
-      const nameSubEl = tr?.querySelector('.td-name-sub');
-      data.campaign_end_date = tr?.dataset.endDate || null;
-    }
-    if (data.error) throw new Error(data.error);
-    structRow.querySelector('td').innerHTML = renderStructure(data, data.campaign_name || '');
-  } catch(err) {
-    structRow.querySelector('td').innerHTML =
-      `<div class="structure-loading" style="color:var(--red)">Ошибка: ${err.message}</div>`;
-  }
-}
-
-// ── Сортировка внутри группы ─────────────────────────────
-const _sgSort = {};  // gid → {field, dir}
-
-function sortSgArray(items, gid, type) {
-  const sort = _sgSort[gid];
-  if (!sort) return items;
-  const { field, dir } = sort;
-
-  return items.sort((a, b) => {
-    let va, vb;
-    if (field === 'bid') {
-      va = type === 'kw' ? (a.bid || 0) : (a.bid || 0);
-    } else {
-      const sa = a.stats || {};
-      const sb = b.stats || {};
-      if (field === 'acos') {
-        va = sa.cost && sa.sales_14d ? sa.cost/sa.sales_14d*100 : null;
-        vb = sb.cost && sb.sales_14d ? sb.cost/sb.sales_14d*100 : null;
-      } else if (field === 'ctr') {
-        va = sa.impressions ? sa.clicks/sa.impressions*100 : null;
-        vb = sb.impressions ? sb.clicks/sb.impressions*100 : null;
-      } else {
-        va = sa[field] ?? null;
-        vb = sb[field] ?? null;
-      }
-    }
-    // null в конец
-    if (va === null && vb === null) return 0;
-    if (va === null) return 1;
-    if (vb === null) return -1;
-    return dir === 'desc' ? vb - va : va - vb;
+function closeExpand(){
+  state._expandedId=null;
+  document.querySelectorAll('tr.er').forEach(t=>t.remove());
+  document.querySelectorAll('tr.dr.exp').forEach(t=>{
+    t.classList.remove('exp'); t.querySelector('.rchev')?.classList.remove('op');
   });
 }
-
-function sortSgItems(gid, e) {
-  e.stopPropagation();
-  const el = e.target.closest('[data-field]');
-  if (!el) return;
-  const field = el.dataset.field;
-  const cur   = _sgSort[gid];
-  let dir = 'desc';
-  if (cur && cur.field === field) dir = cur.dir === 'desc' ? 'asc' : 'desc';
-  _sgSort[gid] = { field, dir };
-
-  // Найти данные группы в кэше
-  let targetData = null, targetGroup = null;
-  for (const key of Object.keys(_structureCache)) {
-    const d = _structureCache[key];
-    if (!d.groups) continue;
-    const g = d.groups.find(g => g.id.replace(/[^a-z0-9]/gi,'_') === gid);
-    if (g) { targetData = d; targetGroup = g; break; }
-  }
-  if (!targetData || !targetGroup) return;
-
-  const body = el.closest('.sg-group-body');
-  if (!body) return;
-  const panel0 = body.querySelector('.sg-tab-panel[data-panel="0"]');
-  if (!panel0) return;
-
-  const $ = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
-  const bidFmt = v => v != null ? '$' + Number(v).toFixed(2) : '—';
-  const acosClass = v => v > 40 ? 'acos-high' : v < 15 ? 'acos-ok' : '';
-
-  function statCells(s) {
-    const acos = s.acos != null ? s.acos : (s.cost && s.sales_14d ? s.cost/s.sales_14d*100 : null);
-    const ctr  = s.ctr  != null ? s.ctr  : (s.impressions ? s.clicks/s.impressions*100 : null);
-    return [
-      '<span class="num">' + $(s.impressions, v => Number(v).toLocaleString('ru')) + '</span>',
-      '<span class="num">' + $(s.clicks, v => Number(v).toLocaleString('ru')) + '</span>',
-      '<span class="num">' + (ctr  != null ? ctr.toFixed(2)+'%' : '<span style="color:var(--dim)">—</span>') + '</span>',
-      '<span class="num">' + $(s.cost, v => '$'+Number(v).toFixed(2)) + '</span>',
-      '<span class="num">' + $(s.sales_14d, v => '$'+Number(v).toFixed(2)) + '</span>',
-      '<span class="num">' + (acos != null ? '<span class="'+acosClass(acos)+'">'+acos.toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>') + '</span>',
-    ].join('');
-  }
-
-  function toggleBtn(et, eid, mkt, cur_state, cid) {
-    const cls = cur_state === 'ENABLED' ? 'on' : 'off';
-    return '<button class="state-toggle ' + cls + '" data-entity-type="' + et + '" data-entity-id="' + eid
-      + '" data-campaign-id="' + (cid||'') + '" data-marketplace="' + (mkt||'') + '" data-current="' + (cur_state||'ENABLED')
-      + '" onclick="toggleStatePending(event,this)"></button>';
-  }
-
-  const cid = targetData._campaign_id || '';
-  const mkt = targetData._marketplace || '';
-
-  const sortedKw  = sortSgArray([...targetGroup.keywords], gid, 'kw');
-  const sortedTgt = sortSgArray([...targetGroup.targets],  gid, 'tgt');
-
-  let newHtml = '';
-  sortedKw.forEach(kw => {
-    const s = kw.stats || {};
-    newHtml += '<div class="sg-item sg-item-10col">'
-      + toggleBtn('keyword', kw.id, mkt, kw.state, cid)
-      + '<span class="sg-item-text">' + (kw.text||'—') + '</span>'
-      + '<span class="sg-item-match">' + (kw.match_type||'') + '</span>'
-      + '<span class="sg-item-bid">' + bidFmt(kw.bid) + '</span>'
-      + statCells(s)
-      + '</div>';
-  });
-  sortedTgt.forEach(t => {
-    const s = t.stats || {};
-    newHtml += '<div class="sg-item sg-item-10col">'
-      + toggleBtn('target', t.id, mkt, t.state, cid)
-      + '<span class="sg-item-text">' + (t.expression||'—') + '</span>'
-      + '<span></span>'
-      + '<span class="sg-item-bid">' + bidFmt(t.bid) + '</span>'
-      + statCells(s)
-      + '</div>';
-  });
-
-  // Заменить rows в DOM
-  const allItems = panel0.querySelectorAll('.sg-item.sg-item-10col');
-  const headerItem = [...allItems].find(el => el.style.background || el.querySelector('.sg-col-hdr'));
-  const dataItems  = [...allItems].filter(el => !el.style.background && !el.querySelector('.sg-col-hdr'));
-  if (dataItems.length && dataItems[0].parentNode) {
-    const parent = dataItems[0].parentNode;
-    dataItems.forEach(el => el.remove());
-    const temp = document.createElement('div');
-    temp.innerHTML = newHtml;
-    while (temp.firstChild) parent.appendChild(temp.firstChild);
-  }
-
-  // Обновить стрелки
-  panel0.querySelectorAll('.sg-col-hdr').forEach(el => {
-    const f = el.dataset.field;
-    el.classList.toggle('sorted', f === field);
-    const arrow = el.querySelector('.sg-sort-arrow');
-    if (arrow) arrow.textContent = f === field ? (dir==='desc'?'↓':'↑') : '↕';
-  });
+function insertExpandRow(tr){
+  const cid=state._expandedId;
+  const et=document.createElement('tr'); et.className='er';
+  et.innerHTML=`<td colspan="13"><div class="ei" id="ei_${cid}"><div class="stl"><div class="sp"></div> Загрузка структуры...</div></div></td>`;
+  tr.after(et);
 }
 
-function toggleSgGroup(el) {
-  const body   = el.nextElementSibling;
-  const toggle = el.querySelector('.sg-group-toggle');
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  if (toggle) toggle.classList.toggle('open', !isOpen);
+// ── Load structure ───────────────────────────────────────
+const _structureCache={};
+async function loadCampStructure(campId, mkt){
+  const el=document.getElementById('ei_'+campId); if(!el) return;
+  if(_structureCache[campId]){ el.innerHTML=buildCampHtml(_structureCache[campId],campId,mkt); return; }
+  try{
+    const df=document.getElementById('dateFrom').value;
+    const dt=document.getElementById('dateTo').value;
+    const r=await fetch(`/analytics/campaigns/structure?campaign_id=${campId}&account_type=${state.acct}&date_from=${df}&date_to=${dt}`);
+    const d=await r.json(); if(d.error) throw new Error(d.error);
+    _structureCache[campId]=d;
+    if(el.closest('tr')) el.innerHTML=buildCampHtml(d,campId,mkt);
+  }catch(e){
+    if(el.closest('tr')) el.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
+  }
 }
 
-// ── Сортировка поисковых запросов ────────────────────────
-function sortStItems(e, gid, field) {
-  e.stopPropagation();
-  const key = gid + '_st';
-  const cur = _sgSort[key] || {field: 'clicks', dir: 'desc'};
-  _sgSort[key] = { field, dir: (cur.field === field && cur.dir === 'desc') ? 'asc' : 'desc' };
+// ── Build camp HTML (products-style groups) ──────────────
+const _ts={};
+function je(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function f(v,d=0){if(v==null||v==='')return'—';return Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});}
 
-  // Найти panel 1 (поисковые запросы)
-  const panel = document.querySelector(
-    '.sg-tab-panel[data-group="' + gid + '"][data-panel="1"]'
-  );
-  if (!panel) return;
-
-  // Найти данные группы в кэше
-  let groupData = null, cacheData = null;
-  for (const key2 of Object.keys(_structureCache)) {
-    const d = _structureCache[key2];
-    if (!d.groups) continue;
-    const g = d.groups.find(g => g.id.replace(/[^a-z0-9]/gi, '_') === gid);
-    if (g) { groupData = g; cacheData = d; break; }
+function buildCampHtml(data, campId, mkt){
+  const groups=data.groups||[];
+  const cs=data.campaign_stats||{};
+  // Detect targeting type from groups if not set on campaign level
+  let tgtType=(data.targeting_type||'').toUpperCase();
+  if(!tgtType && groups.length){
+    const types=[...new Set(groups.map(g=>(g.targeting_type||g.campaign_targeting_type||'').toUpperCase()).filter(Boolean))];
+    if(types.length===1) tgtType=types[0];
   }
-  if (!groupData) return;
+  // Fallback: use targeting_type from table row (passed via state)
+  if(!tgtType) tgtType=(state._expandedTgt||'').toUpperCase();
 
-  const sort = _sgSort[gid + '_st'];
-  const allSt = [
-    ...(groupData.search_terms || []),
-    ...groupData.keywords.flatMap(kw => kw.search_terms || []),
-  ];
-  const sorted = [...allSt].sort((a, b) => {
-    const val = (s) => {
-      if (sort.field === 'acos') return (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
-      if (sort.field === 'ctr')  return s.impressions ? s.clicks/s.impressions*100 : null;
-      return s[sort.field] != null ? s[sort.field] : null;
+  let h=`<div class="cpp">`;
+
+  // Campaign-level negatives (compact)
+  const campNegs=data.campaign_negatives||[];
+  if(campNegs.length){
+    h+=`<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <div style="padding:5px 10px;background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">🚫 Минус слова кампании (${campNegs.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px">
+        ${campNegs.map(n=>`<span style="padding:2px 8px;border:1px solid var(--border);border-radius:99px;font-size:11px;background:var(--surface2);font-style:italic;color:var(--muted)">${n.text||'—'}</span>`).join('')}
+      </div></div>`;
+  }
+
+  // Header: title + + Группа button
+  h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Группы объявлений · ${groups.length} шт</div>
+    <button class="act-btn" style="height:26px;font-size:11px" onclick="event.stopPropagation();openCreateGrp('${je(campId)}','${je(mkt)}','${je(tgtType)}')">+ Группа</button>
+  </div>`;
+
+  if(!groups.length){ h+='<div class="ge">Нет групп объявлений</div></div>'; return h; }
+
+  h+=`<div class="cpc">`;
+  groups.forEach((g,gi)=>{
+    const gid='g'+gi+'_'+campId.slice(-6);
+    const enC=(g.state||'').toUpperCase()==='ENABLED';
+    // Per-group targeting type (for groups in mixed campaigns)
+    const gTgtType=(g.targeting_type||g.campaign_targeting_type||tgtType||'').toUpperCase();
+    const kwN=(g.keywords||[]).length+(g.targets||[]).length;
+    const allSt=[...(g.search_terms||[]),...(g.keywords||[]).flatMap(kw=>kw.search_terms||[]),...(g.targets||[]).flatMap(t=>t.search_terms||[])];
+    const stN=allSt.length, ngN=(g.negatives||[]).length, adN=(g.ads||[]).length;
+    const st=g.stats||{};
+    const acC=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
+
+    // Group bid edit
+    const grpBid=g.bid?Number(g.bid).toFixed(2):'';
+    const grpBidId='gbid_'+gid;
+    const grpBidHtml=grpBid?`<span id="${grpBidId}">
+      <button class="bid-btn" onclick="event.stopPropagation();openBidEdit(event,'${grpBidId}')">$${grpBid}</button>
+      <span class="bid-edit" style="display:none">
+        <input class="bid-inp" type="number" value="${grpBid}" min="0.02" step="0.01"
+          onkeydown="if(event.key==='Enter')saveBidItem(event,'${grpBidId}','ad_group','${je(String(g.id||''))}','${grpBid}','${je(mkt)}')"
+          onclick="event.stopPropagation()">
+        <button class="bid-ok" onclick="saveBidItem(event,'${grpBidId}','ad_group','${je(String(g.id||''))}','${grpBid}','${je(mkt)}')">✓</button>
+        <button class="bid-cx" onclick="closeBidEdit('${grpBidId}')">✕</button>
+      </span></span>`:'—';
+
+    h+=`<div class="cc" id="cc_${gid}">
+      <div class="cch" onclick="grpClick(this)">
+        <button class="stog ${enC?'en':'pa'}" title="${enC?'Enabled':'Paused'}"
+          onclick="event.stopPropagation();toggleState(event,'ad_group','${je(g.id||'')}','${je(g.state||'ENABLED')}','${je(mkt)}','')" data-current="${je(g.state||'ENABLED')}"></button>
+        <span id="gn_${gid}" class="cn">${g.name||g.id}</span>
+        <button class="pencil-btn" title="Переименовать" onclick="event.stopPropagation();openNameEdit(event,'gn_${gid}','gne_${gid}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <span id="gne_${gid}" class="name-edit-wrap">
+          <input class="name-inp" value="${je(g.name||g.id||'')}"
+            onkeydown="if(event.key===&quot;Enter&quot;)saveNameSg(event,&quot;${gid}&quot;,&quot;${je(g.id||'')}&quot;,&quot;${je(mkt)}&quot;);if(event.key===&quot;Escape&quot;)closeNameEdit(&quot;gn_${gid}&quot;,&quot;gne_${gid}&quot;)" onclick="event.stopPropagation()">
+          <button class="bid-ok" onclick="event.stopPropagation();saveNameSg(event,&quot;${gid}&quot;,&quot;${je(g.id||'')}&quot;,&quot;${je(mkt)}&quot;)">✓</button>
+          <button class="bid-cx" onclick="event.stopPropagation();closeNameEdit(&quot;gn_${gid}&quot;,&quot;gne_${gid}&quot;)">✕</button>
+        </span>
+        <div class="camp-inline-meta" onclick="event.stopPropagation()">
+          <span class="act-lbl">Ставка</span>
+          ${grpBidHtml}
+        </div>
+        <div class="cm">
+          ${gTgtType?`<span class="b ${gTgtType==='AUTO'?'ba':'bman'}">${gTgtType}</span>`:''}
+          <span class="b ${enC?'be':'bp'}">${enC?'ENABLED':'PAUSED'}</span>
+          ${st.impressions!=null?`<span class="cs2"><span class="csl">Показы</span><span class="csv bn">${f(st.impressions)}</span></span>`:''}
+          ${st.clicks!=null?`<span class="cs2"><span class="csl">Клики</span><span class="csv">${f(st.clicks)}</span></span>`:''}
+          ${st.cost!=null?`<span class="cs2"><span class="csl">Расходы</span><span class="csv an">$${f(st.cost,2)}</span></span>`:''}
+          ${st.sales_14d!=null?`<span class="cs2"><span class="csl">Продажи</span><span class="csv gn">$${f(st.sales_14d,2)}</span></span>`:''}
+          ${st.purchases_14d!=null?`<span class="cs2"><span class="csl">Заказы</span><span class="csv">${f(st.purchases_14d)}</span></span>`:''}
+          ${st.acos!=null?`<span class="cs2"><span class="csl">ACOS</span><span class="csv ${acC}">${st.acos.toFixed(1)}%</span></span>`:''}
+        </div>
+        <svg class="cchev" id="chev_${gid}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="cst" id="cs_${gid}">`;
+
+    // Tabs
+    h+=`<div class="tabs" style="justify-content:space-between">
+      <div style="display:flex">
+        <span class="tab on" onclick="tabClick(event,0)">Таргеты<span class="tbb">${kwN}</span></span>
+        <span class="tab" onclick="tabClick(event,1)">Поисковые запросы<span class="tbb">${stN}</span></span>
+        <span class="tab" onclick="tabClick(event,2)">Минус слова<span class="tbb">${ngN}</span></span>
+        <span class="tab" onclick="tabClick(event,3)">Объявления<span class="tbb">${adN}</span></span>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
+        <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddKw('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Ключевое слово</button>
+        <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddNeg('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Минус</button>
+      </div>
+    </div>`;
+
+    // Tab 0: keywords + targets
+    const kwKey=`kw_${gid}`;
+    const kwS=_ts[kwKey]||{field:'clicks',dir:'desc'};
+    const kwH=(field,label)=>{
+      const on=kwS.field===field;
+      const arr=on?(kwS.dir==='desc'?'↓':'↑'):'↕';
+      return `<span class="shdr${on?' son':''}" onclick="tabSortClick(event,'${kwKey}',this)" data-field="${field}">${label}<span class="sar">${arr}</span></span>`;
     };
-    const va = val(a), vb = val(b);
-    if (va == null && vb == null) return 0;
-    if (va == null) return 1; if (vb == null) return -1;
-    return sort.dir === 'desc' ? vb - va : va - vb;
-  });
-
-  // Перестроить rows (все кроме заголовка)
-  const allItems = panel.querySelectorAll('.sg-item.sg-item-st');
-  const header   = [...allItems].find(el => el.querySelector('.sg-col-hdr') || el.style.background);
-  const rows     = [...allItems].filter(el => el !== header);
-  if (!rows.length || !rows[0].parentNode) return;
-  const parent = rows[0].parentNode;
-  rows.forEach(el => el.remove());
-
-  const z = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
-
-  sorted.forEach(st => {
-    const s = st;
-    const acos = (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
-    const ctr  = s.impressions ? s.clicks/s.impressions*100 : null;
-    const kwLabel = s.keyword
-      ? (s.keyword.length > 25 ? s.keyword.slice(0,25) + '…' : s.keyword)
-      : (s.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED'
-          ? '<span style="color:var(--dim);font-size:10px">auto</span>'
-          : '<span style="color:var(--dim)">—</span>');
-    const div = document.createElement('div');
-    div.className = 'sg-item sg-item-st';
-    div.innerHTML =
-      '<span class="sg-item-text" title="' + (st.term||'') + '">' + (st.term||'—') + '</span>'
-      + '<span class="sg-item-text" style="color:var(--muted);font-size:11px">' + kwLabel + '</span>'
-      + '<span class="sg-item-match">' + (st.match_type || (st.keyword_type ? st.keyword_type.replace('TARGETING_EXPRESSION_PREDEFINED','AUTO') : '')) + '</span>'
-      + '<span class="num">' + z(s.impressions, v => Number(v).toLocaleString('ru')) + '</span>'
-      + '<span class="num">' + z(s.clicks, v => Number(v).toLocaleString('ru')) + '</span>'
-      + '<span class="num">' + (ctr  != null ? ctr.toFixed(2)+'%'  : '<span style="color:var(--dim)">—</span>') + '</span>'
-      + '<span class="num">' + z(s.cost, v => '$'+Number(v).toFixed(2)) + '</span>'
-      + '<span class="num">' + z(s.sales_14d, v => '$'+Number(v).toFixed(2)) + '</span>'
-      + '<span class="num">' + (acos != null
-          ? '<span class="'+(acos>40?'acos-high':acos<15?'acos-ok':'')+'">'+acos.toFixed(1)+'%</span>'
-          : '<span style="color:var(--dim)">—</span>') + '</span>';
-    parent.appendChild(div);
-  });
-
-  // Обновить стрелки в заголовке
-  if (header) {
-    header.querySelectorAll('.sg-col-hdr').forEach(el => {
-      const f = el.dataset.stfield;
-      el.classList.toggle('sorted', f === field);
-      const arrow = el.querySelector('.sg-sort-arrow');
-      if (arrow) arrow.textContent = f === field ? (sort.dir === 'desc' ? '↓' : '↑') : '↕';
-    });
-  }
-}
-
-function switchSgTab(e, gid, idx) {
-  e.stopPropagation();
-  const body = e.target.closest('.sg-group-body');
-  if (!body) return;
-  // Переключить вкладки
-  body.querySelectorAll('.sg-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
-  body.querySelectorAll('.sg-tab-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
-}
-
-function renderStructure(data, campaignName) {
-  const { groups = [], adjustments = [], campaign_stats: cs = {} } = data;
-
-  const stateChip = (s) => {
-    if (!s) return '';
-    const cls = s === 'ENABLED' ? 'sg-state-enabled' : 'sg-state-paused';
-    return `<span class="sg-state ${cls}">${s === 'ENABLED' ? 'On' : 'Off'}</span>`;
-  };
-
-  const bidStr = (b) => b != null ? `$${Number(b).toFixed(2)}` : '—';
-  const n = (v, dec=0) => (v == null || v === 0)
-    ? `<span class="sg-stat-val zero">—</span>`
-    : `<span class="sg-stat-val">${Number(v).toLocaleString('ru',{maximumFractionDigits:dec})}</span>`;
-  const cost$ = (v) => (v == null || v === 0)
-    ? `<span class="sg-stat-val zero">—</span>`
-    : `<span class="sg-stat-val">$${Number(v).toFixed(2)}</span>`;
-  const acosEl = (v) => {
-    if (v == null) return `<span class="sg-stat-val zero">—</span>`;
-    const cls = v > 40 ? 'acos-hi' : v < 15 ? 'acos-ok' : '';
-    return `<span class="sg-stat-val ${cls}">${Number(v).toFixed(1)}%</span>`;
-  };
-  const ctrEl = (v) => v == null
-    ? `<span class="sg-stat-val zero">—</span>`
-    : `<span class="sg-stat-val">${Number(v).toFixed(2)}%</span>`;
-
-  const statsBlock = (s, size='sm') => {
-    if (!s || !Object.keys(s).length) return '';
-    return `<div class="sg-stats">
-      <div class="sg-stat">${n(s.impressions)}<span class="sg-stat-lbl">Показы</span></div>
-      <div class="sg-stat">${n(s.clicks)}<span class="sg-stat-lbl">Клики</span></div>
-      <div class="sg-stat">${ctrEl(s.ctr)}<span class="sg-stat-lbl">CTR</span></div>
-      <div class="sg-stat">${cost$(s.cost)}<span class="sg-stat-lbl">Расход</span></div>
-      <div class="sg-stat">${cost$(s.sales_14d)}<span class="sg-stat-lbl">Продажи</span></div>
-      <div class="sg-stat">${n(s.purchases_14d)}<span class="sg-stat-lbl">Заказы</span></div>
-      <div class="sg-stat">${acosEl(s.acos)}<span class="sg-stat-lbl">ACOS</span></div>
+    h+=`<div class="tp on"><div class="ih">
+      <span></span><span>Ключевое слово / Таргет</span><span style="text-align:left">Тип</span>
+      ${kwH('bid','Ставка')}${kwH('impressions','Показы')}${kwH('clicks','Клики')}
+      ${kwH('purchases_14d','Заказы')}${kwH('cost','Расход')}${kwH('sales_14d','Продажи')}${kwH('acos','ACOS')}
     </div>`;
-  };
-
-  let html = '<div class="structure-panel">';
-
-  // Название кампании (только если отличается от того что видно в таблице)
-  // Убрано — дублирует строку таблицы
-
-  // Дата окончания — редактирование
-  if (data.campaign_end_date !== undefined) {
-    const today = new Date().toISOString().slice(0,10);
-    const endVal = data.campaign_end_date ? data.campaign_end_date.slice(0,10) : '';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;margin-bottom:10px;font-size:12px">
-      <span style="color:var(--muted);font-family:DM Mono,monospace;font-size:10px">ДАТА ОКОНЧАНИЯ</span>
-      <input type="date" id="endDateInput_${data._campaign_id||''}"
-        value="${endVal}"
-        min="${today}"
-        style="height:28px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:DM Mono,monospace;font-size:11px;padding:0 8px;outline:none">
-      <button onclick="setEndDate('${data._campaign_id||''}','${data._marketplace||''}')" class="btn-set-date">Изменить</button>
-      ${endVal ? '<button onclick="clearEndDate(\''+data._campaign_id+'\'\,\''+data._marketplace+'\')" style="height:28px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--muted);font-size:11px;cursor:pointer">Убрать дату</button>' : ''}
-    </div>`;
-  }
-
-  // Суммарная статистика кампании
-  if (cs && cs.clicks != null) {
-    const fmtn = (v,d=0) => v != null ? Number(v).toLocaleString('ru',{maximumFractionDigits:d}) : '—';
-    const fmtc = (v) => v != null ? '$'+Number(v).toFixed(2) : '—';
-    const acosColor = cs.acos > 40 ? 'var(--red)' : cs.acos < 15 ? 'var(--green)' : 'var(--text)';
-    html += `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;font-family:DM Mono,monospace">
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px">${fmtn(cs.impressions)}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Показы</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px">${fmtn(cs.clicks)}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Клики</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px">${cs.ctr != null ? cs.ctr.toFixed(2)+'%' : '—'}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">CTR</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px;color:var(--accent)">${fmtc(cs.cost)}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Расход</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px;color:var(--green)">${fmtc(cs.sales_14d)}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Продажи</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px">${fmtn(cs.purchases_14d)}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Заказы</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <span style="font-size:11px;font-weight:600;color:${acosColor}">${cs.acos != null ? cs.acos.toFixed(1)+'%' : '—'}</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">ACOS</span>
-      </div>
-      ${cs.top_of_search_share != null ? `<div style="display:flex;flex-direction:column;gap:1px;margin-left:auto">
-        <span style="font-size:11px;color:var(--blue)">${cs.top_of_search_share.toFixed(1)}%</span>
-        <span style="font-size:9px;color:var(--dim);text-transform:uppercase">Top of Search IS</span>
-      </div>` : ''}
-    </div>`;
-  }
-
-  // Полное имя кампании
-  if (data.campaign_name) {
-    html += `<div style="font-size:11px;color:var(--muted);padding:4px 2px 8px;font-family:DM Mono,monospace">📋 ${data.campaign_name}</div>`;
-  }
-
-  // Плейсменты
-  if (adjustments.length) {
-    const PNAME = {
-      TOP_OF_SEARCH:  '🔝 Top of Search',
-      PRODUCT_PAGE:   '📦 Product Page',
-      REST_OF_SEARCH: '🔍 Rest of Search',
-    };
-    html += '<div style="margin-bottom:10px">';
-    html += '<div style="font-family:DM Mono,monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-bottom:6px">Корректировки ставок</div>';
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
-    adjustments.forEach(a => {
-      const pname = PNAME[a.placement] || a.placement;
-      const pct   = a.percentage || 0;
-      const color = pct > 0 ? 'var(--blue)' : 'var(--muted)';
-      const bg    = pct > 0 ? 'var(--blue-bg)' : 'var(--surface2)';
-      const border= pct > 0 ? 'var(--blue-border)' : 'var(--border)';
-      html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;border:1px solid ${border};background:${bg}">
-        <span style="font-size:12px">${pname}</span>
-        <span style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:${color}">+${pct}%</span>
+    const kwItems=tabSortItems([...(g.keywords||[]),...(g.targets||[])],kwS,s=>s.stats||{});
+    kwItems.forEach(it=>{
+      const s=it.stats||{};
+      const ac=s.acos==null?'dv':s.acos<25?'ok':s.acos<50?'hi':'cr';
+      const itEn=(it.state||'ENABLED').toUpperCase()==='ENABLED';
+      const itType=it.match_type?'keyword':'target';
+      const bidId='bid_'+((it.id||it.text||'x').toString().replace(/[^a-z0-9]/gi,'_').slice(0,20));
+      const bidVal=it.bid?Number(it.bid).toFixed(2):(g.bid?Number(g.bid).toFixed(2):'');
+      const bidIsGrp=!it.bid&&g.bid;
+      const bidHtml=bidVal?`<span id="${bidId}">
+        <button class="bid-btn" style="${bidIsGrp?'color:var(--dim);font-style:italic':''}" onclick="openBidEdit(event,'${bidId}')">$${bidVal}${bidIsGrp?' (г)':''}</button>
+        <span class="bid-edit" style="display:none">
+          <input class="bid-inp" type="number" value="${bidVal}" min="0.02" step="0.01"
+            onkeydown="if(event.key==='Enter')saveBidItem(event,'${bidId}','${itType}','${je(String(it.id||''))}','${bidVal}','${je(mkt)}')">
+          <button class="bid-ok" onclick="saveBidItem(event,'${bidId}','${itType}','${je(String(it.id||''))}','${bidVal}','${je(mkt)}')">✓</button>
+          <button class="bid-cx" onclick="closeBidEdit('${bidId}')">✕</button>
+        </span></span>`:'—';
+      h+=`<div class="ii">
+        <button class="stog ${itEn?'en':'pa'}" onclick="event.stopPropagation();toggleState(event,'${itType}','${je(String(it.id||''))}','${itEn?'ENABLED':'PAUSED'}','${je(mkt)}','')"></button>
+        <span class="it" title="${je(it.text||it.expression||'')}">${it.text||it.expression||'—'}</span>
+        <span class="ir" style="text-align:left">${it.match_type||''}</span>
+        <span class="ir">${bidHtml}</span>
+        <span class="ir">${f(s.impressions)}</span><span class="ir">${f(s.clicks)}</span>
+        <span class="ir">${f(s.purchases_14d)}</span>
+        <span class="ir an">${s.cost!=null?'$'+f(s.cost,2):'—'}</span>
+        <span class="ir gn">${s.sales_14d!=null?'$'+f(s.sales_14d,2):'—'}</span>
+        <span class="ir ${ac}">${s.acos!=null?s.acos.toFixed(1)+'%':'—'}</span>
       </div>`;
     });
-    html += '</div></div>';
-  }
+    if(!kwItems.length) h+='<div class="ge">Нет таргетов</div>';
+    h+='</div>';
 
-  // Campaign-level негативы
-  const campNegs = data.campaign_negatives || [];
-  if (campNegs.length) {
-    html += '<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden">'
-      + '<div style="padding:6px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">'
-      + '🚫 Минус слова кампании (' + campNegs.length + ')'
-      + '</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;max-height:150px;overflow-y:auto">'
-      + campNegs.map(n => {
-          const icon = n.type === 'product' ? '📦 ' : '';
-          return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border:1px solid var(--border);border-radius:99px;font-size:11px;background:var(--surface2);font-style:italic;color:var(--muted)">'
-            + icon + (n.text||'—')
-            + (n.match_type ? ' <span style="font-family:DM Mono,monospace;font-size:9px;color:var(--dim);margin-left:3px">'+n.match_type+'</span>' : '')
-            + '</span>';
-        }).join('')
-      + '</div></div>';
-  }
-
-  if (!groups.length) {
-    html += '<div style="color:var(--dim);font-size:12px;padding:8px">Нет групп объявлений</div></div>';
-    return html;
-  }
-
-  groups.forEach(g => {
-    const kwCount  = g.keywords.length;
-    const tgCount  = g.targets.length;
-    const negCount = g.negatives.length;
-    const meta = [
-      kwCount  ? `${kwCount} kw`  : null,
-      tgCount  ? `${tgCount} pt`  : null,
-      negCount ? `${negCount} neg`: null,
-    ].filter(Boolean).join(' · ');
-
-    // Собираем поисковые запросы группы (все kw + auto)
-    const allSearchTerms = [
-      ...(g.search_terms || []),
-      ...g.keywords.flatMap(kw => kw.search_terms || []),
-    ].sort((a,b) => (b.clicks||0) - (a.clicks||0));
-
-    const gid = g.id.replace(/[^a-z0-9]/gi,'_');
-
-    const agIsEnabled = g.state === 'ENABLED';
-    const agCtrlBtn = `<button
-      class="state-toggle ${agIsEnabled ? 'on' : 'off'}"
-      title="${agIsEnabled ? 'Поставить на паузу' : 'Запустить'} (добавить в очередь)"
-      data-entity-type="ad_group"
-      data-entity-id="${g.id}"
-      data-campaign-id="${data._campaign_id||''}"
-      data-marketplace="${data._marketplace||''}"
-      data-current="${g.state||'ENABLED'}"
-      onclick="toggleStatePending(event,this)"
-      style="margin-left:6px">
-    </button>`;
-
-    html += `<div class="sg-group">
-      <div class="sg-group-header" onclick="toggleSgGroup(this)">
-        <span class="sg-group-toggle">▶</span>
-        <span class="sg-group-name">${g.name || g.id}</span>
-        ${stateChip(g.state)}
-        ${agCtrlBtn}
-        <span class="sg-group-meta">${bidStr(g.bid)}${meta ? ' · ' + meta : ''}</span>
-        ${statsBlock(g.stats)}
-      </div>
-      <div class="sg-group-body">`;
-
-    // Заголовок таблицы
-    // Генератор заголовка с сортировкой
-    const mkSgHdr = (field, label) => {
-      const sorted = _sgSort[gid] && _sgSort[gid].field === field;
-      const dir    = sorted ? _sgSort[gid].dir : 'desc';
-      const arrow  = sorted ? (dir === 'desc' ? '↓' : '↑') : '↕';
-      const cls    = 'sg-col-hdr' + (sorted ? ' sorted' : '');
-      return '<span class="' + cls + '" onclick="sortSgItems(\'' + gid + '\',event)" data-field="' + field + '" style="text-align:right;display:block">' + label + ' <span class="sg-sort-arrow">' + arrow + '</span></span>';
-    };
-
-    const colHeader = `<div class="sg-item sg-item-10col" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
-      <span></span>
-      <span>Таргет / Ключевое слово</span>
-      <span>Match</span>
-      ${mkSgHdr('bid','Бид')}
-      ${mkSgHdr('impressions','Показы')}
-      ${mkSgHdr('clicks','Клики')}
-      ${mkSgHdr('ctr','CTR')}
-      ${mkSgHdr('cost','Расход')}
-      ${mkSgHdr('sales_14d','Продажи')}
-      ${mkSgHdr('acos','ACOS')}
-    </div>`;
-
-    const renderStatCells = (s) => {
-      const z = (v,fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
-      return `
-        <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
-        <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
-        <span class="num">${z(s.ctr, v => Number(v).toFixed(2)+'%')}</span>
-        <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
-        <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
-        <span class="num">${s.acos != null
-          ? '<span class="' + (s.acos>40?'acos-high':s.acos<15?'acos-ok':'') + '">' + Number(s.acos).toFixed(1) + '%</span>'
-          : '<span style="color:var(--dim)">—</span>'}</span>
-`;
-    };
-
-    // ── Вкладки ──
-    const tab1 = g.keywords.length + g.targets.length;
-    const tab2 = allSearchTerms.length;
-    const tab3 = g.negatives.length;
-    const tab4 = (g.ads || []).length;
-
-    html += `<div class="sg-tabs">
-      <span class="sg-tab active" onclick="switchSgTab(event,'${gid}',0)">
-        Таргеты<span class="sg-tab-badge">${tab1}</span>
-      </span>
-      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',1)">
-        Поисковые запросы<span class="sg-tab-badge">${tab2}</span>
-      </span>
-      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',2)">
-        Минус слова<span class="sg-tab-badge">${tab3}</span>
-      </span>
-      <span class="sg-tab" onclick="switchSgTab(event,'${gid}',3)">
-        Объявления<span class="sg-tab-badge">${tab4}</span>
-      </span>
-    </div>`;
-
-    html += `<div class="sg-tab-panel active" data-group="${gid}" data-panel="0">`;
-    html += colHeader;
-    const sortedKw = sortSgArray([...g.keywords], gid, 'kw');
-    sortedKw.forEach(kw => {
-      const s = kw.stats || {};
-      html += `<div class="sg-item sg-item-10col">
-        <button class="state-toggle ${kw.state === 'ENABLED' ? 'on' : 'off'}" data-entity-type="keyword" data-entity-id="${kw.id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${kw.state||'ENABLED'}" onclick="toggleStatePending(event,this)" style="flex-shrink:0"></button>
-        <span class="sg-item-text">${kw.text || '—'}</span>
-        <span class="sg-item-match">${kw.match_type || ''}</span>
-        <span class="sg-item-bid">${bidStr(kw.bid)}</span>
-        ${renderStatCells(s)}
+    // Tab 1: search terms
+    const stKey=`st_${gid}`;
+    const stS=_ts[stKey]||{field:'clicks',dir:'desc'};
+    const stH=(field,label)=>{const on=stS.field===field;const arr=on?(stS.dir==='desc'?'↓':'↑'):'↕';return `<span class="shdr${on?' son':''}" onclick="tabSortClick(event,'${stKey}',this)" data-field="${field}">${label}<span class="sar">${arr}</span></span>`;};
+    h+=`<div class="tp"><div class="ih st"><span>Поисковый запрос</span><span>Таргет / тип</span>${stH('impressions','Показы')}${stH('clicks','Клики')}${stH('purchases_14d','Заказы')}${stH('cost','Расход')}${stH('sales_14d','Продажи')}${stH('acos','ACOS')}</div>`;
+    const stItems=tabSortItems(allSt,stS,s=>s);
+    stItems.forEach(st=>{
+      const ac=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
+      const isAuto=st.keyword_type&&st.keyword_type.includes('EXPRESSION');
+      const mt=isAuto?'AUTO':(st.match_type||'');
+      const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
+      const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+      h+=`<div class="ii st">
+        <span class="it" title="${je(st.term||'')}">${st.term||'—'}</span>
+        <span class="ir" style="font-size:10px;text-align:right">${combined}</span>
+        <span class="ir">${f(st.impressions)}</span><span class="ir">${f(st.clicks)}</span>
+        <span class="ir">${f(st.purchases_14d)}</span>
+        <span class="ir an">${st.cost!=null?'$'+f(st.cost,2):'—'}</span>
+        <span class="ir gn">${st.sales_14d!=null?'$'+f(st.sales_14d,2):'—'}</span>
+        <span class="ir ${ac}">${st.acos!=null?st.acos.toFixed(1)+'%':'—'}</span>
       </div>`;
     });
-    const sortedTgt = sortSgArray([...g.targets], gid, 'tgt');
-    sortedTgt.forEach(t => {
-      const s = t.stats || {};
-      html += `<div class="sg-item sg-item-10col">
-          <button class="state-toggle ${t.state === 'ENABLED' ? 'on' : 'off'}" title="Переключить таргет (в очередь)" data-entity-type="target" data-entity-id="${t.id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${t.state||'ENABLED'}" onclick="toggleStatePending(event,this)" style="flex-shrink:0"></button>
-          <span class="sg-item-text">${t.expression || '—'}</span>
-        <span></span>
-        <span class="sg-item-bid">${bidStr(t.bid)}</span>
-        ${renderStatCells(s)}
-        </div>`;
-    });
-    if (!g.keywords.length && !g.targets.length) {
-      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет таргетов</div>`;
-    }
-    html += `</div>`;
+    if(!stItems.length) h+='<div class="ge">Нет поисковых запросов</div>';
+    h+='</div>';
 
-    // ── Панель 1: Поисковые запросы ──
-    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="1">`;
-    if (allSearchTerms.length) {
-      // Поисковые запросы: свой заголовок без колонок Бид и Статус
-      // Сортировка поисковых запросов
-      const _stSortKey = gid + '_st';
-      const _stSort = _sgSort[_stSortKey] || {field: 'clicks', dir: 'desc'};
-      const _stHdr = (field, label) => {
-        const active = _stSort.field === field;
-        const arrow  = active ? (_stSort.dir === 'desc' ? '↓' : '↑') : '↕';
-        const cls = 'sg-col-hdr' + (active ? ' sorted' : '');
-        return `<span class="${cls}" onclick="sortStItems(event,'${gid}','${field}')" data-stfield="${field}" style="text-align:right;display:block">${label} <span class="sg-sort-arrow">${arrow}</span></span>`;
-      };
-      const _sortedSt = [...allSearchTerms].sort((a, b) => {
-        const val = (s) => {
-          if (_stSort.field === 'acos')  return (s.cost && s.sales_14d) ? s.cost/s.sales_14d*100 : null;
-          if (_stSort.field === 'ctr')   return s.impressions ? s.clicks/s.impressions*100 : null;
-          return s[_stSort.field] != null ? s[_stSort.field] : null;
-        };
-        const va = val(a), vb = val(b);
-        if (va == null && vb == null) return 0;
-        if (va == null) return 1; if (vb == null) return -1;
-        return _stSort.dir === 'desc' ? vb - va : va - vb;
-      });
-      html += `<div class="sg-item sg-item-st" style="background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
-        <span>Поисковый запрос</span>
-        <span>Ключевое слово / Таргет</span>
-        <span>Match</span>
-        ${_stHdr('impressions','Показы')}
-        ${_stHdr('clicks','Клики')}
-        ${_stHdr('ctr','CTR')}
-        ${_stHdr('cost','Расход')}
-        ${_stHdr('sales_14d','Продажи')}
-        ${_stHdr('acos','ACOS')}
-      </div>`;
-      _sortedSt.forEach(st => {
-        const s = st;
-        const z = (v,fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
-        html += `<div class="sg-item sg-item-st">
-          <span class="sg-item-text" title="${st.term || ''}">${st.term || '—'}</span>
-          <span class="sg-item-text" style="color:var(--muted);font-size:11px" title="${st.keyword || ''}">${
-            st.keyword
-              ? (st.keyword.length > 25 ? st.keyword.slice(0,25)+'…' : st.keyword)
-              : (st.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED'
-                  ? '<span style="color:var(--dim);font-size:10px">auto</span>'
-                  : '<span style="color:var(--dim)">—</span>')
-          }</span>
-          <span class="sg-item-match">${st.match_type || (st.keyword_type ? st.keyword_type.replace('TARGETING_EXPRESSION_PREDEFINED','AUTO') : '')}</span>
-          <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
-          <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
-          <span class="num">${z(s.ctr, v => Number(v).toFixed(2)+'%')}</span>
-          <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
-          <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
-          <span class="num">${s.acos != null ? '<span class="'+(s.acos>40?'acos-high':s.acos<15?'acos-ok':'')+'">' + Number(s.acos).toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>'}</span>
+    // Tab 2: negatives
+    h+='<div class="tp">';
+    if(ngN){ (g.negatives||[]).forEach(n=>{ h+=`<div class="in2"><span class="nt">${n.text||n.raw||'—'}</span>${n.match_type?`<span class="nb">${n.match_type}</span>`:''}</div>`; }); }
+    else h+='<div class="ge">Нет минус слов</div>';
+    h+='</div>';
+
+    // Tab 3: ads
+    h+='<div class="tp">';
+    const ads=g.ads||[];
+    if(ads.length){
+      ads.forEach(ad=>{
+        const mktD={'UK':'amazon.co.uk','DE':'amazon.de','FR':'amazon.fr','IT':'amazon.it','ES':'amazon.es','CA':'amazon.ca','AU':'amazon.com.au'}[mkt]||'amazon.com';
+        const img=ad.image_url?`<img src="${ad.image_url}" style="width:36px;height:36px;border-radius:4px;object-fit:cover;border:1px solid var(--border);flex-shrink:0" loading="lazy">`:
+          `<div style="width:36px;height:36px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">📦</div>`;
+        const title=ad.title||ad.sku||ad.asin||'—';
+        const titleEl=ad.asin?`<a href="https://${mktD}/dp/${ad.asin}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block" title="${title}">${title.length>50?title.slice(0,50)+'…':title}</a>`:
+          `<span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${title}</span>`;
+        const sub=[ad.asin?'ASIN: '+ad.asin:null,ad.product_type||null,ad.price?'$'+Number(ad.price).toFixed(2):null].filter(Boolean).join(' · ');
+        const isAdOn=ad.state==='ENABLED';
+        const s=ad.stats||{};
+        const acos=s.cost&&s.sales_14d?s.cost/s.sales_14d*100:null;
+        const ctr=s.impressions&&s.clicks?s.clicks/s.impressions*100:null;
+        const z=(v,fmt)=>(v!=null&&v!==0)?fmt(v):'<span class="dv">—</span>';
+        h+=`<div style="display:grid;grid-template-columns:40px 1fr 70px 55px 60px 75px 75px 65px 28px;gap:8px;align-items:center;padding:7px 11px;border-bottom:1px solid var(--border)">
+          ${img}
+          <div style="min-width:0">${titleEl}<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);margin-top:1px">${sub}</div></div>
+          <span class="ir">${z(s.impressions,v=>Number(v).toLocaleString('ru'))}</span>
+          <span class="ir">${z(s.clicks,v=>Number(v).toLocaleString('ru'))}</span>
+          <span class="ir">${ctr!=null?ctr.toFixed(2)+'%':'<span class="dv">—</span>'}</span>
+          <span class="ir an">${z(s.cost,v=>'$'+Number(v).toFixed(2))}</span>
+          <span class="ir gn">${z(s.sales_14d,v=>'$'+Number(v).toFixed(2))}</span>
+          <span class="ir ${acos==null?'dv':acos<25?'ok':acos<50?'hi':'cr'}">${acos!=null?acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span>
+          <button class="stog ${isAdOn?'en':'pa'}" title="${isAdOn?'Выключить':'Включить'}" data-entity-type="product_ad" data-entity-id="${ad.ad_id}" data-campaign-id="${campId}" data-marketplace="${mkt}" data-current="${ad.state||'ENABLED'}" onclick="event.stopPropagation();toggleStatePending(event,this)"></button>
         </div>`;
       });
-    } else {
-      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет данных за период</div>`;
-    }
-    html += `</div>`;
+    } else h+='<div class="ge">Нет объявлений</div>';
+    h+='</div>';
 
-    // ── Панель 2: Минус слова ──
-    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="2">`;
-    if (g.negatives.length) {
-      // Заголовок
-      html += `<div style="display:grid;grid-template-columns:16px 1fr 80px;gap:8px;padding:5px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
-        <span></span><span>Текст</span><span>Тип</span>
-      </div>`;
-      g.negatives.forEach(n => {
-        const icon = n.type === 'product' ? '📦' : '🚫';
-        // PRODUCT_EXACT / PRODUCT_AND_TARGETING — это matchType а не ASIN
-        // Реальный ASIN выглядит как B0XXXXXXXX
-        const isRealAsin = n.text && /^B0[A-Z0-9]{8}$/i.test(n.text.trim());
-        const isMatchType = n.text && ['PRODUCT_EXACT','PRODUCT_AND_TARGETING','BROAD','EXACT','PHRASE'].includes(n.text.toUpperCase());
-        const displayText = isMatchType
-          ? `<span style="color:var(--dim);font-style:italic">ASIN (требует синхронизации)</span>`
-          : (n.text || '—');
-        const matchLabel = n.match_type
-          ? `<span class="sg-item-match">${n.match_type}</span>`
-          : (n.type === 'product' ? `<span style="font-size:10px;color:var(--muted)">ASIN</span>` : '');
-        html += `<div class="sg-item" style="grid-template-columns:16px 1fr 80px">
-          <span style="font-size:11px">${icon}</span>
-          <span class="sg-item-text sg-item-neg">${displayText}</span>
-          ${matchLabel}
-        </div>`;
-      });
-    } else {
-      html += `<div style="padding:10px;color:var(--dim);font-size:12px">Нет минус слов</div>`;
-    }
-    html += `</div>`;
-
-    // ── Панель 3: Объявления ──
-    html += `<div class="sg-tab-panel" data-group="${gid}" data-panel="3">`;
-    const ads = g.ads || [];
-    if (ads.length) {
-      // Заголовок
-      html += `<div style="display:grid;grid-template-columns:44px 1fr 70px 55px 60px 75px 75px 65px 28px;gap:8px;padding:6px 10px;background:var(--surface2);font-family:DM Mono,monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
-        <span></span><span>Товар</span>
-        <span style="text-align:right">Показы</span>
-        <span style="text-align:right">Клики</span>
-        <span style="text-align:right">CTR</span>
-        <span style="text-align:right">Расход</span>
-        <span style="text-align:right">Продажи</span>
-        <span style="text-align:right">ACOS</span>
-        <span></span>
-      </div>`;
-      html += '<div class="sg-ads">';
-      ads.forEach(ad => {
-        const imgHtml = ad.image_url
-          ? `<img class="sg-ad-img" src="${ad.image_url}" alt="" loading="lazy">`
-          : `<div class="sg-ad-img-placeholder">📦</div>`;
-
-        // Ссылка на товар
-        const mkt = data._marketplace || 'US';
-        const domain = {'UK':'amazon.co.uk','DE':'amazon.de','FR':'amazon.fr','IT':'amazon.it','ES':'amazon.es','CA':'amazon.ca','AU':'amazon.com.au'}[mkt] || 'amazon.com';
-        const titleText = ad.title || ad.sku || ad.asin || '—';
-        const titleEl = ad.asin
-          ? `<a href="https://${domain}/dp/${ad.asin}" target="_blank" class="sg-ad-link" title="${titleText}">${titleText.length>55 ? titleText.slice(0,55)+'…' : titleText}</a>`
-          : `<span class="sg-ad-title" title="${titleText}">${titleText.length>55 ? titleText.slice(0,55)+'…' : titleText}</span>`;
-
-        const sub = [
-          ad.asin ? `ASIN: ${ad.asin}` : null,
-          ad.product_type || null,
-          ad.price != null ? `$${Number(ad.price).toFixed(2)}` : null,
-          ad.status ? ad.status : null,
-        ].filter(Boolean).join(' · ');
-
-        // Статистика
-        const s = ad.stats || {};
-        const z = (v, fmt) => (v != null && v !== 0) ? fmt(v) : '<span style="color:var(--dim)">—</span>';
-        const acos = s.cost && s.sales_14d ? (s.cost / s.sales_14d * 100) : null;
-        const ctr  = s.impressions && s.clicks ? (s.clicks / s.impressions * 100) : null;
-
-        const isOn = ad.state === 'ENABLED';
-        html += `<div style="display:grid;grid-template-columns:44px 1fr 70px 55px 60px 75px 75px 65px 28px;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)">
-          ${imgHtml}
-          <div class="sg-ad-title-wrap">
-            ${titleEl}
-            <div class="sg-ad-sub">${sub || (ad.sku ? 'SKU: '+ad.sku : '—')}</div>
-          </div>
-          <span class="num">${z(s.impressions, v => Number(v).toLocaleString('ru'))}</span>
-          <span class="num">${z(s.clicks, v => Number(v).toLocaleString('ru'))}</span>
-          <span class="num">${ctr != null ? ctr.toFixed(2)+'%' : '<span style="color:var(--dim)">—</span>'}</span>
-          <span class="num">${z(s.cost, v => '$'+Number(v).toFixed(2))}</span>
-          <span class="num">${z(s.sales_14d, v => '$'+Number(v).toFixed(2))}</span>
-          <span class="num">${acos != null ? '<span class="'+(acos>40?'acos-high':acos<15?'acos-ok':'')+'">' + acos.toFixed(1)+'%</span>' : '<span style="color:var(--dim)">—</span>'}</span>
-          <button class="state-toggle ${isOn ? 'on' : 'off'}" title="${isOn ? 'Выключить' : 'Включить'} объявление (в очередь)" data-entity-type="product_ad" data-entity-id="${ad.ad_id}" data-campaign-id="${data._campaign_id||''}" data-marketplace="${data._marketplace||''}" data-current="${ad.state||'ENABLED'}" onclick="toggleStatePending(event,this)"></button>
-        </div>`;
-      });
-      html += '</div>';
-    } else {
-      html += `<div style="padding:14px;color:var(--dim);font-size:12px">Нет объявлений в этой группе</div>`;
-    }
-    html += `</div>`;
-
-    html += '</div></div>'; // sg-group-body + sg-group
+    h+='</div></div>'; // cst + cc
   });
 
-  html += '</div>';
-  return html;
+  h+='</div></div>'; // cpc + cpp
+  return h;
 }
 
-// ── Универсальный toggle → pending_changes ───────────────
-async function toggleStatePending(e, btn) {
+// ── Sort helpers ─────────────────────────────────────────
+function tabSortItems(arr, sortState, getStats){
+  const {field,dir}=sortState;
+  return [...arr].sort((a,b)=>{
+    const sa=getStats(a), sb=getStats(b);
+    let va,vb;
+    if(field==='acos'){va=sa.cost&&sa.sales_14d?sa.cost/sa.sales_14d*100:null;vb=sb.cost&&sb.sales_14d?sb.cost/sb.sales_14d*100:null;}
+    else{va=sa[field]!=null?Number(sa[field]):null;vb=sb[field]!=null?Number(sb[field]):null;}
+    if(va==null&&vb==null) return 0;
+    if(va==null) return 1; if(vb==null) return -1;
+    return dir==='desc'?vb-va:va-vb;
+  });
+}
+function tabSortClick(e, key, el){
+  e.stopPropagation(); e.preventDefault();
+  const field=el.dataset.field;
+  const cur=_ts[key]||{field:'clicks',dir:'desc'};
+  _ts[key]={field,dir:cur.field===field?(cur.dir==='desc'?'asc':'desc'):'desc'};
+  // Re-render only this panel's rows
+  const panel=el.closest('.tp'); if(!panel) return;
+  const campId=state._expandedId; if(!campId) return;
+  const data=_structureCache[campId]; if(!data) return;
+  const mkt=state._expandedMkt||'';
+  // full rebuild is cleanest for now
+  const ei=document.getElementById('ei_'+campId);
+  if(ei) ei.innerHTML=buildCampHtml(data,campId,mkt);
+}
+
+function grpClick(hdr){
+  const cc=hdr.closest('.cc'); if(!cc) return;
+  const body=cc.querySelector('.cst'); const chev=hdr.querySelector('.cchev');
+  const sy=window.scrollY;
+  const isO=body.classList.toggle('op');
+  cc.classList.toggle('co',isO);
+  chev?.classList.toggle('op',isO);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,sy)));
+}
+function tabClick(e,idx){
   e.stopPropagation();
-  if (btn.dataset.loading === '1') return;
+  const cst=e.target.closest('.cst'); if(!cst) return;
+  cst.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===idx));
+  cst.querySelectorAll('.tp').forEach((p,i)=>p.classList.toggle('on',i===idx));
+}
 
-  const entityType = btn.dataset.entityType;
-  const entityId   = btn.dataset.entityId;
-  const marketplace= btn.dataset.marketplace;
-  const current    = btn.dataset.current;
-  const pendingId  = btn.dataset.pendingId;
+// ── State toggle ─────────────────────────────────────────
+async function toggleState(e, entityType, entityId, currentState, mkt, campId){
+  e.stopPropagation();
+  const btn=e.currentTarget;
+  if(btn.classList.contains('ld')||btn.classList.contains('pend')) return;
+  const newState=currentState==='ENABLED'?'PAUSED':'ENABLED';
+  btn.classList.add('ld');
+  try{
+    const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'state',old_value:currentState,new_value:newState});
+    if(d){btn.classList.remove('en','pa','ld');btn.classList.add('pend');btn.dataset.current=newState;toast(d.label);}
+  }catch(err){toast(err.message,false);}
+  finally{btn.classList.remove('ld');}
+}
 
-  // Повторный клик — отменяем изменение
-  if (pendingId) {
-    btn.dataset.loading = '1';
-    try {
-      await fetch('/control/reject', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ account_type: state.acct, ids: [pendingId] })
-      });
-      btn.classList.remove('pending');
-      btn.classList.add(current === 'ENABLED' ? 'on' : 'off');
+// ── toggleStatePending (table rows) ──────────────────────
+async function toggleStatePending(e, btn){
+  e.stopPropagation();
+  if(btn.dataset.loading==='1') return;
+  const entityType=btn.dataset.entityType, entityId=btn.dataset.entityId;
+  const marketplace=btn.dataset.marketplace, current=btn.dataset.current;
+  const pendingId=btn.dataset.pendingId;
+  if(pendingId){
+    btn.dataset.loading='1';
+    try{
+      await fetch('/control/reject',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({account_type:state.acct,ids:[pendingId]})});
+      btn.classList.remove('pend');
+      btn.classList.add(current==='ENABLED'?'en':'pa');
       delete btn.dataset.pendingId;
-      btn.title = current === 'ENABLED'
-        ? 'Enabled · нажми чтобы поставить на паузу'
-        : 'Paused · нажми чтобы запустить';
-    } catch(err) {}
-    btn.dataset.loading = '0';
-    return;
+    }catch(err){}
+    btn.dataset.loading='0'; return;
   }
-
-  const newState = current === 'ENABLED' ? 'PAUSED' : 'ENABLED';
-  btn.classList.remove('on', 'off');
-  btn.classList.add('pending');
-  btn.title = 'В очереди · нажми ещё раз чтобы отменить';
-  btn.dataset.loading = '1';
-
-  try {
-    const profileId = getProfileId(state.acct, marketplace);
-    const resp = await fetch('/control/add', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        account_type: state.acct,
-        marketplace,
-        profile_id:  profileId,
-        entity_type: entityType,
-        entity_id:   entityId,
-        field_name:  'state',
-        old_value:   current,
-        new_value:   newState,
-      })
-    });
-    const d = await resp.json();
-    if (resp.status === 409) {
-      btn.dataset.pendingId = 'dup';
-    } else if (d.error) {
-      throw new Error(d.error);
-    } else {
-      btn.dataset.pendingId = d.id;
-      btn.dataset.current   = newState;
-    }
-  } catch(err) {
-    btn.classList.remove('pending');
-    btn.classList.add(current === 'ENABLED' ? 'on' : 'off');
+  const newState=current==='ENABLED'?'PAUSED':'ENABLED';
+  btn.classList.remove('en','off'); btn.classList.add('pend');
+  btn.dataset.loading='1';
+  try{
+    const pid=getProfileId(state.acct,marketplace);
+    const resp=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({account_type:state.acct,marketplace,profile_id:pid,entity_type:entityType,
+        entity_id:entityId,field_name:'state',old_value:current,new_value:newState})});
+    const d=await resp.json();
+    if(resp.status===409){btn.dataset.pendingId='dup';}
+    else if(d.error) throw new Error(d.error);
+    else{btn.dataset.pendingId=d.id;btn.dataset.current=newState;toast(d.label);}
+  }catch(err){
+    btn.classList.remove('pend');
+    btn.classList.add(current==='ENABLED'?'en':'pa');
     delete btn.dataset.pendingId;
-    btn.title = current === 'ENABLED'
-      ? 'Enabled · нажми чтобы поставить на паузу'
-      : 'Paused · нажми чтобы запустить';
+    toast(err.message,false);
   }
-  btn.dataset.loading = '0';
+  btn.dataset.loading='0';
 }
 
-// ── Получить profile_id по аккаунту и маркетплейсу ───────
-function getProfileId(acct, marketplace) {
-  // Маппинг из amazon_secrets.json (хранится в window._profiles если загружен)
-  const profiles = window._profileMap || {};
-  return profiles[acct + '_' + marketplace] || '';
+// ── Render stats ─────────────────────────────────────────
+function renderStats(s){
+  if(!s) return;
+  const n=(v,d=0)=>v==null?'—':Number(v).toLocaleString('ru',{maximumFractionDigits:d});
+  document.getElementById('sTotalCamp').textContent=n(s.total_campaigns);
+  document.getElementById('sImpr').textContent=n(s.total_impressions);
+  document.getElementById('sClicks').textContent=n(s.total_clicks);
+  document.getElementById('sCost').textContent='$'+n(s.total_cost,2);
+  document.getElementById('sSales').textContent='$'+n(s.total_sales_14d,2);
+  const acos=s.total_cost&&s.total_sales_14d?(s.total_cost/s.total_sales_14d*100).toFixed(1)+'%':'—';
+  const el=document.getElementById('sAcos'); el.textContent=acos;
+  const an=parseFloat(acos);
+  el.className='sv'+(an>40?' cr':an<15?' ok':'');
 }
 
+// ── Pagination ───────────────────────────────────────────
+function renderPagination(total,page,perPage){
+  if(total<=perPage){document.getElementById('paginationRow').style.display='none';return;}
+  const tot=Math.ceil(total/perPage);
+  const from=(page-1)*perPage+1, to=Math.min(page*perPage,total);
+  document.getElementById('pageInfo').textContent=`${from.toLocaleString('ru')}–${to.toLocaleString('ru')} из ${total.toLocaleString('ru')}`;
+  let pages=tot<=7?Array.from({length:tot},(_,i)=>i+1):[];
+  if(!pages.length){const l=Math.max(1,page-2),r=Math.min(tot,page+2);if(l>1)pages.push(1,l>2?'…':null);for(let i=l;i<=r;i++)pages.push(i);if(r<tot)pages.push(r<tot-1?'…':null,tot);pages=pages.filter(Boolean);}
+  const btns=document.getElementById('pageBtns');
+  btns.innerHTML=`<button class="pbb" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`+
+    pages.map(p=>p==='…'?`<button class="pbb" disabled>…</button>`:`<button class="pbb${p===page?' on':''}" onclick="goPage(${p})">${p}</button>`).join('')+
+    `<button class="pbb" onclick="goPage(${page+1})" ${page===tot?'disabled':''}>›</button>`;
+  document.getElementById('paginationRow').style.display='flex';
+}
+function goPage(p){const t=Math.ceil(state.total/state.perPage);if(p<1||p>t)return;state.page=p;fetchData();window.scrollTo({top:0,behavior:'smooth'});}
+function setSort(col){if(state.sortBy===col){state.sortDir=state.sortDir==='desc'?'asc':'desc';}else{state.sortBy=col;state.sortDir='desc';}state.page=1;fetchData();}
 
-
-// ── Изменение даты окончания кампании ────────────────────
-async function setEndDate(campaignId, marketplace) {
-  const input = document.getElementById('endDateInput_' + campaignId);
-  if (!input || !input.value) return;
-  const newDate = input.value;
-  const profileId = getProfileId(state.acct, marketplace);
-  try {
-    const r = await fetch('/control/add', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        account_type: state.acct, marketplace, profile_id: profileId,
-        entity_type: 'campaign', entity_id: campaignId,
-        field_name: 'end_date', old_value: input.dataset.original || '', new_value: newDate,
-      })
-    });
-    const d = await r.json();
-    if (d.error && r.status !== 409) throw new Error(d.error);
-    input.style.borderColor = 'var(--green)';
-    setTimeout(() => { input.style.borderColor = ''; }, 2000);
-  } catch(err) {
-    input.style.borderColor = 'var(--red)';
-    alert('Ошибка: ' + err.message);
-  }
+// ── Filter popups ────────────────────────────────────────
+let _openPopup=null;
+document.addEventListener('click',e=>{if(!e.target.closest('.filter-popup')&&!e.target.closest('.filter-icon'))closeAllPopups();});
+function closeAllPopups(){document.querySelectorAll('.filter-popup.open').forEach(p=>p.classList.remove('open'));_openPopup=null;}
+function togglePopup(e,id){e.stopPropagation();const popup=document.getElementById(id);if(!popup)return;const isOpen=popup.classList.contains('open');closeAllPopups();if(!isOpen){popup.classList.add('open');_openPopup=id;if(id==='popup_portfolio')renderPfListPopup(document.getElementById('fp_pf_search')?.value||'');}}
+function onFpOpChange(id){const op=document.getElementById('fp_op_'+id)?.value;const row2=document.getElementById('fp_row2_'+id);if(row2)row2.style.display=op==='range'?'':'none';}
+function applyNumFilter(field,id){const op=document.getElementById('fp_op_'+id)?.value||'';const v1=document.getElementById('fp_v1_'+id)?.value||'';const v2=document.getElementById('fp_v2_'+id)?.value||'';window._nfState[id]=op&&v1!==''?{op,v1,v2}:null;closeAllPopups();state.page=1;fetchData();}
+function clearNumFilter(id){['fp_op_','fp_v1_','fp_v2_'].forEach(p=>{const el=document.getElementById(p+id);if(el)el.value='';});const row2=document.getElementById('fp_row2_'+id);if(row2)row2.style.display='none';window._nfState[id]=null;closeAllPopups();state.page=1;fetchData();}
+let _allPortfoliosForFilter=[];
+async function loadPortfolioFilter(){
+  try{
+    const p=new URLSearchParams({account_type:state.acct});
+    const mkt=document.getElementById('filterMkt')?.value||'';
+    const tgt=document.getElementById('filterTargeting')?.value||'';
+    if(mkt)p.set('marketplace',mkt);if(tgt)p.set('targeting_type',tgt);
+    const r=await fetch('/analytics/campaigns/portfolios?'+p);
+    const d=await r.json();
+    _allPortfoliosForFilter=d.portfolios||[];
+  }catch(e){}
+}
+function renderPfListPopup(q){
+  const list=document.getElementById('fp_pf_list');if(!list)return;
+  const sel=state.selectedPortfolios||[];
+  const filtered=q?_allPortfoliosForFilter.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())):_allPortfoliosForFilter;
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';return;}
+  list.innerHTML=filtered.map(p=>`<label><input type="checkbox" name="fp_pf" value="${p.id}" ${sel.includes(p.id)?'checked':''}><span>${p.name}</span></label>`).join('');
+}
+function applyPortfolioFilter(){state.selectedPortfolios=[...document.querySelectorAll('input[name="fp_pf"]:checked')].map(el=>el.value);closeAllPopups();state.page=1;fetchData();}
+function clearPortfolioFilter(){state.selectedPortfolios=[];renderPfListPopup('');}
+function buildNumParams(p){
+  const MAP={impr:'impressions',clicks:'clicks',cost:'cost',ctr:'ctr',sales:'sales_14d',orders:'purchases_14d',acos:'acos'};
+  Object.entries(window._nfState||{}).forEach(([id,s])=>{if(!s)return;const field=MAP[id];if(!field)return;if(s.op==='range'){if(s.v1!=='')p.set(field+'_min',s.v1);if(s.v2!=='')p.set(field+'_max',s.v2);}else{p.set(field+'_op',s.op);p.set(field+'_val',s.v1);}});
 }
 
-async function clearEndDate(campaignId, marketplace) {
-  const profileId = getProfileId(state.acct, marketplace);
-  try {
-    const r = await fetch('/control/add', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        account_type: state.acct, marketplace, profile_id: profileId,
-        entity_type: 'campaign', entity_id: campaignId,
-        field_name: 'end_date', old_value: '', new_value: '',
-      })
-    });
-    const d = await r.json();
-    if (d.error && r.status !== 409) throw new Error(d.error);
-  } catch(err) { alert('Ошибка: ' + err.message); }
-}
+// ── Col resize ───────────────────────────────────────────
+let _res=null;
+function startResize(e,handle){e.stopPropagation();const th=handle.parentElement;_res={th,startX:e.pageX,startW:th.offsetWidth};handle.classList.add('dragging');document.addEventListener('mousemove',doResize);document.addEventListener('mouseup',stopResize);}
+function doResize(e){if(!_res)return;_res.th.style.width=Math.max(40,_res.startW+e.pageX-_res.startX)+'px';}
+function stopResize(){if(_res){document.querySelector('.col-resizer.dragging')?.classList.remove('dragging');_res=null;}document.removeEventListener('mousemove',doResize);document.removeEventListener('mouseup',stopResize);}
 
-// ── Загрузить profile_map (нужен для pending_changes) ────
-fetch('/control/profiles')
-  .then(r => r.json())
-  .then(d => { window._profileMap = d.profiles || {}; })
-  .catch(() => { window._profileMap = {}; });
+// ── API helpers ──────────────────────────────────────────
+fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+function getProfileId(acct,mkt){return (window._pm||{})[acct+'_'+mkt]||'';}
+function toast(msg,ok=true){const w=document.getElementById('toastWrap');const d=document.createElement('div');d.className='toast-item '+(ok?'ok':'err');d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;w.appendChild(d);setTimeout(()=>d.remove(),3500);}
+async function ctrlAdd(payload){const r=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(r.status===409){toast('Уже есть ожидающее изменение',false);return null;}if(d.error)throw new Error(d.error);return d;}
+function openModal(id){document.getElementById(id).classList.add('op');}
+function closeModal(id){document.getElementById(id).classList.remove('op');}
 
-// Сброс всех pending-toggles при перезагрузке данных
-function resetPendingToggles() {
-  document.querySelectorAll('.state-toggle.pending').forEach(btn => {
-    const cur = btn.dataset.current || 'ENABLED';
-    btn.classList.remove('pending');
-    btn.classList.add(cur === 'ENABLED' ? 'on' : 'off');
-    delete btn.dataset.pendingId;
-  });
-}
+// ── Bid edit ─────────────────────────────────────────────
+function openBidEdit(e,containerId){e.stopPropagation();const w=document.getElementById(containerId);if(!w)return;w.querySelector('.bid-btn').style.display='none';w.querySelector('.bid-edit').style.display='inline-flex';const inp=w.querySelector('.bid-inp');if(inp){inp.focus();inp.select();}}
+function closeBidEdit(containerId){const w=document.getElementById(containerId);if(!w)return;w.querySelector('.bid-btn').style.display='';w.querySelector('.bid-edit').style.display='none';}
+async function saveBidItem(e,containerId,entityType,entityId,oldBid,mkt){e.stopPropagation();const w=document.getElementById(containerId);if(!w)return;const inp=w.querySelector('.bid-inp');const newBid=parseFloat(inp.value);if(isNaN(newBid)||newBid<0.02){toast('Минимальная ставка $0.02',false);return;}try{const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:entityType,entity_id:entityId,field_name:'bid',old_value:String(oldBid),new_value:String(newBid)});if(d){w.querySelector('.bid-btn').textContent='$'+newBid.toFixed(2)+' ✓';closeBidEdit(containerId);toast(d.label);}}catch(err){toast(err.message,false);}}
 
-// ── Init ──────────────────────────────────────────────────
+// ── Budget/date edit ──────────────────────────────────────
+function openBudgetEdit(e,wrapId){e.stopPropagation();const w=document.getElementById(wrapId);if(!w)return;const disp=document.getElementById(wrapId.replace('budg_wrap_','budg_disp_').replace('edate_wrap_','edate_disp_'));if(disp)disp.style.display='none';w.style.display='inline-flex';const inp=w.querySelector('.bid-inp');if(inp){inp.focus();if(inp.type!=='date')inp.select();}}
+function closeBudgetEdit(wrapId,dispId){const w=document.getElementById(wrapId);const d=document.getElementById(dispId);if(w)w.style.display='none';if(d)d.style.display='';}
+async function saveBudget(campId,mkt,oldBudget){const inp=document.getElementById('budg_'+campId);const val=parseFloat(inp.value);if(isNaN(val)||val<1){toast('Минимальный бюджет $1',false);return;}try{const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'campaign',entity_id:campId,field_name:'daily_budget',old_value:String(oldBudget),new_value:String(val)});if(d){const btn=document.querySelector('#budg_disp_'+campId+' .bid-btn');if(btn)btn.textContent='$'+val.toFixed(2)+' ✓';closeBudgetEdit('budg_wrap_'+campId,'budg_disp_'+campId);toast(d.label);}}catch(err){toast(err.message,false);}}
+async function saveEndDate(campId,mkt,oldDate){const inp=document.getElementById('edate_'+campId);const val=inp.value||'';try{const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'campaign',entity_id:campId,field_name:'end_date',old_value:oldDate,new_value:val});if(d){const btn=document.querySelector('#edate_disp_'+campId+' .bid-btn');if(btn)btn.textContent=(val||'∞')+' ✓';closeBudgetEdit('edate_wrap_'+campId,'edate_disp_'+campId);toast(d.label);}}catch(err){toast(err.message,false);}}
+
+// ── Name edit ────────────────────────────────────────────
+function openNameEdit(e,dispId,wrapId){e.stopPropagation();const disp=document.getElementById(dispId);const wrap=document.getElementById(wrapId);if(!disp||!wrap)return;disp.style.display='none';wrap.classList.add('on');const inp=wrap.querySelector('.name-inp');if(inp){inp.focus();inp.select();}}
+function closeNameEdit(dispId,wrapId){const disp=document.getElementById(dispId);const wrap=document.getElementById(wrapId);if(disp)disp.style.display='';if(wrap)wrap.classList.remove('on');}
+async function saveName(e,entityType,entityId,dispId,wrapId,mkt){e.stopPropagation();const wrap=document.getElementById(wrapId);if(!wrap)return;const inp=wrap.querySelector('.name-inp');const newName=inp.value.trim();if(!newName){toast('Введите название',false);return;}const disp=document.getElementById(dispId);const oldName=disp?disp.textContent.trim():'';if(newName===oldName){closeNameEdit(dispId,wrapId);return;}try{const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:entityType,entity_id:entityId,field_name:'name',old_value:oldName,new_value:newName});if(d){if(disp)disp.textContent=newName+' ✓';closeNameEdit(dispId,wrapId);toast(d.label);}}catch(err){toast(err.message,false);}}
+async function saveNameSg(e,gid,entityId,mkt){e.stopPropagation();const wrapId='gne_'+gid,dispId='gn_'+gid;const wrap=document.getElementById(wrapId);if(!wrap)return;const inp=wrap.querySelector('.name-inp');const newName=inp.value.trim();if(!newName){toast('Введите название',false);return;}const disp=document.getElementById(dispId);const oldName=disp?disp.textContent.trim():'';if(newName===oldName){closeNameEdit(dispId,wrapId);return;}try{const d=await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'ad_group',entity_id:entityId,field_name:'name',old_value:oldName,new_value:newName});if(d){if(disp)disp.textContent=newName+' ✓';closeNameEdit(dispId,wrapId);toast(d.label);}}catch(err){toast(err.message,false);}}
+
+// ── Add keyword modal ────────────────────────────────────
+function openAddKw(groupId,campId,mkt){document.getElementById('mkwGroupId').value=groupId;document.getElementById('mkwCampId').value=campId;document.getElementById('mkwMkt').value=mkt;document.getElementById('mkwText').value='';openModal('modalKw');}
+async function submitAddKw(){const text=document.getElementById('mkwText').value.trim();const match=document.getElementById('mkwMatch').value;const bid=parseFloat(document.getElementById('mkwBid').value);const groupId=document.getElementById('mkwGroupId').value;const campId=document.getElementById('mkwCampId').value;const mkt=document.getElementById('mkwMkt').value;if(!text){toast('Введите ключевые слова',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,fail=0;for(const kw of kws){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})});ok++;}catch(err){fail++;}}closeModal('modalKw');toast(`Добавлено в очередь: ${ok} kw${fail?', ошибок: '+fail:''}`,fail===0);}
+
+// ── Add negative modal ───────────────────────────────────
+function openAddNeg(groupId,campId,mkt){document.getElementById('mnegGroupId').value=groupId;document.getElementById('mnegCampId').value=campId;document.getElementById('mnegMkt').value=mkt;document.getElementById('mnegText').value='';openModal('modalNeg');}
+function onNegTypeChange(radio){const isP=radio.value==='product';document.getElementById('mnegTextLabel').textContent=isP?'ASIN (по одному на строку)':'Слова (по одному на строку)';document.getElementById('mnegText').placeholder=isP?'B0FT63YVTW\nB0FX36C3YS':'free\ncheap';document.getElementById('mnegMatchRow').style.display=isP?'none':'';}
+async function submitAddNeg(){const text=document.getElementById('mnegText').value.trim();const match=document.getElementById('mnegMatch').value;const groupId=document.getElementById('mnegGroupId').value;const campId=document.getElementById('mnegCampId').value;const mkt=document.getElementById('mnegMkt').value;const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';if(!text){toast('Введите значения',false);return;}const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,fail=0;for(const w of items){try{let payload;if(negType==='product'){payload={account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})};}else{payload={account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})};}await ctrlAdd(payload);ok++;}catch(err){fail++;}}closeModal('modalNeg');toast(`Добавлено в очередь: ${ok}${fail?', ошибок: '+fail:''}`,fail===0);}
+
+// ── Create group modal ───────────────────────────────────
+function openCreateGrp(campId,mkt,targetingType){document.getElementById('mgrpCampId').value=campId;document.getElementById('mgrpMkt').value=mkt;document.getElementById('mgrpType').value=targetingType||'';document.getElementById('mgrpName').value='';document.getElementById('mgrpAsins').value='';document.getElementById('mgrpKwText').value='';const isAuto=(targetingType||'').toUpperCase()==='AUTO';document.getElementById('mgrpKwBlock').style.display=isAuto?'none':'';document.getElementById('mgrpTitle').textContent=isAuto?'Создать AUTO группу':'Создать MANUAL группу';openModal('modalGrp');}
+async function submitCreateGrp(){const name=document.getElementById('mgrpName').value.trim();const bid=parseFloat(document.getElementById('mgrpBid').value);const campId=document.getElementById('mgrpCampId').value;const mkt=document.getElementById('mgrpMkt').value;const targetingType=document.getElementById('mgrpType').value.toUpperCase();const isAuto=targetingType==='AUTO';const asins=document.getElementById('mgrpAsins').value.trim().split(/\n/).map(l=>l.trim().toUpperCase()).filter(Boolean);if(!name){toast('Введите название группы',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}let ok=0,fail=0;try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'ad_group_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({name,default_bid:bid,campaign_id:campId})});ok++;}catch(err){toast('Ошибка создания группы: '+err.message,false);return;}for(const asin of asins){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});ok++;}catch(err){fail++;}}if(!isAuto){const kwRaw=document.getElementById('mgrpKwText').value.trim();const kwMatch=document.getElementById('mgrpKwMatch').value;const kwBid=parseFloat(document.getElementById('mgrpKwBid').value)||bid;const kws=kwRaw.split(/\n/).map(l=>l.trim()).filter(Boolean);for(const kw of kws){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId})});ok++;}catch(err){fail++;}}}closeModal('modalGrp');toast(`В очередь: группа + ${asins.length} ASIN${!isAuto?' + '+document.getElementById('mgrpKwText').value.trim().split(/\n/).filter(Boolean).length+' kw':''}${fail?' ('+fail+' ошибок)':''}`,fail===0);}
+
+// ── Keyboard ─────────────────────────────────────────────
+document.getElementById('filterName').addEventListener('keydown',e=>{if(e.key==='Enter')applyFilters();});
+
+// ── Init ─────────────────────────────────────────────────
 loadPortfolios();
 </script>
 </body>

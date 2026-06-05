@@ -645,7 +645,7 @@ async function loadCamps(asin, mkt){
       const enC=(c.campaign_state||'').toLowerCase()==='enabled';
       const acC=c.acos==null?'dv':c.acos<25?'ok':c.acos<50?'hi':'cr';
       h+=`<div class="cc" id="cc_${cid}">
-        <div class="cch" onclick="campClick('${je(cid)}','${je(asin)}','${je(c.marketplace||'')}')">
+        <div class="cch" onclick="campClick('${je(cid)}','${je(asin)}','${je(c.marketplace||'')}','${je(c.targeting_type||'')}')">
           <button class="stog ${enC?'en':'pa'}" title="${enC?'Enabled':'Paused'}"
             onclick="toggleState(event,'campaign','${je(cid)}','${je(c.campaign_state||'ENABLED')}','${je(c.marketplace||'')}','${je(cid)}')" data-current="${je(c.campaign_state||'ENABLED')}"></button>
           <span id="cn_${cid}" class="cn">${c.campaign_name||cid}</span>
@@ -708,7 +708,7 @@ async function loadCamps(asin, mkt){
 }
 
 // ── Camp click ────────────────────────────────────────────
-async function campClick(cid, asin, mkt=''){
+async function campClick(cid, asin, mkt='', tgtType=''){
   const isO=S.eC[cid];
   S.eC[cid]=!isO;
   const cs=document.getElementById('cs_'+cid);
@@ -718,7 +718,7 @@ async function campClick(cid, asin, mkt=''){
   if(!isO){
     cs.classList.add('op'); cc?.classList.add('co'); chev?.classList.add('op');
     if(S.sc[cid]){
-      cs.innerHTML=buildStruct(S.sc[cid], asin, cid, mkt);
+      cs.innerHTML=buildStruct(S.sc[cid], asin, cid, mkt, tgtType);
     }else{
       cs.innerHTML='<div class="stl"><div class="sp"></div> Загрузка структуры...</div>';
       const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
@@ -726,7 +726,7 @@ async function campClick(cid, asin, mkt=''){
         const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}`);
         const d=await r.json(); if(d.error)throw new Error(d.error);
         S.sc[cid]=d;
-        if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt);
+        if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt, tgtType);
       }catch(e){
         if(cs.classList.contains('op')) cs.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
       }
@@ -896,7 +896,7 @@ function tabSortClick(e, key, el){
   }
 }
 
-function buildStruct(data, filterAsin, campId='', mkt=''){
+function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
   let groups=data.groups||[];
 
   // Filter groups: only those containing this ASIN
@@ -924,7 +924,7 @@ function buildStruct(data, filterAsin, campId='', mkt=''){
   let h='';
   const campIdForGrp = campId || '';
   const mktForGrp = mkt || '';
-  const tgtTypeForGrp = (data.targeting_type || data.groups?.[0]?.targeting_type || '').toUpperCase();
+  const tgtTypeForGrp = (data.targeting_type || data.groups?.[0]?.targeting_type || tgtTypeFallback || '').toUpperCase();
   h += `<div style="display:flex;justify-content:flex-end;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface2)">
     <button class="act-btn" style="height:26px;font-size:11px" onclick="event.stopPropagation();openCreateGrp('${je(campIdForGrp)}','${je(mktForGrp)}','${je(tgtTypeForGrp)}')">+ Группа</button>
   </div>`;

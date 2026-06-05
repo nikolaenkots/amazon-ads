@@ -390,6 +390,16 @@ def get_pending():
         fetch_names(ad_ids, "ad_id", "asin",
                     "AND entity_type = 'product_ad'")
 
+    # _add типы: entity_id = campaign_id → подтягиваем campaign_name
+    add_camp_ids = (by_type.get("ad_group_add", set()) |
+                    by_type.get("keyword_add", set()) |
+                    by_type.get("negative_add", set()) |
+                    by_type.get("negative_product_add", set()) |
+                    by_type.get("product_ad_add", set())) - camp_ids
+    if add_camp_ids:
+        fetch_names(add_camp_ids, "campaign_id", "campaign_name",
+                    "AND entity_type = 'campaign'")
+
     # Добавляем entity_name в каждую строку
     for r in rows:
         et  = r["entity_type"]
@@ -462,6 +472,12 @@ def get_log():
             "target":          ("target_id",     "targeting_expression", "entity_type = 'product_targeting'"),
             "negative_delete": ("keyword_id",    "keyword_text",         "entity_type = 'negative_keyword'"),
             "product_ad":      ("ad_id",         "asin",                 "entity_type = 'product_ad'"),
+            # _add types: entity_id = campaign_id → lookup campaign_name
+            "ad_group_add":    ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
+            "keyword_add":     ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
+            "negative_add":    ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
+            "negative_product_add": ("campaign_id", "campaign_name",     "entity_type = 'campaign'"),
+            "product_ad_add":  ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
         }
         for et, ids in by_type_log.items():
             if et not in TYPE_QUERY or not ids: continue

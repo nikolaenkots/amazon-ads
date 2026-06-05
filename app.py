@@ -26,12 +26,19 @@ from earnings_routes  import earnings_bp
 from ads_routes       import ads_bp
 from campaigns_routes import campaigns_bp
 from portfolios       import portfolios_bp
+from analytics_routes import analytics_bp
+from control_routes import control_bp
+from products_routes  import products_bp
+
 
 app.register_blueprint(catalog_bp)
 app.register_blueprint(earnings_bp)
 app.register_blueprint(ads_bp)
 app.register_blueprint(campaigns_bp)
 app.register_blueprint(portfolios_bp)
+app.register_blueprint(analytics_bp)
+app.register_blueprint(control_bp)
+app.register_blueprint(products_bp)
 
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
