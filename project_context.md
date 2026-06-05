@@ -1032,6 +1032,44 @@ const _jeS = (s) => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").repl
 
 ---
 
+---
+
+## Авторизация (app.py)
+
+HTTP Basic Auth через `@app.before_request`. Логин/пароль задаются в `app.py`.
+
+```python
+# ── Auth ──────────────────────────────────────────────────
+import base64
+from flask import Response, request  # request обязателен!
+
+AUTH_USERNAME = "Artem"
+AUTH_PASSWORD = "..."
+
+def check_auth(auth_header):
+    if not auth_header or not auth_header.startswith('Basic '):
+        return False
+    try:
+        decoded = base64.b64decode(auth_header[6:]).decode('utf-8')
+        user, pwd = decoded.split(':', 1)
+        return user == AUTH_USERNAME and pwd == AUTH_PASSWORD
+    except Exception:
+        return False
+
+@app.before_request
+def require_auth():
+    if not check_auth(request.headers.get('Authorization')):
+        return Response(
+            'Требуется авторизация',
+            401,
+            {'WWW-Authenticate': 'Basic realm="Amazon Ads"'}
+        )
+```
+
+**Важно:** `request` должен быть импортирован явно — либо в `from flask import Flask, send_from_directory, request` вверху файла, либо в отдельном `from flask import Response, request` рядом с auth блоком. Без `request` Flask упадёт с Internal Server Error.
+
+---
+
 ## На горизонте
 
 - **analyze.py** — автоматический bid optimization loop
