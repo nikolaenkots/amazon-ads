@@ -457,10 +457,6 @@ def analytics_campaign_structure():
         {date_where}
         """
 
-        struct_rows    = list(client.query(struct_sql).result())
-        stats_rows     = list(client.query(stats_sql).result())
-        search_rows    = list(client.query(search_sql).result())
-
         # Статистика по ASIN объявлений
         asin_stat_table = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
         asin_stats_sql = f"""
@@ -476,11 +472,22 @@ def analytics_campaign_structure():
         {date_where}
         GROUP BY ad_group_id, advertised_asin
         """
+
+        # Запускаем все 5 jobs параллельно
+        job_struct    = client.query(struct_sql)
+        job_stats     = client.query(stats_sql)
+        job_search    = client.query(search_sql)
+        job_asin      = client.query(asin_stats_sql)
+        job_placement = client.query(placement_sql)
+
+        struct_rows     = list(job_struct.result())
+        stats_rows      = list(job_stats.result())
+        search_rows     = list(job_search.result())
         try:
-            asin_stats_rows = list(client.query(asin_stats_sql).result())
+            asin_stats_rows = list(job_asin.result())
         except Exception:
             asin_stats_rows = []
-        placement_rows = list(client.query(placement_sql).result())
+        placement_rows  = list(job_placement.result())
 
         campaign_stats = {}
         if placement_rows:

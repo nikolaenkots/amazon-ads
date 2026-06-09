@@ -88,6 +88,7 @@ def analytics_products_data():
         safe_asin = asin_filter.replace("'", "''")
         asin_cond = f"AND a.advertised_asin LIKE '%{safe_asin}%'"
 
+    # Единый SQL: строки + total + summary через window functions (1 запрос вместо 3)
     sql = f"""
     WITH camp_filter AS (
         SELECT DISTINCT camp.campaign_id, camp.marketplace
@@ -119,81 +120,29 @@ def analytics_products_data():
             CASE WHEN impressions > 0 THEN ROUND(clicks / impressions * 100, 3) ELSE NULL END AS ctr,
             CASE WHEN sales_14d   > 0 THEN ROUND(cost / sales_14d * 100, 1)    ELSE NULL END AS acos
         FROM stats
+    ),
+    filtered AS (
+        SELECT * FROM with_metrics
+        {where_clause}
     )
     SELECT
-        s.*,
+        f.*,
         cat.title,
         cat.image_url,
         cat.product_type,
         cat.price,
-        cat.status
-    FROM with_metrics s
+        cat.status,
+        COUNT(*) OVER ()                    AS _total,
+        SUM(f.impressions) OVER ()          AS _sum_impressions,
+        SUM(f.clicks) OVER ()               AS _sum_clicks,
+        ROUND(SUM(f.cost) OVER (), 2)       AS _sum_cost,
+        ROUND(SUM(f.sales_14d) OVER (), 2)  AS _sum_sales,
+        SUM(f.purchases_14d) OVER ()        AS _sum_purchases
+    FROM filtered f
     LEFT JOIN `{cat_table}` cat
-        ON cat.asin = s.asin AND cat.marketplace = s.marketplace
-    {where_clause}
+        ON cat.asin = f.asin AND cat.marketplace = f.marketplace
     ORDER BY {sort_by} {sort_dir} NULLS LAST
     LIMIT {per_page} OFFSET {(page-1)*per_page}
-    """
-
-    count_sql = f"""
-    WITH camp_filter AS (
-        SELECT DISTINCT camp.campaign_id, camp.marketplace
-        FROM `{camp_table}` camp
-        {camp_where}
-    )
-    SELECT COUNT(*) AS total FROM (
-        SELECT
-            a.advertised_asin AS asin, a.marketplace,
-            SUM(a.impressions) AS impressions, SUM(a.clicks) AS clicks,
-            ROUND(SUM(a.cost),2) AS cost, ROUND(SUM(a.sales_14d),2) AS sales_14d,
-            SUM(a.purchases_14d) AS purchases_14d,
-            CASE WHEN SUM(a.impressions)>0 THEN ROUND(SUM(a.clicks)/SUM(a.impressions)*100,3) ELSE NULL END AS ctr,
-            CASE WHEN SUM(a.sales_14d)>0 THEN ROUND(SUM(a.cost)/SUM(a.sales_14d)*100,1) ELSE NULL END AS acos
-        FROM `{asin_table}` a
-        INNER JOIN camp_filter cf
-            ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
-        WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
-        {date_where}
-        {asin_cond}
-        GROUP BY a.advertised_asin, a.marketplace
-    ) t
-    {where_clause}
-    """
-
-    summary_sql = f"""
-    WITH camp_filter AS (
-        SELECT DISTINCT camp.campaign_id, camp.marketplace
-        FROM `{camp_table}` camp
-        {camp_where}
-    ),
-    agg AS (
-        SELECT
-            a.advertised_asin AS asin,
-            a.marketplace,
-            SUM(a.impressions)   AS impressions,
-            SUM(a.clicks)        AS clicks,
-            ROUND(SUM(a.cost),2) AS cost,
-            ROUND(SUM(a.sales_14d),2) AS sales_14d,
-            SUM(a.purchases_14d) AS purchases_14d,
-            CASE WHEN SUM(a.impressions)>0 THEN ROUND(SUM(a.clicks)/SUM(a.impressions)*100,3) ELSE NULL END AS ctr,
-            CASE WHEN SUM(a.sales_14d)>0 THEN ROUND(SUM(a.cost)/SUM(a.sales_14d)*100,1) ELSE NULL END AS acos
-        FROM `{asin_table}` a
-        INNER JOIN camp_filter cf
-            ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
-        WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
-        {date_where}
-        {asin_cond}
-        GROUP BY a.advertised_asin, a.marketplace
-    )
-    SELECT
-        COUNT(DISTINCT asin)   AS total_asins,
-        SUM(impressions)       AS impressions,
-        SUM(clicks)            AS clicks,
-        ROUND(SUM(cost), 2)    AS cost,
-        ROUND(SUM(sales_14d),2) AS sales_14d,
-        SUM(purchases_14d)     AS purchases_14d
-    FROM agg
-    {where_clause}
     """
 
     try:
@@ -202,28 +151,39 @@ def analytics_products_data():
         def cvt(v):
             return float(v) if isinstance(v, decimal.Decimal) else v
 
-        rows_raw    = list(client.query(sql).result())
-        count_raw   = list(client.query(count_sql).result())
-        summary_raw = list(client.query(summary_sql).result())
+        all_rows = list(client.query(sql).result())
 
-        total   = int(count_raw[0].total) if count_raw else 0
-        sum_row = dict(summary_raw[0]) if summary_raw else {}
-        rows    = [{k: cvt(v) for k, v in dict(r).items()} for r in rows_raw]
+        rows = []
+        total = 0
+        sum_impressions = sum_clicks = sum_cost = sum_sales = sum_purchases = 0.0
 
-        impr  = float(sum_row.get('impressions') or 0)
-        clks  = float(sum_row.get('clicks') or 0)
-        cost  = float(sum_row.get('cost') or 0)
-        sales = float(sum_row.get('sales_14d') or 0)
+        for r in all_rows:
+            d = {k: cvt(v) for k, v in dict(r).items()}
+            if not rows:
+                total           = int(d.pop('_total') or 0)
+                sum_impressions = float(d.pop('_sum_impressions') or 0)
+                sum_clicks      = float(d.pop('_sum_clicks') or 0)
+                sum_cost        = float(d.pop('_sum_cost') or 0)
+                sum_sales       = float(d.pop('_sum_sales') or 0)
+                sum_purchases   = float(d.pop('_sum_purchases') or 0)
+            else:
+                d.pop('_total', None)
+                d.pop('_sum_impressions', None)
+                d.pop('_sum_clicks', None)
+                d.pop('_sum_cost', None)
+                d.pop('_sum_sales', None)
+                d.pop('_sum_purchases', None)
+            rows.append(d)
 
         summary = {
-            'total_asins':   int(sum_row.get('total_asins') or 0),
-            'impressions':   int(impr),
-            'clicks':        int(clks),
-            'cost':          round(cost, 2),
-            'sales_14d':     round(sales, 2),
-            'purchases_14d': int(sum_row.get('purchases_14d') or 0),
-            'acos': round(cost/sales*100, 1) if sales > 0 else None,
-            'ctr':  round(clks/impr*100, 3) if impr > 0 else None,
+            'total_asins':   total,
+            'impressions':   int(sum_impressions),
+            'clicks':        int(sum_clicks),
+            'cost':          round(sum_cost, 2),
+            'sales_14d':     round(sum_sales, 2),
+            'purchases_14d': int(sum_purchases),
+            'acos': round(sum_cost / sum_sales * 100, 1) if sum_sales > 0 else None,
+            'ctr':  round(sum_clicks / sum_impressions * 100, 3) if sum_impressions > 0 else None,
         }
 
         return jsonify({'rows': rows, 'total': total, 'page': page, 'per_page': per_page, 'summary': summary})

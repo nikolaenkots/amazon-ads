@@ -98,6 +98,19 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 .sp2{animation:spin .7s linear infinite;display:inline-block}
 
+
+/* Sync history */
+.hist-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px}
+.hist-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.hist-list{display:flex;flex-direction:column;gap:0}
+.hist-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px}
+.hist-item:last-child{border-bottom:none}
+.hist-acct{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap;font-family:'DM Mono',monospace}
+.hist-date{font-family:'DM Mono',monospace;color:var(--text);font-size:11px}
+.hist-rows{color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;margin-left:auto}
+.hist-time{color:var(--dim);font-family:'DM Mono',monospace;font-size:11px}
+.hist-empty{padding:14px 16px;font-size:12px;color:var(--dim);font-family:'DM Mono',monospace}
+
 /* Table section */
 .tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
@@ -200,6 +213,15 @@ td{padding:7px 13px;font-family:'DM Mono',monospace;vertical-align:middle;white-
     </div>
   </div>
 
+  <!-- Sync history -->
+  <div class="hist-wrap">
+    <div class="hist-hdr">
+      <span class="tt">История синхронизаций</span>
+      <button class="btn btn-s" style="height:28px;font-size:11px" onclick="clearSyncHistory()">Очистить</button>
+    </div>
+    <div class="hist-list" id="syncHistoryList"></div>
+  </div>
+
   <!-- Table preview -->
   <div class="tw" id="tableSection" style="display:none">
     <div class="thr">
@@ -234,7 +256,8 @@ const PROFILES={
   ]
 };
 
-let currentType='MERCH', currentMkt='US', pollTimer=null, currentJobId=null;
+let currentType='MERCH', currentMkt='US', pollTimer=null, currentJobId=null, lastSyncedAt=null;
+let syncHistory=JSON.parse(localStorage.getItem('campaigns_sync_history')||'[]');
 
 function setType(type,el){
   currentType=type;
@@ -242,6 +265,26 @@ function setType(type,el){
   el.classList.add(type==='KDP'?'on-blue':'on');
   renderMkt();
 }
+
+function renderSyncHistory(){
+  const list=document.getElementById('syncHistoryList');
+  if(!syncHistory.length){list.innerHTML='<div class="hist-empty">Нет синхронизаций</div>';return;}
+  list.innerHTML=syncHistory.map(h=>{
+    const cnt=h.counts||{};
+    const parts=[];
+    if(cnt.campaign)  parts.push(cnt.campaign+' кампаний');
+    if(cnt.ad_group)  parts.push(cnt.ad_group+' групп');
+    if(cnt.keyword)   parts.push(cnt.keyword+' kw');
+    const detail=parts.length?parts.join(' · '):'';
+    return '<div class="hist-item">'
+      +'<span class="hist-acct">'+h.acct+'</span>'
+      +'<span class="hist-date">'+h.date+'</span>'
+      +'<span class="hist-rows">'+((h.total||0).toLocaleString('ru'))+' строк'+(detail?' · '+detail:'')+'</span>'
+      +'<span class="hist-time">'+h.time+'</span>'
+      +'</div>';
+  }).join('');
+}
+function clearSyncHistory(){syncHistory=[];localStorage.removeItem('campaigns_sync_history');renderSyncHistory();}
 
 function renderMkt(){
   const list=PROFILES[currentType];
@@ -380,7 +423,19 @@ function handleMsg(msg){
     const rb=document.getElementById('resultBlock');
     rb.className='info ok on';
     rb.textContent=`✓ Готово · ${data.total} строк · ${new Date().toLocaleTimeString('ru')}`;
-    document.getElementById('lastSync').textContent='Последняя синхронизация: '+new Date().toLocaleString('ru');
+    const _now=new Date();
+    document.getElementById('lastSync').textContent='Последняя синхронизация: '+_now.toLocaleString('ru');
+    lastSyncedAt=data.synced_at||null;
+    syncHistory.unshift({
+      acct:currentType+' '+currentMkt,
+      total:data.total,
+      counts:data.counts,
+      time:_now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}),
+      date:_now.toLocaleDateString('ru'),
+      synced_at:lastSyncedAt
+    });
+    localStorage.setItem('campaigns_sync_history',JSON.stringify(syncHistory.slice(0,50)));
+    renderSyncHistory();
     const btn=document.getElementById('syncBtn');
     btn.disabled=false;
     btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Синхронизировать';
@@ -444,6 +499,7 @@ async function loadPreview(entity){
 }
 
 renderMkt();
+renderSyncHistory();
 loadPreview('campaign');
 </script>
 </body>

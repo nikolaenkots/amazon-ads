@@ -88,20 +88,41 @@ def amz_post(endpoint, path, headers, body, retries=3):
 
 # ── BigQuery helpers ──────────────────────────────────────
 def fetch_pending(bq, account_type, marketplace_filter=None):
-    """Читает APPROVED изменения из pending_changes"""
-    table = PENDING_TABLES[account_type]
-    where = "WHERE status = 'APPROVED'"
-    if marketplace_filter:
-        where += f" AND marketplace = '{marketplace_filter}'"
+    """Читает APPROVED и застрявшие SENDING из pending_changes.
+    Исключает те, что уже есть в change_log с result=SUCCESS (идемпотентность).
+    """
+    table     = PENDING_TABLES[account_type]
+    log_table = CHANGELOG_TABLES[account_type]
+    mkt_filter = f"AND p.marketplace = '{marketplace_filter}'" if marketplace_filter else ""
     sql = f"""
-    SELECT id, created_at, entity_type, entity_id, profile_id, marketplace,
-           field_name, old_value, new_value, retry_count
-    FROM `{table}`
-    {where}
-    ORDER BY created_at
+    SELECT p.id, p.created_at, p.entity_type, p.entity_id, p.profile_id, p.marketplace,
+           p.field_name, p.old_value, p.new_value, p.retry_count
+    FROM `{table}` p
+    WHERE p.status IN ('APPROVED', 'SENDING')
+    {mkt_filter}
+    AND p.id NOT IN (
+        SELECT pending_id FROM `{log_table}` WHERE result = 'SUCCESS'
+    )
+    ORDER BY p.created_at
     """
     rows = list(bq.query(sql).result())
     return [dict(r) for r in rows]
+
+
+def reset_stale_sending(bq, account_type):
+    """Сбрасывает застрявшие SENDING → APPROVED если нет записи SUCCESS в логе.
+    Вызывается в начале send_changes чтобы они попали в следующий запуск.
+    """
+    table     = PENDING_TABLES[account_type]
+    log_table = CHANGELOG_TABLES[account_type]
+    bq.query(f"""
+        UPDATE `{table}`
+        SET status = 'APPROVED'
+        WHERE status = 'SENDING'
+        AND id NOT IN (
+            SELECT pending_id FROM `{log_table}` WHERE result = 'SUCCESS'
+        )
+    """).result()
 
 
 def mark_sending(bq, account_type, ids):
@@ -744,6 +765,9 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
     bq      = bigquery.Client(project=PROJECT_ID)
     sent_at = datetime.now(tz=timezone.utc).isoformat()
 
+    # Сбрасываем застрявшие SENDING → APPROVED (зависшие прошлые запуски)
+    reset_stale_sending(bq, account_type)
+
     changes = fetch_pending(bq, account_type, marketplace_filter)
     if not changes:
         print(f"[{account_type}] Нет APPROVED изменений.")
@@ -757,9 +781,8 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
         mkt = c["marketplace"]
         by_profile.setdefault(mkt, []).append(c)
 
-    all_changelog = []
-    all_success   = []
-    all_failed    = []
+    total_success = 0
+    total_failed  = 0
 
     token = get_token()
 
@@ -771,8 +794,9 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
         profile = PROFILES.get(profile_key)
         if not profile:
             print(f"  Профиль {profile_key} не найден, пропускаем {len(mkt_changes)} изменений")
-            for c in mkt_changes:
-                all_failed.append(c["id"])
+            if not dry_run:
+                mark_failed(bq, account_type, [c["id"] for c in mkt_changes], "Profile not found")
+            total_failed += len(mkt_changes)
             continue
 
         endpoint   = profile.get("api_endpoint", "https://advertising-api.amazon.com")
@@ -781,7 +805,7 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
 
         print(f"\n  Marketplace: {mkt} ({len(mkt_changes)} изменений)")
 
-        # Помечаем как SENDING
+        # Помечаем как SENDING перед отправкой — видно что «в работе»
         if not dry_run:
             mark_sending(bq, account_type, [c["id"] for c in mkt_changes])
 
@@ -797,7 +821,10 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
             ("create_ad_groups",  send_create_ad_groups),
         ]
 
-        bq_updates = []
+        mkt_success   = []
+        mkt_failed    = []
+        mkt_changelog = []
+        bq_updates    = []
 
         for group_key, send_fn in send_funcs:
             batch = grouped[group_key]
@@ -807,11 +834,15 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
             print(f"    {group_key}: {len(batch)} шт.")
             results = send_fn(endpoint, headers, batch, dry_run=dry_run)
 
+            batch_success   = []
+            batch_failed    = []
+            batch_changelog = []
+
             for idx, change in enumerate(batch):
                 result = results.get(idx, "SUCCESS")
                 success = result == "SUCCESS"
 
-                all_changelog.append({
+                batch_changelog.append({
                     "id":           str(uuid.uuid4()),
                     "pending_id":   change["id"],
                     "sent_at":      sent_at,
@@ -827,27 +858,35 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
                 })
 
                 if success:
-                    all_success.append(change["id"])
+                    batch_success.append(change["id"])
                     bq_updates.append(change)
                     print(f"      ✓ {change['entity_type']}/{change.get('field_name','')} → {change['new_value'][:50]}")
                 else:
-                    all_failed.append(change["id"])
+                    batch_failed.append(change["id"])
                     print(f"      ✗ {change['entity_type']}/{change.get('field_name','')} — {result[:100]}")
 
-        # Применяем успешные изменения в BigQuery
+            # ── Записываем результаты сразу после каждого батча ──────────────
+            # Это гарантирует что лог и статусы сохранятся даже если скрипт
+            # упадёт или зависнет на следующем батче.
+            if not dry_run:
+                write_changelog(bq, account_type, batch_changelog)
+                if batch_success:
+                    mark_done(bq, account_type, batch_success, "SENT")
+                if batch_failed:
+                    mark_failed(bq, account_type, batch_failed, f"{group_key} failed")
+
+            mkt_success.extend(batch_success)
+            mkt_failed.extend(batch_failed)
+            mkt_changelog.extend(batch_changelog)
+
+        # Применяем успешные изменения в BigQuery (локальный кэш campaigns_merch)
         if not dry_run and bq_updates:
             update_campaigns_bq(bq, account_type, mkt, bq_updates)
 
-    # Финализируем статусы и пишем лог
-    if not dry_run:
-        if all_success:
-            mark_done(bq, account_type, all_success, "SENT")
-        if all_failed:
-            mark_failed(bq, account_type, all_failed, "Last batch failed")
-        if all_changelog:
-            write_changelog(bq, account_type, all_changelog)
+        total_success += len(mkt_success)
+        total_failed  += len(mkt_failed)
 
-    print(f"\n✓ Готово: {len(all_success)} успешно, {len(all_failed)} с ошибками")
+    print(f"\n✓ Готово: {total_success} успешно, {total_failed} с ошибками")
 
 
 # ── CLI ───────────────────────────────────────────────────

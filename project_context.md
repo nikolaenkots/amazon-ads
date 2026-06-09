@@ -683,6 +683,65 @@ python3 send.py --all                # MERCH + KDP
 python3 send.py --dry-run            # показать без отправки
 ```
 
+### Схема статусов pending_changes
+
+```
+PENDING → APPROVED → SENDING → SENT
+                             → FAILED
+          REJECTED (вручную)
+```
+
+| Статус | Когда |
+|---|---|
+| `PENDING` | Создано, ждёт одобрения |
+| `APPROVED` | Одобрено, ждёт отправки |
+| `SENDING` | Скрипт взял в работу прямо сейчас |
+| `SENT` | Успешно принято Amazon |
+| `FAILED` | Amazon вернул ошибку (см. `error_msg`) |
+| `REJECTED` | Отклонено вручную |
+
+### Надёжность (защита от зависания)
+
+**Проблема:** если скрипт завис после отправки в Amazon, но до записи в `change_log` — изменения применены, но нет ни записи в истории, ни смены статуса.
+
+**Три уровня защиты:**
+
+1. **`reset_stale_sending`** — первым делом при запуске: находит все `SENDING` без соответствующей записи `SUCCESS` в `change_log` → сбрасывает в `APPROVED`. Это восстанавливает зависшие записи в очередь.
+
+2. **Запись после каждого батча** — `write_changelog` + `mark_done`/`mark_failed` вызываются сразу после каждой группы операций (`update_campaigns`, `create_targets`, ...), а не в конце всего цикла. Если скрипт упадёт на следующем батче — предыдущие уже сохранены.
+
+3. **Идемпотентный `fetch_pending`** — читает `APPROVED` и `SENDING`, но исключает те, у которых уже есть запись `SUCCESS` в `change_log`. Повторный запуск не отправит уже отправленное.
+
+```python
+# fetch_pending исключает уже успешные:
+AND p.id NOT IN (
+    SELECT pending_id FROM change_log WHERE result = 'SUCCESS'
+)
+
+# reset_stale_sending в начале send_changes:
+UPDATE pending_changes SET status = 'APPROVED'
+WHERE status = 'SENDING'
+AND id NOT IN (SELECT pending_id FROM change_log WHERE result = 'SUCCESS')
+```
+
+**Ручное восстановление зависших SENDING (если нужно):**
+```sql
+UPDATE `amazon-ads-api-494412.amazon_ads.pending_changes_merch`
+SET status = 'APPROVED'
+WHERE status = 'SENDING'
+AND id NOT IN (
+    SELECT pending_id FROM `amazon-ads-api-494412.amazon_ads.change_log_merch`
+    WHERE result = 'SUCCESS'
+)
+```
+
+**FAILED с ошибкой `Last batch failed`** — артефакт старого кода (писал одно сообщение на весь батч). Это не реальная ошибка Amazon — можно сбросить в `APPROVED` и отправить повторно:
+```sql
+UPDATE `amazon-ads-api-494412.amazon_ads.pending_changes_merch`
+SET status = 'APPROVED'
+WHERE status = 'FAILED' AND error_msg = 'Last batch failed'
+```
+
 ### Ключевые фиксы (актуальные)
 
 **Дедупликация ad_group_add по (name, campaign_id):**
@@ -885,7 +944,7 @@ marketplace
 ```sql
 id, created_at, entity_type, entity_id, profile_id, marketplace
 field_name, old_value, new_value
-status   -- PENDING → APPROVED → SENT / FAILED / REJECTED
+status   -- PENDING → APPROVED → SENDING → SENT / FAILED / REJECTED
 error_msg, retry_count
 ```
 

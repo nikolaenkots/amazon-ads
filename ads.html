@@ -3,137 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Amazon Ads — Статистика</title>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Реклама · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f2ed;--surface:#fff;--surface2:#f0ece5;--border:#e4dfd7;--border2:#d4cec5;--text:#1c1a17;--muted:#7a756d;--dim:#b5b0a8;--accent:#c8440a;--accent-bg:rgba(200,68,10,.07);--accent-border:rgba(200,68,10,.2);--green:#2d7a4f;--green-bg:rgba(45,122,79,.07);--green-border:rgba(45,122,79,.2);--blue:#1a5fa8;--blue-bg:rgba(26,95,168,.07);--blue-border:rgba(26,95,168,.2);--yellow:#a07800;--yellow-bg:rgba(160,120,0,.07);--yellow-border:rgba(160,120,0,.2)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
-header{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--border);background:var(--surface)}
-.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
-.logo-dot{width:22px;height:22px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center}
-nav{display:flex;gap:4px}
-nav a{font-size:13px;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:6px;transition:all .15s}
-nav a:hover{background:var(--surface2);color:var(--text)}
-nav a.active{background:var(--accent-bg);color:var(--accent)}
-main{flex:1;padding:40px;max-width:960px;margin:0 auto;width:100%}
-h1{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;margin-bottom:6px}
-.subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
 
-.account-bar{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:16px;flex-wrap:wrap}
-.account-bar label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
-.seg{display:flex;gap:4px}
-.seg-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
-.seg-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
-.seg-btn.active-blue{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
-.seg-btn.active-green{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
-.divider{width:1px;height:24px;background:var(--border);flex-shrink:0}
-.profile-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px}
-.profile-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
 
-.create-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
-.panel-title{font-size:14px;font-weight:500;margin-bottom:14px}
+/* Layout */
+main{padding:18px 32px;max-width:1200px;margin:0 auto}
+
+/* Buttons */
+.btn{height:34px;padding:0 14px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover:not(:disabled){background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover:not(:disabled){background:var(--surface2)}
+.btn-g{background:var(--green);color:#fff}.btn-g:hover:not(:disabled){background:#157a4d}
+.btn-d{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+
+/* Account bar */
+.ab{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ab-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+.ab-seg{display:flex;gap:3px}
+.ab-btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.ab-btn.on{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.ab-btn.on-blue{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue)}
+.ab-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.ab-profile{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:5px 11px;border-radius:6px}
+.ab-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* Create panel */
+.ap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ap-title{font-size:13px;font-weight:600;margin-bottom:12px}
 .create-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
 .field{display:flex;flex-direction:column;gap:4px}
-.field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em}
-.field input[type=date]{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
-.field input[type=date]:focus{border-color:var(--accent-border)}
-.field select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;cursor:pointer;transition:border-color .15s}
-.field select:focus{border-color:var(--accent-border)}
+.field label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input[type=date],.field select{height:34px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s;cursor:pointer}
+.field input[type=date]:focus,.field select:focus{border-color:var(--accent-bd)}
 
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#b03a08}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
-.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
-.btn-sm:hover{border-color:var(--border2)}.btn-sm:disabled{opacity:.5;cursor:not-allowed}
-.btn-sm.green{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
-.btn-sm.danger{color:var(--dim)}.btn-sm.danger:hover{color:var(--accent);border-color:var(--accent-border)}
+/* Queue */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.queue-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px}
 
-.queue-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.queue-title{font-size:13px;font-weight:500}
-.queue-list{display:flex;flex-direction:column;gap:8px;margin-bottom:36px}
-.queue-empty{font-size:12px;color:var(--dim);padding:24px 0;text-align:center;background:var(--surface);border:1px dashed var(--border2);border-radius:10px}
+/* Report card */
+.rc{border-bottom:1px solid var(--border);transition:background .1s}
+.rc:last-child{border-bottom:none}
+.rc:hover{background:#fafafa}
+.rc-main{display:flex;align-items:center;gap:10px;padding:10px 16px;flex-wrap:wrap}
+.rc-acct{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap;color:var(--muted)}
+.rc-type{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap}
+.rc-type.targeting{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.rc-type.asin{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
+.rc-type.search{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue)}
+.rc-dates{font-family:'DM Mono',monospace;font-size:12px;color:var(--text)}
+.rc-status{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;border:1px solid}
+.st-pending{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
+.st-completed{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.st-downloaded{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.st-loaded{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.st-uploading{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.st-failed,.st-error{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
+.rc-rows{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.rc-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
+.rc-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.rc-extra{padding:0 16px 10px}
+.prog-wrap{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;border:1px solid var(--border);margin-bottom:4px}
+.prog-bar{height:100%;background:var(--blue);border-radius:2px;transition:width .3s}
+.prog-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.rc-error{font-family:'DM Mono',monospace;font-size:11px;color:var(--red)}
+.pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.2s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 
-.report-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.report-card.pending  {border-left:3px solid var(--yellow)}
-.report-card.completed{border-left:3px solid var(--green)}
-.report-card.downloaded{border-left:3px solid var(--blue)}
-.report-card.loaded   {border-left:3px solid var(--green);opacity:.65}
-.report-card.failed,.report-card.error{border-left:3px solid var(--accent)}
-.report-card.uploading{border-left:3px solid var(--blue)}
+/* History */
+.hist-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.hist-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.hist-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px}
+.hist-item:last-child{border-bottom:none}
+.hist-acct{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.hist-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--text)}
+.hist-rows{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto}
+.hist-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
+.hist-empty{padding:16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
 
-.card-main{display:flex;align-items:center;gap:10px;padding:12px 16px;flex-wrap:wrap}
-.card-acct{font-size:11px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap}
-.card-type{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;white-space:nowrap}
-.card-type.targeting{background:var(--accent-bg);border:1px solid var(--accent-border);color:var(--accent)}
-.card-type.asin{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
-.card-type.search{background:var(--blue-bg);border:1px solid var(--blue-border);color:var(--blue)}
-.card-dates{font-size:12px;font-family:'DM Mono',monospace;color:var(--text)}
-.card-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:12px;white-space:nowrap}
-.st-pending  {background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
-.st-completed{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
-.st-downloaded{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
-.st-loaded   {background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
-.st-uploading{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
-.st-failed,.st-error{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
-.card-rows{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-.card-meta{font-size:11px;color:var(--dim);font-family:'DM Mono',monospace}
-.card-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
-.card-extra{padding:0 16px 10px;display:flex;flex-direction:column;gap:4px}
-.prog-wrap{background:var(--border);border-radius:3px;height:4px;overflow:hidden}
-.prog-bar{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
-.prog-text{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-.card-error{font-size:11px;color:var(--accent);font-family:'DM Mono',monospace}
-.pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* Info */
+.info{padding:9px 13px;border-radius:7px;font-family:'DM Mono',monospace;font-size:12px;display:none;margin-top:10px}
+.info.on{display:block}
+.info.ok{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
+.info.err{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
 
-.history{margin-top:8px}
-.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.history h2{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:'DM Mono',monospace}
-.history-list{display:flex;flex-direction:column;gap:6px}
-.history-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px}
-.history-item .date{font-family:'DM Mono',monospace;color:var(--text)}
-.history-item .acct{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
-.history-item .rows{color:var(--muted);margin-left:auto}
-.history-item .time{color:var(--dim);font-family:'DM Mono',monospace;font-size:11px}
-.btn-clear{font-size:11px;color:var(--dim);background:none;border:none;cursor:pointer}.btn-clear:hover{color:var(--accent)}
-.info-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:10px}
-.info-block.success{border-color:var(--green-border);color:var(--green);background:var(--green-bg)}
-.info-block.error{border-color:var(--accent-border);color:var(--accent);background:var(--accent-bg)}
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.sp2{display:inline-block;animation:spin .7s linear infinite}
 </style>
 </head>
 <body>
+
 <header>
   <div class="logo">
-    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="logo-dot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+    </div>
     Amazon Ads Automation
   </div>
-  <nav><a href="/">Главная</a><a href="/catalog">Каталог</a><a href="/earnings">Продажи</a><a href="/ads" class="active">Реклама</a></nav>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/analytics/campaigns">Аналитика</a>
+    <a href="/analytics/products">Продукты</a>
+    <a href="/control">Контроль</a>
+    <a href="/campaigns">Кампании SP API</a>
+    <a href="/portfolios">Портфолио</a>
+    <a href="/ads" class="active">Реклама</a>
+  </nav>
 </header>
 
 <main>
-  <h1>Сбор статистики рекламы</h1>
-  <p class="subtitle">Создавайте несколько отчётов параллельно — они появятся в очереди ниже</p>
 
-  <!-- Выбор аккаунта -->
-  <div class="account-bar">
-    <div style="display:flex;flex-direction:column;gap:4px">
-      <label>Тип аккаунта</label>
-      <div class="seg" id="typeSelector">
-        <button class="seg-btn active" onclick="setType('MERCH',event)">Merch by Amazon</button>
-        <button class="seg-btn" onclick="setType('KDP',event)">KDP</button>
+  <!-- Account bar -->
+  <div class="ab">
+    <div>
+      <div class="ab-label">Аккаунт</div>
+      <div class="ab-seg" id="typeSelector">
+        <button class="ab-btn on" onclick="setType('MERCH',event)">Merch by Amazon</button>
+        <button class="ab-btn" onclick="setType('KDP',event)">KDP</button>
       </div>
     </div>
-    <div class="divider"></div>
-    <div style="display:flex;flex-direction:column;gap:4px">
-      <label>Маркетплейс</label>
-      <div class="seg" id="mktSelector"></div>
+    <div class="ab-divider"></div>
+    <div>
+      <div class="ab-label">Маркетплейс</div>
+      <div class="ab-seg" id="mktSelector"></div>
     </div>
-    <div class="profile-badge"><div class="profile-dot"></div><span id="profileBadge">Merch US · 2418854071638725</span></div>
+    <div class="ab-profile">
+      <div class="ab-dot"></div>
+      <span id="profileBadge">Merch US · 2418854071638725</span>
+    </div>
   </div>
 
-  <!-- Создать отчёт -->
-  <div class="create-panel">
-    <div class="panel-title">Создать отчёт</div>
+  <!-- Create report -->
+  <div class="ap">
+    <div class="ap-title">Создать отчёт</div>
     <div class="create-row">
       <div class="field">
         <label>Тип отчёта</label>
@@ -145,29 +172,35 @@ h1{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400;margin-bo
       </div>
       <div class="field"><label>Дата начала</label><input type="date" id="startDate"></div>
       <div class="field"><label>Дата конца</label><input type="date" id="endDate"></div>
-      <button class="btn btn-primary" onclick="createReport()" id="btnCreate">Создать отчёт</button>
+      <button class="btn btn-p" onclick="createReport()" id="btnCreate" style="margin-top:14px">Создать отчёт</button>
     </div>
-    <div id="createMsg"></div>
+    <div class="info" id="createMsg"></div>
   </div>
 
-  <!-- Очередь -->
-  <div class="queue-header">
-    <div class="queue-title">Очередь отчётов</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn-sm" onclick="refreshAll()" id="btnRefresh">↻ Обновить статусы</button>
-      <span id="refreshMsg" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace"></span>
+  <!-- Queue -->
+  <div class="tw">
+    <div class="thr">
+      <span class="tt">Очередь отчётов</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-s" onclick="refreshAll()" id="btnRefresh">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Обновить статусы
+        </button>
+        <span id="refreshMsg" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)"></span>
+      </div>
     </div>
+    <div id="queueList"><div class="queue-empty">Нет отчётов в очереди</div></div>
   </div>
-  <div class="queue-list" id="queueList"><div class="queue-empty">Нет отчётов в очереди</div></div>
 
-  <!-- История -->
-  <div class="history">
-    <div class="history-header">
-      <h2>История загрузок</h2>
-      <button class="btn-clear" onclick="clearHistory()">Очистить</button>
+  <!-- History -->
+  <div class="hist-wrap">
+    <div class="hist-hdr">
+      <span class="tt">История загрузок</span>
+      <button class="btn btn-s" style="height:28px;font-size:11px" onclick="clearHistory()">Очистить</button>
     </div>
-    <div class="history-list" id="historyList"></div>
+    <div id="historyList"><div class="hist-empty">Нет загрузок</div></div>
   </div>
+
 </main>
 
 <script>
@@ -209,8 +242,8 @@ renderMktSelector();renderHistory();loadLog();
 
 function setType(type,e){
   sel.type=type;
-  document.querySelectorAll('#typeSelector .seg-btn').forEach(b=>b.classList.remove('active','active-blue'));
-  e.target.classList.add(type==='MERCH'?'active':'active-blue');
+  document.querySelectorAll('#typeSelector .ab-btn').forEach(b=>b.classList.remove('on','on-blue'));
+  e.target.classList.add(type==='KDP'?'on-blue':'on');
   const f=PROFILES[type][0];sel.marketplace=f.marketplace;sel.profileId=f.id;
   renderMktSelector();updateBadge();
 }
@@ -219,7 +252,7 @@ function renderMktSelector(){
   const s=document.getElementById('mktSelector');s.innerHTML='';
   (PROFILES[sel.type]||[]).forEach(p=>{
     const b=document.createElement('button');
-    b.className='seg-btn'+(p.marketplace===sel.marketplace?(sel.type==='MERCH'?' active':' active-blue'):'');
+    b.className='ab-btn'+(p.marketplace===sel.marketplace?(sel.type==='KDP'?' on-blue':' on'):'');
     b.textContent=p.marketplace;b.onclick=()=>setMkt(p.marketplace,p.id);s.appendChild(b);
   });
 }
@@ -257,30 +290,34 @@ async function createReport(){
   if(!s||!e){alert('Выберите даты');return}
   if(s>e){alert('Дата начала позже конца');return}
   const btn=document.getElementById('btnCreate');
-  btn.disabled=true;btn.textContent='Создаём...';
-  const msg=document.getElementById('createMsg');msg.innerHTML='';
+  btn.disabled=true;btn.innerHTML='<span class="sp2">↻</span> Создаём...';
+  const msg=document.getElementById('createMsg');msg.className='info';
   try{
     const r=await fetch('/ads/create_report',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({start_date:s,end_date:e,account_type:sel.type,marketplace:sel.marketplace,report_type:rt})});
     const data=await r.json();
     if(data.error)throw new Error(data.error);
-    msg.innerHTML=`<div class="info-block success">✓ Отчёт создан и добавлен в очередь</div>`;
+    msg.className='info ok on';msg.textContent='✓ Отчёт создан и добавлен в очередь';
     await loadLog();
-  }catch(e){msg.innerHTML=`<div class="info-block error">Ошибка: ${e.message}</div>`;}
-  finally{btn.disabled=false;btn.textContent='Создать отчёт';}
+  }catch(e){msg.className='info err on';msg.textContent='✕ Ошибка: '+e.message;}
+  finally{btn.disabled=false;btn.innerHTML='Создать отчёт';}
 }
 
 async function refreshAll(){
-  const btn=document.getElementById('btnRefresh');btn.disabled=true;btn.textContent='Проверяем...';
+  const btn=document.getElementById('btnRefresh');btn.disabled=true;
+  btn.innerHTML='<span class="sp2">↻</span> Проверяем...';
   const msg=document.getElementById('refreshMsg');
   try{
     const r=await fetch('/ads/refresh_statuses',{method:'POST'});
     const data=await r.json();
     if(data.error)throw new Error(data.error);
-    msg.textContent=data.checked?`обновлено: ${data.updated}/${data.checked}`:'нет ожидающих';
+    msg.textContent=data.checked?('обновлено: '+data.updated+'/'+data.checked):'нет ожидающих';
     await loadLog();
   }catch(e){msg.textContent='Ошибка: '+e.message;}
-  finally{btn.disabled=false;btn.textContent='↻ Обновить статусы';}
+  finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Обновить статусы';
+  }
 }
 
 async function downloadEntry(entryId){
@@ -314,7 +351,7 @@ function pollUpload(entryId,jobId){
   if(pollTimers[entryId])clearInterval(pollTimers[entryId]);
   pollTimers[entryId]=setInterval(async()=>{
     try{
-      const msgs=await(await fetch(`/ads/upload_progress/${jobId}`)).json();
+      const msgs=await(await fetch('/ads/upload_progress/'+jobId)).json();
       const item=queue.find(q=>q.entry_id===entryId);if(!item)return;
       for(const m of msgs){
         if(m.event==='progress'){item._pct=m.data.pct;item._msg=m.data.msg;}
@@ -324,7 +361,7 @@ function pollUpload(entryId,jobId){
           item._pct=100;item._msg='Готово!';
           const rtLabel=REPORT_LABELS[item.report_type]||item.report_type;
           localHistory.unshift({date:item.start_date,endDate:item.end_date,
-            acct:`${item.account_type} ${item.marketplace} · ${rtLabel}`,
+            acct:item.account_type+' '+item.marketplace+' · '+rtLabel,
             rows:m.data.rows,inserted:m.data.inserted,
             time:new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})});
           localStorage.setItem('ads_history',JSON.stringify(localHistory.slice(0,50)));
@@ -353,53 +390,53 @@ function renderQueue(){
     const sc=item.status.toLowerCase();
     const label=STATUS_LABELS[item.status]||item.status;
     const pulse=(item.status==='PENDING'||item.status==='UPLOADING')?'<span class="pulse"></span>':'';
-    const acct=item.profile_name||`${item.account_type} ${item.marketplace}`;
-    const dates=item.start_date===item.end_date?item.start_date:`${item.start_date} → ${item.end_date}`;
+    const acct=item.profile_name||(item.account_type+' '+item.marketplace);
+    const dates=item.start_date===item.end_date?item.start_date:(item.start_date+' → '+item.end_date);
     const created=item.created_at?new Date(item.created_at).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'';
     const rtClass=item.report_type==='spAdvertisedProduct'?'asin':item.report_type==='spSearchTerm'?'search':'targeting';
     const rtLabel=REPORT_LABELS[item.report_type]||item.report_type;
-    const rows=item.rows?`<span class="card-rows">${item.rows.toLocaleString('ru')} стр${item.inserted?' · '+item.inserted.toLocaleString('ru')+' зап':''}</span>`:'';
+    const rows=item.rows?('<span class="rc-rows">'+item.rows.toLocaleString('ru')+' стр'+(item.inserted?' · '+item.inserted.toLocaleString('ru')+' зап':'')+'</span>'):'';
 
     let actions='';
     if(item.status==='COMPLETED'&&!item._downloading)
-      actions+=`<button class="btn-sm" onclick="downloadEntry('${item.entry_id}')">⬇ Скачать</button>`;
+      actions+='<button class="btn btn-s" style="height:28px;font-size:11px" onclick="downloadEntry(\''+item.entry_id+'\')">⬇ Скачать</button>';
     if(item._downloading)
-      actions+=`<button class="btn-sm" disabled>Скачиваем...</button>`;
+      actions+='<button class="btn btn-s" style="height:28px;font-size:11px" disabled>Скачиваем...</button>';
     if(item.status==='DOWNLOADED')
-      actions+=`<button class="btn-sm green" onclick="uploadEntry('${item.entry_id}')">→ В BigQuery</button>`;
+      actions+='<button class="btn btn-g" style="height:28px;font-size:11px" onclick="uploadEntry(\''+item.entry_id+'\')">→ В BigQuery</button>';
     if(['LOADED','FAILED','ERROR'].includes(item.status))
-      actions+=`<button class="btn-sm danger" onclick="deleteEntry('${item.entry_id}')">✕</button>`;
+      actions+='<button class="btn btn-d" style="height:28px;font-size:11px;padding:0 10px" onclick="deleteEntry(\''+item.entry_id+'\')">✕</button>';
 
     let extra='';
     if(item.status==='UPLOADING')
-      extra=`<div class="card-extra"><div class="prog-wrap"><div class="prog-bar" style="width:${item._pct||5}%"></div></div><div class="prog-text">${item._msg||'...'}</div></div>`;
+      extra='<div class="rc-extra"><div class="prog-wrap"><div class="prog-bar" style="width:'+( item._pct||5)+'%"></div></div><div class="prog-text">'+(item._msg||'...')+'</div></div>';
     if(item.error&&item.status!=='UPLOADING')
-      extra=`<div class="card-extra"><div class="card-error">${item.error}</div></div>`;
+      extra='<div class="rc-extra"><div class="rc-error">'+item.error+'</div></div>';
 
-    return `<div class="report-card ${sc}">
-      <div class="card-main">
-        <span class="card-acct">${acct}</span>
-        <span class="card-type ${rtClass}">${rtLabel}</span>
-        <span class="card-dates">${dates}</span>
-        <span class="card-status st-${sc}">${pulse}${label}</span>
-        ${rows}
-        <span class="card-meta">${created}</span>
-        <div class="card-actions">${actions}</div>
-      </div>${extra}
-    </div>`;
+    return '<div class="rc">'
+      +'<div class="rc-main">'
+      +'<span class="rc-acct">'+acct+'</span>'
+      +'<span class="rc-type '+rtClass+'">'+rtLabel+'</span>'
+      +'<span class="rc-dates">'+dates+'</span>'
+      +'<span class="rc-status st-'+sc+'">'+pulse+label+'</span>'
+      +rows
+      +'<span class="rc-time">'+created+'</span>'
+      +'<div class="rc-actions">'+actions+'</div>'
+      +'</div>'+extra+'</div>';
   }).join('');
 }
 
 function renderHistory(){
   const list=document.getElementById('historyList');
-  if(!localHistory.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:10px 0;">Нет загрузок</div>';return}
-  list.innerHTML=localHistory.map(h=>`
-    <div class="history-item">
-      <span class="date">${h.date}${h.endDate&&h.endDate!==h.date?' → '+h.endDate:''}</span>
-      <span class="acct">${h.acct||'MERCH US'}</span>
-      <span class="rows">${(h.rows||0).toLocaleString('ru')} строк · ${(h.inserted||0).toLocaleString('ru')} записано</span>
-      <span class="time">${h.time}</span>
-    </div>`).join('');
+  if(!localHistory.length){list.innerHTML='<div class="hist-empty">Нет загрузок</div>';return}
+  list.innerHTML=localHistory.map(h=>
+    '<div class="hist-item">'
+    +'<span class="hist-acct">'+(h.acct||'MERCH US')+'</span>'
+    +'<span class="hist-date">'+h.date+(h.endDate&&h.endDate!==h.date?' → '+h.endDate:'')+'</span>'
+    +'<span class="hist-rows">'+((h.rows||0).toLocaleString('ru'))+' стр · '+((h.inserted||0).toLocaleString('ru'))+' зап</span>'
+    +'<span class="hist-time">'+h.time+'</span>'
+    +'</div>'
+  ).join('');
 }
 function clearHistory(){localHistory=[];localStorage.removeItem('ads_history');renderHistory();}
 </script>
