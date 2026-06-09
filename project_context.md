@@ -1016,6 +1016,33 @@ python3 collect.py 2026-05-31 all                 # все профили
 - Amazon хранит данные 95 дней
 - Attribution restatement: данные пересчитываются до 14 дней назад
 
+### Загрузка данных в BigQuery (ads_routes.py, campaigns_routes.py)
+
+Оба файла используют одинаковую схему загрузки чанками с параллельным батчингом:
+
+```python
+CHUNK      = 50_000      # строк в одном job
+BATCH_SIZE = 5           # jobs параллельно, потом пауза
+```
+
+**Алгоритм:**
+1. Данные режутся на чанки по 50k строк
+2. Запускаются 5 jobs параллельно (без `job.result()`)
+3. Потом ждём все 5 (`job.result()` в цикле)
+4. Пауза 2 сек между батчами
+5. Следующие 5 jobs
+
+**Почему так:**
+- Один большой job (867k строк) → OOM на PythonAnywhere (3 ГБ лимит)
+- Полностью параллельный запуск всех jobs → `429 rateLimitExceeded` от BigQuery (`table.write` лимит)
+- Батчи по 5 + пауза 2 сек — баланс между скоростью и rate limit
+
+**Перед загрузкой всегда DELETE:**
+- `ads_routes.py`: `DELETE WHERE date BETWEEN ... AND ... AND profile_id = '...'`
+- `campaigns_routes.py`: `DELETE WHERE marketplace = '...'`
+
+Дублей не возникает — чистим диапазон перед вставкой.
+
 ---
 
 ## Правила изменения ставок (планируется, analyze.py)

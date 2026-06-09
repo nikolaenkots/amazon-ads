@@ -363,20 +363,33 @@ def _run_campaigns_sync(account_type, marketplace, job_id):
         client = bigquery.Client(project=PROJECT_ID)
         client.query(f"DELETE FROM `{table_ref}` WHERE marketplace = '{marketplace}'").result()
 
-        total    = len(all_rows)
-        uploaded = 0
-        for i in range(0, total, CHUNK_SIZE):
-            chunk = all_rows[i:i + CHUNK_SIZE]
-            job   = client.load_table_from_json(
-                chunk, table_ref,
-                job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
-            )
-            job.result()
-            if job.errors:
-                raise RuntimeError(f"BQ ошибки: {job.errors}")
-            uploaded += len(chunk)
-            pct = 80 + int(uploaded / total * 18)
-            emit(job_id, "progress", {"uploaded": uploaded, "total": total, "pct": pct})
+        import time
+        total      = len(all_rows)
+        uploaded   = 0
+        CHUNK      = 50_000
+        BATCH_SIZE = 5   # jobs параллельно, потом пауза
+        chunks     = [all_rows[i:i+CHUNK] for i in range(0, total, CHUNK)]
+        emit(job_id, "progress", {"uploaded": 0, "total": total, "pct": 81,
+                                   "msg": f"Загружаем {total} строк ({len(chunks)} частей)..."})
+        for b_start in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[b_start:b_start+BATCH_SIZE]
+            jobs  = []
+            for ch in batch:
+                j = client.load_table_from_json(
+                    ch, table_ref,
+                    job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
+                )
+                jobs.append((j, len(ch)))
+            for j, n in jobs:
+                j.result()
+                if j.errors:
+                    raise RuntimeError(f"BQ ошибки: {j.errors}")
+                uploaded += n
+                pct = 80 + int(uploaded / total * 18)
+                emit(job_id, "progress", {"uploaded": uploaded, "total": total, "pct": pct})
+            # пауза между батчами чтобы не превысить rate limit
+            if b_start + BATCH_SIZE < len(chunks):
+                time.sleep(2)
 
         emit(job_id, "count", {"key": "bq", "pct": 99, "msg": f"Загружено {total} строк", "count": total})
         emit(job_id, "done",  {"total": total, "counts": counts, "synced_at": synced_at})
