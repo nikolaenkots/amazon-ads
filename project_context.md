@@ -1170,13 +1170,39 @@ imported_at       -- TIMESTAMP
 ## Portfolios API (portfolios.py)
 
 ```
-GET  /portfolios             → HTML страница
-POST /portfolios/sync        → сканирует campaigns_*, добавляет новые в portfolio_labels
-POST /portfolios/update      → обновляет одну запись
-POST /portfolios/bulk-update → обновляет массив {changes: [...]}
-GET  /portfolios/list        → все портфолио из portfolio_labels
-POST /portfolios/import-csv  → импорт имён из CSV через MERGE
+GET  /portfolios                      → HTML страница
+POST /portfolios/update               → обновляет одну запись локально в BigQuery
+POST /portfolios/bulk-update          → обновляет массив {changes: [...]} локально в BigQuery
+GET  /portfolios/list                 → все портфолио из portfolio_labels
+GET  /portfolios/profiles             → список профилей из amazon_secrets.json (для dropdown)
+POST /portfolios/amazon-sync-names    → загружает названия из Amazon API для всех профилей, MERGE в portfolio_labels
+POST /portfolios/amazon-create        → создаёт портфолио в Amazon API + добавляет в portfolio_labels
+POST /portfolios/amazon-update        → переименовывает портфолио в Amazon API + обновляет portfolio_labels
 ```
+
+### Удалённые endpoints (июнь 2026)
+- `POST /portfolios/sync` — сканирование campaigns_* таблиц не нужно, т.к. `amazon-sync-names` сам создаёт новые записи
+- `POST /portfolios/import-csv` — заменён на `amazon-sync-names`
+
+### amazon-sync-names
+Для каждого профиля вызывает `POST /portfolios/list` (Amazon API v3, `application/vnd.spPortfolio.v3+json`) с пагинацией через `nextToken`. Собирает все строки в памяти, затем:
+1. `DROP TABLE IF EXISTS portfolio_sync_tmp`
+2. `CREATE TABLE portfolio_sync_tmp`
+3. `LOAD` все строки одним batch job
+4. `MERGE portfolio_labels` — UPDATE если portfolio_id существует, INSERT если нет
+
+### amazon-create / amazon-update
+- Content-Type: `application/vnd.spPortfolio.v3+json`
+- `POST /portfolios` для создания, `PUT /portfolios` для обновления
+- `state` поддерживает только `ENABLED`
+- После успешного ответа Amazon — синхронизирует `portfolio_labels` в BigQuery
+
+### portfolios.html (июнь 2026)
+Кнопки на странице:
+- **Загрузить названия из Amazon** — вызывает `amazon-sync-names`, обновляет таблицу
+- **Создать портфолио** — модал с полями Название / Аккаунт / Маркетплейс (маркетплейсы из `/portfolios/profiles`)
+- **Сохранить в Amazon** (янтарная) — отправляет изменения названий через `amazon-update`
+- **Сохранить локально** (зелёная) — только BigQuery через `bulk-update`
 
 ---
 
