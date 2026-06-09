@@ -102,6 +102,19 @@ td{padding:7px 14px;vertical-align:middle}
 .sp{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 .sp-dark{border-color:var(--border);border-top-color:var(--accent)}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:440px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+select.modal-inp{cursor:pointer}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.btn-amz{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.btn-amz:hover:not(:disabled){background:var(--amber-bd)}
 </style>
 </head>
 <body>
@@ -127,11 +140,14 @@ td{padding:7px 14px;vertical-align:middle}
   <!-- Actions panel -->
   <div class="ap">
     <div class="ap-title">Управление портфолио</div>
-    <div class="ap-desc">Сканирует таблицы кампаний и добавляет новые портфолио. Существующие имена не затрагиваются.</div>
     <div class="ap-row">
-      <button class="btn btn-p" id="syncBtn" onclick="syncPortfolios()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-        Обновить список
+      <button class="btn btn-s" id="amzSyncBtn" onclick="syncNamesFromAmazon()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Загрузить названия из Amazon
+      </button>
+      <button class="btn btn-s" onclick="openCreateModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Создать портфолио
       </button>
       <label class="btn btn-s" style="cursor:pointer">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -176,12 +192,41 @@ td{padding:7px 14px;vertical-align:middle}
   <!-- Save row -->
   <div class="save-row">
     <button class="btn btn-s" id="resetBtn" onclick="resetChanges()" disabled>Отменить</button>
+    <button class="btn btn-amz btn" id="amazonBtn" onclick="saveToAmazon()" disabled title="Переименовать выбранные портфолио в Amazon">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Сохранить в Amazon
+    </button>
     <button class="btn btn-g" id="saveBtn" onclick="saveChanges()" disabled>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-      Сохранить изменения
+      Сохранить локально
     </button>
   </div>
+  <div class="info" id="amazonResult"></div>
   <div class="info" id="saveResult"></div>
+
+<!-- Modal: Создать портфолио -->
+<div class="modal-bg" id="createModal">
+  <div class="modal">
+    <div class="modal-title">Создать портфолио в Amazon</div>
+    <label class="modal-label">Название</label>
+    <input class="modal-inp" id="newName" type="text" placeholder="Например: Sport_BROAD_US">
+    <label class="modal-label">Аккаунт</label>
+    <select class="modal-inp" id="newType">
+      <option value="MERCH">MERCH</option>
+      <option value="KDP">KDP</option>
+    </select>
+    <label class="modal-label">Маркетплейс</label>
+    <select class="modal-inp" id="newMkt"></select>
+    <div class="info" id="createResult" style="margin-top:12px"></div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeCreateModal()">Отмена</button>
+      <button class="btn btn-p" id="createSubmitBtn" onclick="submitCreate()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Создать
+      </button>
+    </div>
+  </div>
+</div>
 
 </main>
 
@@ -250,17 +295,14 @@ function renderTable(){
     <th style="width:80px">Аккаунт</th>
     <th style="width:60px">Маркет</th>
     <th>Название</th>
-    <th>Заметки</th>
   </tr></thead><tbody>`;
   rows.forEach(p=>{
     const pid=p.portfolio_id;
     const cn=changes[pid]?.portfolio_name!==undefined?changes[pid].portfolio_name:(p.portfolio_name||'');
-    const cno=changes[pid]?.notes!==undefined?changes[pid].notes:(p.notes||'');
     const mod=changes[pid]!==undefined;
     const tb=p.account_type==='MERCH'?'bm':'bk';
     const mb=p.marketplace==='US'?'bus':'bmkt';
     const chN=mod&&changes[pid]?.portfolio_name!==undefined?'ch':'';
-    const chO=mod&&changes[pid]?.notes!==undefined?'ch':'';
     h+=`<tr class="${mod?'mod':''}" id="row-${pid}">
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)">${pid}</td>
       <td><span class="b ${tb}">${p.account_type}</span></td>
@@ -269,10 +311,6 @@ function renderTable(){
         onchange="rec('${pid}','portfolio_name',this.value,'${xe(p.portfolio_name||'')}')"
         oninput="this.classList.add('ch')"
         data-orig="${xe(p.portfolio_name||'')}"></td>
-      <td class="ec"><input type="text" value="${xe(cno)}" placeholder="Заметки…" class="${chO}"
-        onchange="rec('${pid}','notes',this.value,'${xe(p.notes||'')}')"
-        oninput="this.classList.add('ch')"
-        data-orig="${xe(p.notes||'')}"></td>
     </tr>`;
   });
   h+='</tbody></table>';
@@ -295,29 +333,9 @@ function updChg(){
   b.textContent=n+' изменений'; b.classList.toggle('on',n>0);
   document.getElementById('saveBtn').disabled=n===0;
   document.getElementById('resetBtn').disabled=n===0;
+  document.getElementById('amazonBtn').disabled=n===0;
 }
 function resetChanges(){changes={};updChg();renderTable();}
-
-// ── Sync ──────────────────────────────────────────────────
-async function syncPortfolios(){
-  const btn=document.getElementById('syncBtn');
-  const res=document.getElementById('syncResult');
-  btn.disabled=true;
-  btn.innerHTML='<span class="sp"></span> Обновляем...';
-  res.className='info inf on'; res.textContent='Сканируем таблицы кампаний...';
-  try{
-    const d=await fetch('/portfolios/sync',{method:'POST'}).then(r=>r.json());
-    if(d.error) throw new Error(d.error);
-    res.className='info ok on';
-    res.textContent=`✓ Готово · Найдено: ${d.total} · Добавлено новых: ${d.inserted}`;
-    await loadPortfolios();
-  }catch(e){
-    res.className='info err on'; res.textContent='✕ Ошибка: '+e.message;
-  }finally{
-    btn.disabled=false;
-    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Обновить список';
-  }
-}
 
 // ── Save ──────────────────────────────────────────────────
 async function saveChanges(){
@@ -331,8 +349,7 @@ async function saveChanges(){
       const orig=allPortfolios.find(p=>p.portfolio_id===pid);
       const delta=changes[pid];
       return{portfolio_id:pid,account_type:orig.account_type,marketplace:orig.marketplace,
-        portfolio_name:delta.portfolio_name!==undefined?delta.portfolio_name:(orig.portfolio_name||''),
-        notes:delta.notes!==undefined?delta.notes:(orig.notes||'')};
+        portfolio_name:delta.portfolio_name!==undefined?delta.portfolio_name:(orig.portfolio_name||'')};
     });
     const d=await fetch('/portfolios/bulk-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({changes:payload})}).then(r=>r.json());
     if(d.error) throw new Error(d.error);
@@ -382,6 +399,128 @@ async function importCSV(input){
   }catch(e){
     res.className='info err on'; res.textContent='✕ Ошибка: '+e.message;
   }finally{input.value='';}
+}
+
+
+// ── Sync names from Amazon ────────────────────────────────
+async function syncNamesFromAmazon(){
+  const btn=document.getElementById('amzSyncBtn');
+  const res=document.getElementById('syncResult');
+  btn.disabled=true;
+  btn.innerHTML='<span class="sp sp-dark"></span> Загружаем...';
+  res.className='info inf on'; res.textContent='Загружаем названия из Amazon для всех профилей...';
+  try{
+    const d=await fetch('/portfolios/amazon-sync-names',{method:'POST'}).then(r=>r.json());
+    if(d.error) throw new Error(d.error);
+    let msg=`✓ Обновлено ${d.updated} портфолио`;
+    if(d.errors&&d.errors.length) msg+=` · Ошибки: ${d.errors.join('; ')}`;
+    res.className='info ok on'; res.textContent=msg;
+    await loadPortfolios();
+  }catch(e){
+    res.className='info err on'; res.textContent='✕ Ошибка: '+e.message;
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Загрузить названия из Amazon';
+  }
+}
+
+// ── Save to Amazon ────────────────────────────────────────
+async function saveToAmazon(){
+  const btn=document.getElementById('amazonBtn');
+  const res=document.getElementById('amazonResult');
+  const pids=Object.keys(changes).filter(pid=>changes[pid]?.portfolio_name!==undefined);
+  if(!pids.length){res.className='info err on';res.textContent='Нет изменений названий для отправки';return;}
+  btn.disabled=true;
+  btn.innerHTML='<span class="sp sp-dark"></span> Отправляем...';
+  res.className='info inf on'; res.textContent=`Отправляем ${pids.length} изменений в Amazon...`;
+  let ok=0, fail=[];
+  for(const pid of pids){
+    const orig=allPortfolios.find(p=>p.portfolio_id===pid);
+    if(!orig) continue;
+    const newName=changes[pid].portfolio_name;
+    try{
+      const d=await fetch('/portfolios/amazon-update',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({portfolio_id:pid,name:newName,
+          account_type:orig.account_type,marketplace:orig.marketplace})
+      }).then(r=>r.json());
+      if(d.error) throw new Error(d.error);
+      ok++;
+      // update local
+      orig.portfolio_name=newName;
+      delete changes[pid].portfolio_name;
+      if(!Object.keys(changes[pid]).length) delete changes[pid];
+    }catch(e){fail.push(`${pid}: ${e.message}`);}
+  }
+  updChg(); renderTable();
+  if(fail.length){
+    res.className='info err on';
+    res.textContent=`✓ ${ok} сохранено · ✕ ${fail.length} ошибок: ${fail.join('; ')}`;
+  }else{
+    res.className='info ok on';
+    res.textContent=`✓ ${ok} портфолио обновлено в Amazon · ${new Date().toLocaleTimeString('ru')}`;
+  }
+  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Сохранить в Amazon';
+  updChg();
+}
+
+// ── Create modal ──────────────────────────────────────────
+let _profiles=[];
+async function openCreateModal(){
+  const modal=document.getElementById('createModal');
+  document.getElementById('createResult').className='info';
+  document.getElementById('newName').value='';
+  // Load profiles if needed
+  if(!_profiles.length){
+    try{
+      const d=await fetch('/portfolios/profiles').then(r=>r.json());
+      _profiles=d.profiles||[];
+    }catch(e){_profiles=[];}
+  }
+  // Populate marketplace select based on type
+  populateMktSelect();
+  document.getElementById('newType').onchange=populateMktSelect;
+  modal.classList.add('op');
+  setTimeout(()=>document.getElementById('newName').focus(),100);
+}
+function populateMktSelect(){
+  const type=document.getElementById('newType').value;
+  const mkts=[...new Set(_profiles.filter(p=>p.type===type).map(p=>p.marketplace))].sort();
+  const sel=document.getElementById('newMkt');
+  sel.innerHTML=mkts.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+function closeCreateModal(){
+  document.getElementById('createModal').classList.remove('op');
+}
+document.getElementById('createModal').addEventListener('click',function(e){
+  if(e.target===this) closeCreateModal();
+});
+async function submitCreate(){
+  const name=document.getElementById('newName').value.trim();
+  const type=document.getElementById('newType').value;
+  const mkt=document.getElementById('newMkt').value;
+  const res=document.getElementById('createResult');
+  const btn=document.getElementById('createSubmitBtn');
+  if(!name){res.className='info err on';res.textContent='Введите название';return;}
+  btn.disabled=true;
+  btn.innerHTML='<span class="sp"></span> Создаём...';
+  res.className='info inf on'; res.textContent='Отправляем запрос в Amazon...';
+  try{
+    const d=await fetch('/portfolios/amazon-create',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,account_type:type,marketplace:mkt})
+    }).then(r=>r.json());
+    if(d.error) throw new Error(d.error);
+    res.className='info ok on';
+    res.textContent=`✓ Создано · ID: ${d.portfolio_id}`;
+    await loadPortfolios();
+    setTimeout(closeCreateModal,1500);
+  }catch(e){
+    res.className='info err on'; res.textContent='✕ '+e.message;
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Создать';
+  }
 }
 
 loadPortfolios();
