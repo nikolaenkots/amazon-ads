@@ -650,10 +650,23 @@ Toggle · Текст · Тип · Ставка · Показы · Клики · 
 
 ### Колонки поисковых запросов (класс `.ii.st`)
 ```
-grid-template-columns: 1fr 150px 80px 70px 65px 88px 85px 72px
-Запрос · Таргет/тип · Показы · Клики · Заказы · Расходы · Продажи · ACOS
+grid-template-columns: 25px 1fr 150px 80px 70px 65px 88px 85px 72px
+Чекбокс · Запрос · Таргет/тип · Показы · Клики · Заказы · Расходы · Продажи · ACOS
 ```
 CSS классы `.ih` / `.ii` и `.ih.st` / `.ii.st` задают сетку только через CSS — без inline `style=` переопределений.
+
+### Пакетное добавление минусов из поисковых запросов (июнь 2026)
+Вкладка «Поисковые запросы» — чекбоксы слева от каждой строки. При выборе появляется кнопка **«→ Минус (N)»**.
+
+`stCbChange(gid)` — обновляет счётчик и показывает/скрывает кнопку.
+
+`openNegFromSt(groupId, campId, mkt)` — собирает выбранные термины, разделяет на слова и ASINы:
+- `isAsin(str)` — паттерн `/^[Bb][0-9A-Za-z]{9}$/`
+- Только ASINы → открывает modalNeg в режиме «Продукт»
+- Только слова → открывает в режиме «Слово»  
+- Смешанный → слова в модалку, ASINы в очередь автоматически после сабмита (`window._pendingNegAsins`)
+
+После `submitAddNeg()` — все чекбоксы в группе снимаются.
 
 ### Ставка с fallback на ставку группы
 Если у ключевого слова нет своей ставки (bid=null), показывается ставка группы серым курсивом с пометкой `(г)`:
@@ -688,6 +701,8 @@ const bidIsGroup = !it.bid && g.bid;
 - Слово: текст + Match Type → `negative_add`
 - Продукт: ASIN (по одному на строку) → `negative_product_add`
 `onNegTypeChange(radio)` — переключает label и placeholder, скрывает/показывает Match Type.
+
+**Отправка пачкой:** `submitAddNeg` использует `ctrlAddBatch(payloads)` — один запрос для всех строк вместо N параллельных. Аналогично `submitAddKw` и `submitCreateGrp`.
 
 ### Модал + Группа
 Открывается с параметром `targeting_type` кампании (`openCreateGrp(campId, mkt, targetingType)`).
@@ -732,7 +747,14 @@ const anyHasAsin = groups.some(g => g.ads.some(a => a.asin === filterAsin));
 - **История** — change_log с результатами отправки
 
 ### Колонки таблицы
-ТИП | МКТ | ID | НАЗВАНИЕ | ПОЛЕ | БЫЛО | СТАЛО | СОЗДАНО/ОТПРАВЛЕНО | ДЕЙСТВИЯ/РЕЗУЛЬТАТ
+ТИП | МКТ | ID | КАМПАНИЯ/ГРУППА | НАЗВАНИЕ | ПОЛЕ | БЫЛО | СТАЛО | СОЗДАНО/ОТПРАВЛЕНО | ДЕЙСТВИЯ/РЕЗУЛЬТАТ
+
+**КАМПАНИЯ/ГРУППА** (`context_name`) — контекст сущности:
+- Действия уровня кампании (`campaign`, `ad_group_add`) → `campaign_name`
+- Действия уровня группы (`ad_group`, `keyword_add`, `negative_add`, `negative_product_add`, `product_ad_add`) → `ad_group_name`
+- Ключи/таргеты/минусы (`keyword`, `target`, `negative_delete`) → `ad_group_name` через JOIN по `ad_group_id`
+
+**Важно:** `ad_group_name` на строках `product_targeting`/`keyword` в campaigns таблице равен NULL — берётся через JOIN с `entity_type='ad_group'`
 
 ### Форматирование значений
 
@@ -758,16 +780,29 @@ const anyHasAsin = groups.some(g => g.ads.some(a => a.asin === filterAsin));
 Фильтрация только на фронте (клиентская) — `/control/log` не поддерживает параметр `entity_type`.
 `/control/pending` также фильтрует на клиенте через `.filter(r => !S.typeFilter || r.entity_type === S.typeFilter)`.
 
-### Название кампании для _add операций
-`control_routes.py` подтягивает `campaign_name` для `ad_group_add`, `keyword_add`, `negative_add`, `negative_product_add`, `product_ad_add` (их `entity_id` = `campaign_id`):
+### Название и контекст (entity_name + context_name)
+`control_routes.py` возвращает два поля:
+- `entity_name` — текст ключа / ASIN / название кампании или группы (как было)
+- `context_name` — **новое**: кампания или группа в зависимости от уровня сущности
+
 ```python
-add_camp_ids = (by_type.get("ad_group_add", set()) |
-                by_type.get("keyword_add", set()) |
-                by_type.get("negative_add", set()) |
-                by_type.get("negative_product_add", set()) |
-                by_type.get("product_ad_add", set())) - camp_ids
-if add_camp_ids:
-    fetch_names(add_camp_ids, "campaign_id", "campaign_name", "AND entity_type = 'campaign'")
+# campaign-level → campaign_name
+CAMP_LEVEL = {"campaign", "ad_group_add"}
+# group-level (entity_id = ad_group_id) → ad_group_name
+GROUP_LEVEL = {"ad_group", "keyword_add", "negative_add", "negative_product_add", "product_ad_add"}
+# keyword/target → ad_group_name через JOIN по ad_group_id
+# (ad_group_name NULL на строках product_targeting/keyword — нужен JOIN с entity_type='ad_group')
+```
+
+JOIN для keyword/target/negative_delete:
+```sql
+SELECT DISTINCT t.target_id AS eid, ag.ad_group_name AS name
+FROM campaigns_merch t
+JOIN campaigns_merch ag
+  ON ag.ad_group_id = t.ad_group_id
+ AND ag.entity_type = 'ad_group'
+ AND ag.marketplace = t.marketplace
+WHERE t.target_id IN (...) AND t.entity_type='product_targeting'
 ```
 
 ---
@@ -784,6 +819,17 @@ if add_camp_ids:
 ```
 Возвращает: `{"success": true, "id": "uuid", "label": "⏸ Пауза"}`
 409 если уже есть PENDING (кроме NO_DUP_CHECK типов)
+
+### POST /control/add_batch
+Принимает массив NO_DUP_CHECK операций, один `load_table_from_json` на все строки.
+```json
+{"items": [{...}, {...}]}
+```
+Возвращает: `{"success": true, "inserted": 20, "errors": [], "ids": [...]}`
+Поддерживает только: `keyword_add`, `negative_add`, `negative_product_add`, `ad_group_add`, `product_ad_add`.
+Максимум 500 элементов за раз.
+
+**Использование в JS:** `ctrlAddBatch(payloads)` — все submit-функции (submitAddKw, submitAddNeg, submitCreateGrp) используют этот endpoint вместо N параллельных `/control/add`. Скорость: 1 round-trip вместо N.
 
 **ad_group_add дедупликация** — дополнительная проверка по `(campaign_id + имя группы)`:
 ```python
@@ -1399,6 +1445,11 @@ git add earnings_kdp.html kdp_earnings_routes.py app.py index.html project_conte
 # Коммит
 git commit -m "Add KDP earnings import"
 
+# Сохранение после сессии июнь 2026 (search terms checkboxes + batch add + context_name)
+# git add products_analytics.html campaigns_analytics.html control_routes.py control.html project_context.md
+# git commit -m "Search terms checkboxes batch neg, /control/add_batch, context_name column"
+# git push origin master
+
 # Пуш в master
 git push origin master
 ```
@@ -1508,6 +1559,17 @@ SP API v1 возвращает `{"success": [...], "error": [...], "partialSucce
 ### Поисковые запросы пустые в мануальных кампаниях на Products странице
 Причина: `search_terms` для мануальных кампаний хранятся в `keyword['search_terms']`, не в `group['search_terms']`
 Решение: в JS собирать из `g.search_terms + g.keywords[].search_terms + g.targets[].search_terms`
+
+### context_name пустой для авто-таргетов и ключей на control.html
+Причина: `ad_group_name` = NULL на строках `product_targeting`/`keyword` в campaigns таблице
+Решение: JOIN с entity_type='ad_group' через `ad_group_id`:
+```sql
+SELECT DISTINCT t.target_id AS eid, ag.ad_group_name AS name
+FROM campaigns_merch t
+JOIN campaigns_merch ag ON ag.ad_group_id = t.ad_group_id
+  AND ag.entity_type = 'ad_group' AND ag.marketplace = t.marketplace
+WHERE t.target_id IN (...) AND t.entity_type='product_targeting'
+```
 
 ---
 

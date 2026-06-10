@@ -163,9 +163,9 @@ tr.er td{padding:0}
 /* ── Items ── */
 .ih{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
 .ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
-.ih.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.ih.st{grid-template-columns:25px 1fr 150px 80px 70px 65px 88px 85px 72px}
 .ii.st .sg-item-r:first-child{text-align:left}
-.ii.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.ii.st{grid-template-columns:25px 1fr 150px 80px 70px 65px 88px 85px 72px}
 .ih span:first-child{text-align:left}
 .ih span:nth-child(2){text-align:left}
 .shdr{cursor:pointer;user-select:none}
@@ -975,6 +975,7 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
           <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
             <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddKw('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">+ Ключевое слово</button>
             <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddNeg('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">+ Минус</button>
+            <button class="act-btn st-neg-btn" id="stnb_${je(g.id||gi)}" style="height:24px;font-size:11px;display:none;background:var(--accent);color:#fff;border-color:var(--accent)" onclick="event.stopPropagation();openNegFromSt('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">→ Минус (<span class="st-neg-cnt" id="stnc_${je(g.id||gi)}">0</span>)</button>
           </div>
         </div>
         <div class="tp on">`;
@@ -1039,7 +1040,7 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         return `<span class="shdr${on?' son':''}" onclick="tabSortClick(event,'${stKey}',this)" data-field="${field}">${label}<span class="sar">${arr}</span></span>`;
       };
       h+=`<div class="ih st">
-        <span>Поисковый запрос</span><span>Таргет / тип</span>
+        <span></span><span>Поисковый запрос</span><span>Таргет / тип</span>
         ${stH('impressions','Показы')}${stH('clicks','Клики')}${stH('purchases_14d','Заказы')}
         ${stH('cost','Расходы')}${stH('sales_14d','Продажи')}${stH('acos','ACOS')}
       </div>`;
@@ -1050,7 +1051,11 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         const mt=isAuto?'AUTO':(st.match_type||'');
         const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
         const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+        const stCbId=`stcb_${g.id||gi}_${stItems.indexOf(st)}`;
         h+=`<div class="ii st">
+          <input type="checkbox" class="st-cb" data-term="${xe(st.term||'')}" data-gid="${je(g.id||gi)}"
+            style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+            onchange="stCbChange('${je(g.id||gi)}')" onclick="event.stopPropagation()">
           <span class="it" title="${xe(st.term||'')}">${st.term||'—'}</span>
           <span class="ir" style="font-size:10px;text-align:right" title="${xe(mt+' '+kw)}">${combined}</span>
           <span class="ir">${f(st.impressions)}</span>
@@ -1254,7 +1259,15 @@ async function ctrlAdd(payload){
   return d;
 }
 
-// Modal helpers
+// Modal
+async function ctrlAddBatch(payloads){
+  // Один запрос для массива однотипных NO_DUP_CHECK операций
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||'Batch error');
+  return d; // {inserted, errors, ids}
+}
+ helpers
 function openModal(id){document.getElementById(id).classList.add('op');}
 function closeModal(id){document.getElementById(id).classList.remove('op');}
 
@@ -1382,17 +1395,65 @@ async function submitAddKw(){
   if(!text){toast('Введите ключевые слова',false);return;}
   if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}
   const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
-  let ok=0,fail=0;
-  for(const kw of kws){
-    try{
-      await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-        entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',
-        new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})});
-      ok++;
-    }catch(err){fail++;}
-  }
+  const batchKw=await ctrlAddBatch(kws.map(kw=>({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+    entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',
+    new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})})));
+  const ok=batchKw.inserted;
+  const fail=batchKw.errors.length;
   closeModal('modalKw');
   toast(`Добавлено в очередь: ${ok} kw${fail?', ошибок: '+fail:''}`, fail===0);
+}
+
+// ── Search term checkboxes → Минус ───────────────────────
+function stCbChange(gid){
+  // Count checked boxes for this group
+  const cbs = document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`);
+  const cnt = cbs.length;
+  const btn = document.getElementById('stnb_' + gid);
+  const cntEl = document.getElementById('stnc_' + gid);
+  if(btn){ btn.style.display = cnt > 0 ? 'inline-flex' : 'none'; }
+  if(cntEl){ cntEl.textContent = cnt; }
+}
+
+function isAsin(str){
+  // ASIN: 10 chars, starts with B (case insensitive), no spaces
+  str = str.trim();
+  return /^[Bb][0-9A-Za-z]{9}$/.test(str);
+}
+
+function openNegFromSt(groupId, campId, mkt){
+  const cbs = document.querySelectorAll(`.st-cb[data-gid="${groupId}"]:checked`);
+  if(!cbs.length){ toast('Выберите поисковые запросы', false); return; }
+  const terms = Array.from(cbs).map(cb => cb.dataset.term.trim()).filter(Boolean);
+  const asins = terms.filter(t => isAsin(t));
+  const words = terms.filter(t => !isAsin(t));
+
+  document.getElementById('mnegGroupId').value = groupId;
+  document.getElementById('mnegCampId').value = campId;
+  document.getElementById('mnegMkt').value = mkt;
+
+  if(asins.length > 0 && words.length === 0){
+    // Only ASINs — switch to product mode
+    document.querySelector('input[name="mnegType"][value="product"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="product"]'));
+    document.getElementById('mnegText').value = asins.join('\n');
+  } else if(words.length > 0 && asins.length === 0){
+    // Only words
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value = words.join('\n');
+  } else {
+    // Mixed — default to keywords, put all (user can split manually if needed)
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value = words.join('\n');
+    if(asins.length){
+      toast(`Обнаружено ${asins.length} ASIN — они добавлены отдельно автоматически`, true);
+      // Queue ASINs separately after modal closes
+      window._pendingNegAsins = {asins, groupId, campId, mkt};
+    }
+  }
+  openModal('modalNeg');
 }
 
 // ── Add negative modal ────────────────────────────────────
@@ -1418,25 +1479,35 @@ async function submitAddNeg(){
   const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';
   if(!text){toast('Введите значения',false);return;}
   const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
-  let ok=0,fail=0;
-  for(const w of items){
-    try{
-      let payload;
-      if(negType==='product'){
-        // Минус ASIN — product targeting
-        payload={account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-          entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',
-          new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})};
-      }else{
-        payload={account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-          entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',
-          new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})};
-      }
-      await ctrlAdd(payload);
-      ok++;
-    }catch(err){fail++;}
-  }
+  const payloads=items.map(w=>negType==='product'
+    ?{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})}
+    :{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})});
+  const batchNeg=await ctrlAddBatch(payloads);
+  const ok=batchNeg.inserted;
+  const fail=batchNeg.errors.length;
   closeModal('modalNeg');
+  // Uncheck all search term checkboxes for this group
+  const gid = groupId;
+  document.querySelectorAll(`.st-cb[data-gid="${gid}"]`).forEach(cb=>{ cb.checked=false; });
+  stCbChange(gid);
+  // Handle pending ASIN negatives (mixed mode)
+  if(window._pendingNegAsins && window._pendingNegAsins.groupId === groupId){
+    const {asins, groupId: pgid, campId: pcid, mkt: pmkt} = window._pendingNegAsins;
+    window._pendingNegAsins = null;
+    (async()=>{
+      const aB=await ctrlAddBatch(asins.map(a=>({
+        account_type:S.acct,marketplace:pmkt,profile_id:getProfileId(pmkt),
+        entity_type:'negative_product_add',entity_id:pgid,field_name:'—',old_value:'',
+        new_value:JSON.stringify({asin:a.toUpperCase(),ad_group_id:pgid,campaign_id:pcid})})));
+      const aok=aB.inserted;
+      const afail=aB.errors.length;
+      toast(`ASIN минусы: ${aok} добавлено${afail?', '+afail+' ошибок':''}`, afail===0);
+    })();
+  }
   toast(`Добавлено в очередь: ${ok}${fail?', ошибок: '+fail:''}`, fail===0);
 }
 
@@ -1477,30 +1548,28 @@ async function submitCreateGrp(){
     ok++;
   }catch(err){toast('Ошибка создания группы: '+err.message,false);return;}
 
-  // 2. Добавить ASIN объявления (product_ad через keyword_add с типом product_ad_add)
+  // 2+3. Параллельно: ASIN объявления + ключевые слова
+  const bulkPayloads=[];
   for(const asin of asins){
-    try{
-      await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-        entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',
-        new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});
-      ok++;
-    }catch(err){fail++;}
+    bulkPayloads.push({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',
+      new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});
   }
-
-  // 3. MANUAL: добавить ключевые слова
   if(!isAuto){
     const kwRaw=document.getElementById('mgrpKwText').value.trim();
     const kwMatch=document.getElementById('mgrpKwMatch').value;
     const kwBid=parseFloat(document.getElementById('mgrpKwBid').value)||bid;
     const kws=kwRaw.split(/\n/).map(l=>l.trim()).filter(Boolean);
     for(const kw of kws){
-      try{
-        await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-          entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',
-          new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId})});
-        ok++;
-      }catch(err){fail++;}
+      bulkPayloads.push({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId})});
     }
+  }
+  if(bulkPayloads.length){
+    const bulkRes=await ctrlAddBatch(bulkPayloads);
+    ok+=bulkRes.inserted;
+    fail+=bulkRes.errors.length;
   }
 
   closeModal('modalGrp');

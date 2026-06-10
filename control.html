@@ -408,7 +408,8 @@ function renderPending(rows,status){
     <th style="width:90px">Тип</th>
     <th style="width:44px">МКТ</th>
     <th style="width:110px">ID</th>
-    <th style="min-width:160px">Название</th>
+    <th style="min-width:140px">Кампания/Группа</th>
+    <th style="min-width:140px">Название</th>
     <th style="width:80px">Поле</th>
     <th style="min-width:140px">Было</th>
     <th style="min-width:200px">Стало</th>
@@ -428,6 +429,7 @@ function renderPending(rows,status){
       <td>${etBadge(r.entity_type)}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:11px">${r.marketplace}</span></td>
       <td class="id-cell" title="${r.entity_id}">…${r.entity_id.slice(-12)}</td>
+      <td class="nc" title="${r.context_name||''}">${r.context_name||'<span style="color:var(--dim)">—</span>'}</td>
       <td class="nc" title="${r.entity_name||r.entity_id}">${r.entity_name||'<span style="color:var(--dim)">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${fn}</td>
       <td>${fmtOld(r)}</td>
@@ -447,7 +449,8 @@ function renderLog(rows){
     <th style="width:90px">Тип</th>
     <th style="width:44px">МКТ</th>
     <th style="width:110px">ID</th>
-    <th style="min-width:160px">Название</th>
+    <th style="min-width:140px">Кампания/Группа</th>
+    <th style="min-width:140px">Название</th>
     <th style="width:80px">Поле</th>
     <th style="min-width:140px">Было</th>
     <th style="min-width:200px">Стало</th>
@@ -461,6 +464,7 @@ function renderLog(rows){
       <td>${etBadge(r.entity_type)}</td>
       <td><span style="font-family:'DM Mono',monospace;font-size:11px">${r.marketplace}</span></td>
       <td class="id-cell" title="${r.entity_id}">…${r.entity_id.slice(-12)}</td>
+      <td class="nc" title="${r.context_name||''}">${r.context_name||'<span style="color:var(--dim)">—</span>'}</td>
       <td class="nc" title="${r.entity_name||r.entity_id}">${r.entity_name||'<span style="color:var(--dim)">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${fn}</td>
       <td>${fmtOld(r)}</td>

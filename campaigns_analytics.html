@@ -152,7 +152,7 @@ tr.er td{padding:0}
 /* ── Items (keywords/targets) ── */
 .ih{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
 .ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
-.ih.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.ih.st{grid-template-columns:25px 1fr 150px 80px 70px 65px 88px 85px 72px}
 .ih span:first-child,.ih span:nth-child(2){text-align:left}
 .shdr{cursor:pointer;user-select:none}
 .shdr:hover{color:var(--text)}
@@ -162,7 +162,7 @@ tr.er td{padding:0}
 .ii{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
 .ii:last-child{border-bottom:none}
 .ii:hover{background:var(--surface2)}
-.ii.st{grid-template-columns:1fr 150px 80px 70px 65px 88px 85px 72px}
+.ii.st{grid-template-columns:25px 1fr 150px 80px 70px 65px 88px 85px 72px}
 .it{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ir{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted);white-space:nowrap}
 .in2{display:flex;align-items:center;gap:6px;padding:5px 11px;border-bottom:1px solid var(--border);font-size:12px}
@@ -969,6 +969,7 @@ function buildCampHtml(data, campId, mkt){
       <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
         <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddKw('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Ключевое слово</button>
         <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddNeg('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Минус</button>
+        <button class="act-btn st-neg-btn" id="stnb_${je(gid)}" style="height:24px;font-size:11px;display:none;background:var(--accent);color:#fff;border-color:var(--accent)" onclick="event.stopPropagation();openNegFromSt('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">→ Минус (<span class="st-neg-cnt" id="stnc_${je(gid)}">0</span>)</button>
       </div>
     </div>`;
 
@@ -1021,7 +1022,7 @@ function buildCampHtml(data, campId, mkt){
     const stKey=`st_${gid}`;
     const stS=_ts[stKey]||{field:'clicks',dir:'desc'};
     const stH=(field,label)=>{const on=stS.field===field;const arr=on?(stS.dir==='desc'?'↓':'↑'):'↕';return `<span class="shdr${on?' son':''}" onclick="tabSortClick(event,'${stKey}',this)" data-field="${field}">${label}<span class="sar">${arr}</span></span>`;};
-    h+=`<div class="tp"><div class="ih st"><span>Поисковый запрос</span><span>Таргет / тип</span>${stH('impressions','Показы')}${stH('clicks','Клики')}${stH('purchases_14d','Заказы')}${stH('cost','Расход')}${stH('sales_14d','Продажи')}${stH('acos','ACOS')}</div>`;
+    h+=`<div class="tp"><div class="ih st"><span></span><span>Поисковый запрос</span><span>Таргет / тип</span>${stH('impressions','Показы')}${stH('clicks','Клики')}${stH('purchases_14d','Заказы')}${stH('cost','Расход')}${stH('sales_14d','Продажи')}${stH('acos','ACOS')}</div>`;
     const stItems=tabSortItems(allSt,stS,s=>s);
     stItems.forEach(st=>{
       const ac=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
@@ -1030,8 +1031,11 @@ function buildCampHtml(data, campId, mkt){
       const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
       const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
       h+=`<div class="ii st">
-        <span class="it" title="${je(st.term||'')}">${st.term||'—'}</span>
-        <span class="ir" style="font-size:10px;text-align:right">${combined}</span>
+          <input type="checkbox" class="st-cb" data-term="${xe(st.term||'')}" data-gid="${je(gid)}"
+            style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+            onchange="stCbChange('${je(gid)}')" onclick="event.stopPropagation()">
+          <span class="it" title="${je(st.term||'')}">${st.term||'—'}</span>
+          <span class="ir" style="font-size:10px;text-align:right">${combined}</span>
         <span class="ir">${f(st.impressions)}</span><span class="ir">${f(st.clicks)}</span>
         <span class="ir">${f(st.purchases_14d)}</span>
         <span class="ir an">${st.cost!=null?'$'+f(st.cost,2):'—'}</span>
@@ -1262,6 +1266,13 @@ fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};
 function getProfileId(acct,mkt){return (window._pm||{})[acct+'_'+mkt]||'';}
 function toast(msg,ok=true){const w=document.getElementById('toastWrap');const d=document.createElement('div');d.className='toast-item '+(ok?'ok':'err');d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;w.appendChild(d);setTimeout(()=>d.remove(),3500);}
 async function ctrlAdd(payload){const r=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(r.status===409){toast('Уже есть ожидающее изменение',false);return null;}if(d.error)throw new Error(d.error);return d;}
+async function ctrlAddBatch(payloads){
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||'Batch error');
+  return d;
+}
+
 function openModal(id){document.getElementById(id).classList.add('op');}
 function closeModal(id){document.getElementById(id).classList.remove('op');}
 
@@ -1284,16 +1295,59 @@ async function saveNameSg(e,gid,entityId,mkt){e.stopPropagation();const wrapId='
 
 // ── Add keyword modal ────────────────────────────────────
 function openAddKw(groupId,campId,mkt){document.getElementById('mkwGroupId').value=groupId;document.getElementById('mkwCampId').value=campId;document.getElementById('mkwMkt').value=mkt;document.getElementById('mkwText').value='';openModal('modalKw');}
-async function submitAddKw(){const text=document.getElementById('mkwText').value.trim();const match=document.getElementById('mkwMatch').value;const bid=parseFloat(document.getElementById('mkwBid').value);const groupId=document.getElementById('mkwGroupId').value;const campId=document.getElementById('mkwCampId').value;const mkt=document.getElementById('mkwMkt').value;if(!text){toast('Введите ключевые слова',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,fail=0;for(const kw of kws){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})});ok++;}catch(err){fail++;}}closeModal('modalKw');toast(`Добавлено в очередь: ${ok} kw${fail?', ошибок: '+fail:''}`,fail===0);}
+async function submitAddKw(){const text=document.getElementById('mkwText').value.trim();const match=document.getElementById('mkwMatch').value;const bid=parseFloat(document.getElementById('mkwBid').value);const groupId=document.getElementById('mkwGroupId').value;const campId=document.getElementById('mkwCampId').value;const mkt=document.getElementById('mkwMkt').value;if(!text){toast('Введите ключевые слова',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);const batchKw=await ctrlAddBatch(kws.map(kw=>({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})})));const ok=batchKw.inserted;const fail=batchKw.errors.length;closeModal('modalKw');toast(`Добавлено в очередь: ${ok} kw${fail?', ошибок: '+fail:''}`,fail===0);}
 
 // ── Add negative modal ───────────────────────────────────
+function stCbChange(gid){
+  const cbs=document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`);
+  const cnt=cbs.length;
+  const btn=document.getElementById('stnb_'+gid);
+  const cntEl=document.getElementById('stnc_'+gid);
+  if(btn){btn.style.display=cnt>0?'inline-flex':'none';}
+  if(cntEl){cntEl.textContent=cnt;}
+}
+function isAsin(str){str=str.trim();return /^[Bb][0-9A-Za-z]{9}$/.test(str);}
+function openNegFromSt(groupId,campId,mkt){
+  const cbs=document.querySelectorAll(`.st-cb[data-gid="${groupId}"]:checked`);
+  if(!cbs.length){toast('Выберите поисковые запросы',false);return;}
+  const terms=Array.from(cbs).map(cb=>cb.dataset.term.trim()).filter(Boolean);
+  const asins=terms.filter(t=>isAsin(t));
+  const words=terms.filter(t=>!isAsin(t));
+  document.getElementById('mnegGroupId').value=groupId;
+  document.getElementById('mnegCampId').value=campId;
+  document.getElementById('mnegMkt').value=mkt;
+  if(asins.length>0&&words.length===0){
+    document.querySelector('input[name="mnegType"][value="product"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="product"]'));
+    document.getElementById('mnegText').value=asins.join('\n');
+  }else if(words.length>0&&asins.length===0){
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value=words.join('\n');
+  }else{
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value=words.join('\n');
+    if(asins.length){window._pendingNegAsins={asins,groupId,campId,mkt};}
+  }
+  openModal('modalNeg');
+}
 function openAddNeg(groupId,campId,mkt){document.getElementById('mnegGroupId').value=groupId;document.getElementById('mnegCampId').value=campId;document.getElementById('mnegMkt').value=mkt;document.getElementById('mnegText').value='';openModal('modalNeg');}
 function onNegTypeChange(radio){const isP=radio.value==='product';document.getElementById('mnegTextLabel').textContent=isP?'ASIN (по одному на строку)':'Слова (по одному на строку)';document.getElementById('mnegText').placeholder=isP?'B0FT63YVTW\nB0FX36C3YS':'free\ncheap';document.getElementById('mnegMatchRow').style.display=isP?'none':'';}
-async function submitAddNeg(){const text=document.getElementById('mnegText').value.trim();const match=document.getElementById('mnegMatch').value;const groupId=document.getElementById('mnegGroupId').value;const campId=document.getElementById('mnegCampId').value;const mkt=document.getElementById('mnegMkt').value;const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';if(!text){toast('Введите значения',false);return;}const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);let ok=0,fail=0;for(const w of items){try{let payload;if(negType==='product'){payload={account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})};}else{payload={account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})};}await ctrlAdd(payload);ok++;}catch(err){fail++;}}closeModal('modalNeg');toast(`Добавлено в очередь: ${ok}${fail?', ошибок: '+fail:''}`,fail===0);}
+async function submitAddNeg(){const text=document.getElementById('mnegText').value.trim();const match=document.getElementById('mnegMatch').value;const groupId=document.getElementById('mnegGroupId').value;const campId=document.getElementById('mnegCampId').value;const mkt=document.getElementById('mnegMkt').value;const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';if(!text){toast('Введите значения',false);return;}const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);const negPayloads=items.map(w=>negType==='product'?{account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})}:{account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})});const batchNeg=await ctrlAddBatch(negPayloads);const ok=batchNeg.inserted;const fail=batchNeg.errors.length;closeModal('modalNeg');
+  const gid=groupId;
+  document.querySelectorAll(`.st-cb[data-gid="${gid}"]`).forEach(cb=>{cb.checked=false;});
+  stCbChange(gid);
+  if(window._pendingNegAsins&&window._pendingNegAsins.groupId===groupId){
+    const {asins,groupId:pg,campId:pc,mkt:pm}=window._pendingNegAsins;
+    window._pendingNegAsins=null;
+    (async()=>{const aB=await ctrlAddBatch(asins.map(a=>({account_type:state.acct,marketplace:pm,profile_id:getProfileId(state.acct,pm),entity_type:'negative_product_add',entity_id:pg,field_name:'—',old_value:'',new_value:JSON.stringify({asin:a.toUpperCase(),ad_group_id:pg,campaign_id:pc})})));toast(`ASIN минусы: ${aB.inserted} добавлено${aB.errors.length?', '+aB.errors.length+' ошибок':''}`,aB.errors.length===0);})();
+  }
+  toast(`Добавлено в очередь: ${ok}${fail?', ошибок: '+fail:''}`,fail===0);}
 
 // ── Create group modal ───────────────────────────────────
 function openCreateGrp(campId,mkt,targetingType){document.getElementById('mgrpCampId').value=campId;document.getElementById('mgrpMkt').value=mkt;document.getElementById('mgrpType').value=targetingType||'';document.getElementById('mgrpName').value='';document.getElementById('mgrpAsins').value='';document.getElementById('mgrpKwText').value='';const isAuto=(targetingType||'').toUpperCase()==='AUTO';document.getElementById('mgrpKwBlock').style.display=isAuto?'none':'';document.getElementById('mgrpTitle').textContent=isAuto?'Создать AUTO группу':'Создать MANUAL группу';openModal('modalGrp');}
-async function submitCreateGrp(){const name=document.getElementById('mgrpName').value.trim();const bid=parseFloat(document.getElementById('mgrpBid').value);const campId=document.getElementById('mgrpCampId').value;const mkt=document.getElementById('mgrpMkt').value;const targetingType=document.getElementById('mgrpType').value.toUpperCase();const isAuto=targetingType==='AUTO';const asins=document.getElementById('mgrpAsins').value.trim().split(/\n/).map(l=>l.trim().toUpperCase()).filter(Boolean);if(!name){toast('Введите название группы',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}let ok=0,fail=0;try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'ad_group_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({name,default_bid:bid,campaign_id:campId})});ok++;}catch(err){toast('Ошибка создания группы: '+err.message,false);return;}for(const asin of asins){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});ok++;}catch(err){fail++;}}if(!isAuto){const kwRaw=document.getElementById('mgrpKwText').value.trim();const kwMatch=document.getElementById('mgrpKwMatch').value;const kwBid=parseFloat(document.getElementById('mgrpKwBid').value)||bid;const kws=kwRaw.split(/\n/).map(l=>l.trim()).filter(Boolean);for(const kw of kws){try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId})});ok++;}catch(err){fail++;}}}closeModal('modalGrp');toast(`В очередь: группа + ${asins.length} ASIN${!isAuto?' + '+document.getElementById('mgrpKwText').value.trim().split(/\n/).filter(Boolean).length+' kw':''}${fail?' ('+fail+' ошибок)':''}`,fail===0);}
+async function submitCreateGrp(){const name=document.getElementById('mgrpName').value.trim();const bid=parseFloat(document.getElementById('mgrpBid').value);const campId=document.getElementById('mgrpCampId').value;const mkt=document.getElementById('mgrpMkt').value;const targetingType=document.getElementById('mgrpType').value.toUpperCase();const isAuto=targetingType==='AUTO';const asins=document.getElementById('mgrpAsins').value.trim().split(/\n/).map(l=>l.trim().toUpperCase()).filter(Boolean);if(!name){toast('Введите название группы',false);return;}if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}let ok=0,fail=0;try{await ctrlAdd({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'ad_group_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({name,default_bid:bid,campaign_id:campId})});ok++;}catch(err){toast('Ошибка создания группы: '+err.message,false);return;}const bulkP=[];for(const asin of asins){bulkP.push({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});}if(!isAuto){const kwRaw=document.getElementById('mgrpKwText').value.trim();const kwMatch=document.getElementById('mgrpKwMatch').value;const kwBid=parseFloat(document.getElementById('mgrpKwBid').value)||bid;const kws=kwRaw.split(/\n/).map(l=>l.trim()).filter(Boolean);for(const kw of kws){bulkP.push({account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId});})}}if(bulkP.length){const br=await ctrlAddBatch(bulkP);ok+=br.inserted;fail+=br.errors.length;}closeModal('modalGrp');toast(`В очередь: группа + ${asins.length} ASIN${!isAuto?' + '+document.getElementById('mgrpKwText').value.trim().split(/\n/).filter(Boolean).length+' kw':''}${fail?' ('+fail+' ошибок)':''}`,fail===0);}
 
 // ── Keyboard ─────────────────────────────────────────────
 document.getElementById('filterName').addEventListener('keydown',e=>{if(e.key==='Enter')applyFilters();});
