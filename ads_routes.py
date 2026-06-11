@@ -1,3 +1,4 @@
+from bq_client import get_client
 import gzip
 import json
 import os
@@ -361,7 +362,7 @@ def ads_upload_to_bq():
                 rows = json.load(f)
             emit(job_id, "progress", {"msg": f"Маппинг {len(rows):,} строк...", "pct": 15})
             mapped = [_map_row(r, profile_id, marketplace, report_type) for r in rows]
-            client = bigquery.Client(project=PROJECT_ID)
+            client = get_client()
             tbl    = _get_table(account_type, report_type)
             emit(job_id, "progress", {"msg": "Удаляем старые данные...", "pct": 20})
             client.query(

@@ -1,3 +1,4 @@
+from bq_client import get_client
 import csv
 import os
 import hashlib
@@ -97,7 +98,7 @@ def process_earnings_row_daily(row):
 def run_earnings_import(filepath, job_id):
     errors_log = []
     try:
-        client    = bigquery.Client(project=PROJECT_ID)
+        client    = get_client()
         table_ref = f"{PROJECT_ID}.{DATASET}.{EARNINGS}"
 
         emit(job_id, "step", {"step": 1, "msg": "Парсим CSV файл..."})

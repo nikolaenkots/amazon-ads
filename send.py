@@ -234,6 +234,7 @@ def group_changes(changes):
         "create_targets":    [],
         "delete_targets":    [],
         "create_ad_groups":  [],
+        "create_campaigns":  [],
     }
     for c in changes:
         et = c["entity_type"]
@@ -259,6 +260,8 @@ def group_changes(changes):
             groups["create_ad_groups"].append(c)
         elif et == "negative_delete":
             groups["delete_targets"].append(c)
+        elif et == "campaign_create":
+            groups["create_campaigns"].append(c)
         else:
             print(f"  Неизвестный тип: {et}/{fn}, пропускаем")
     return groups
@@ -527,6 +530,223 @@ def send_delete_targets(endpoint, headers, changes, dry_run=False):
 
     resp = amz_post(endpoint, "/adsApi/v1/delete/targets", headers, {"targets": payloads})
     return parse_multi_response(resp, "targets", len(changes))
+
+
+def send_create_campaigns(endpoint, headers, changes, dry_run=False):
+    """
+    Создаёт полные кампании из campaign_create записей pending_changes.
+    new_value = JSON {type, name, budget, bidadj, portfolio, start, end,
+                      groups:[{name, asin, bid, keywords:[{text,mt,bid}]}]}
+    Последовательность:
+      1. create/campaigns
+      2. (bidAdjustments included inline in campaign payload via optimizations.bidSettings.bidAdjustments.placementBidAdjustments)
+      3. create/adGroups
+      4. create/ads
+      5. create/targets (ключи для MANUAL)
+    """
+    MKT_CURRENCY = {
+        "US":"USD","CA":"CAD","UK":"GBP","GB":"GBP",
+        "DE":"EUR","FR":"EUR","IT":"EUR","ES":"EUR","NL":"EUR",
+        "AU":"AUD","JP":"JPY","IN":"INR","MX":"MXN","SG":"SGD",
+        "SE":"SEK","PL":"PLN","TR":"TRY","BE":"EUR",
+    }
+    MKT_OFFSET = {"US":-5,"CA":-5,"UK":0,"GB":0,"DE":1,"FR":1,"IT":1,"ES":1,"AU":10,"JP":9}
+
+    results = {i: "SUCCESS" for i in range(len(changes))}
+
+    camp_data = []
+    for i, ch in enumerate(changes):
+        try:
+            val = json.loads(ch.get("new_value", "{}"))
+            val["_idx"] = i
+            val["_mkt"] = ch.get("marketplace", "US").upper()
+            camp_data.append(val)
+        except Exception as e:
+            results[i] = f"JSON parse error: {e}"
+
+    if not camp_data:
+        return results
+
+    mkt      = camp_data[0]["_mkt"]
+    currency = MKT_CURRENCY.get(mkt, "USD")
+    offset   = MKT_OFFSET.get(mkt, 0)
+    sign     = "+" if offset >= 0 else "-"
+
+    # 1. create/campaigns
+    camp_payloads = []
+    for c in camp_data:
+        budget = float(c.get("budget") or 0)
+        start  = c.get("start", "")
+        end    = c.get("end", "")
+        BID_STRATEGY_MAP = {
+            "Dynamic bids - down only":   "SALES_DOWN_ONLY",
+            "Dynamic bids - up and down": "SALES_UP_AND_DOWN",
+            "Fixed bid":                  "MANUAL",
+        }
+        strategy = BID_STRATEGY_MAP.get(c.get("bidStrategy"), "SALES_DOWN_ONLY")
+        payload = {
+            "adProduct": "SPONSORED_PRODUCTS",
+            "name":      c["name"],
+            "state":     "ENABLED",
+            "marketplaceScope": "SINGLE_MARKETPLACE",
+            "marketplaces": [mkt],
+            "optimizations": {"bidSettings": {"bidStrategy": strategy}},
+            "budgets": [{
+                "budgetType": "MONETARY",
+                "recurrenceTimePeriod": "DAILY",
+                "budgetValue": {"monetaryBudgetValue": {
+                    "monetaryBudget": {"value": budget},
+                    "marketplaceSettings": [{"marketplace": mkt, "monetaryBudget": {"value": budget}}]
+                }}
+            }],
+        }
+        payload["autoCreationSettings"] = {
+            "autoCreateTargets": (c.get("type") == "auto")
+        }
+        bidadj = int(c.get("bidadj") or 0)
+        if bidadj > 0:
+            payload["optimizations"]["bidSettings"]["bidAdjustments"] = {
+                "placementBidAdjustments": [
+                    {"placement": "TOP_OF_SEARCH", "percentage": bidadj}
+                ]
+            }
+        if start:
+            payload["startDateTime"] = f"{start}T00:00:00Z"
+        if end:
+            payload["endDateTime"] = f"{end}T23:59:59{sign}{abs(offset):02d}:00"
+        if c.get("portfolio"):
+            payload["portfolioId"] = c["portfolio"]
+        camp_payloads.append(payload)
+
+    if dry_run:
+        print(f"  [DRY RUN] create/campaigns: {len(camp_payloads)} шт.")
+        for c in camp_data:
+            print(f"    {c.get('type','?').upper()} — {c['name']}")
+        return results
+
+    resp = amz_post(endpoint, "/adsApi/v1/create/campaigns", headers, {"campaigns": camp_payloads})
+    print(f"  [DEBUG] create/campaigns status={resp.status_code}")
+    try:
+        rj = resp.json()
+        print(f"  [DEBUG] {json.dumps(rj, ensure_ascii=False)[:400]}")
+    except Exception:
+        for i in range(len(changes)):
+            results[i] = f"HTTP {resp.status_code}"
+        return results
+
+    idx_to_camp_id = {}
+    success_items = rj.get("success", []) + rj.get("partialSuccess", [])
+    for n, item in enumerate(success_items):
+        idx = item.get("index", -1)
+        if idx == -1 and len(camp_payloads) == 1:
+            idx = 0
+        cid = item.get("campaignId") or (item.get("campaign") or {}).get("campaignId")
+        if 0 <= idx < len(camp_payloads) and cid:
+            idx_to_camp_id[idx] = cid
+            print(f"    ✓ Campaign: {camp_payloads[idx]['name']} → {cid}")
+    for item in rj.get("error", []):
+        idx = item.get("index", -1)
+        if 0 <= idx < len(camp_data):
+            results[camp_data[idx]["_idx"]] = item.get("errorMessage", "ERROR")
+            print(f"    ✗ Campaign error: {item.get('errorMessage','?')}")
+
+    # 3. create/adGroups
+    ag_payloads, ag_meta = [], []
+    for ci, c in enumerate(camp_data):
+        cid = idx_to_camp_id.get(ci)
+        if not cid: continue
+        for g in c.get("groups", []):
+            ag_payloads.append({
+                "adProduct": "SPONSORED_PRODUCTS", "campaignId": cid,
+                "name": g["name"], "state": "ENABLED",
+                "bid": {"defaultBid": float(g.get("bid") or 0)},
+            })
+            ag_meta.append((ci, cid, g))
+
+    idx_to_ag_id = {}
+    if ag_payloads:
+        ra = amz_post(endpoint, "/adsApi/v1/create/adGroups", headers, {"adGroups": ag_payloads})
+        print(f"  [DEBUG] create/adGroups status={ra.status_code}")
+        print(f"  [DEBUG] payload: {json.dumps(ag_payloads, ensure_ascii=False)[:400]}")
+        try:
+            rja = ra.json()
+            print(f"  [DEBUG] response: {json.dumps(rja, ensure_ascii=False)[:600]}")
+            for item in rja.get("success", []) + rja.get("partialSuccess", []):
+                idx = item.get("index", -1)
+                aid = item.get("adGroupId") or (item.get("adGroup") or {}).get("adGroupId")
+                if 0 <= idx < len(ag_payloads) and aid:
+                    idx_to_ag_id[idx] = aid
+                    print(f"    ✓ AdGroup: {ag_payloads[idx]['name']} → {aid}")
+            for item in rja.get("error", []):
+                print(f"    ✗ AdGroup: {item.get('errorMessage','?')}")
+        except Exception: pass
+
+    # 4. create/ads
+    ad_payloads = []
+    for ag_idx, (ci, cid, g) in enumerate(ag_meta):
+        ag_id = idx_to_ag_id.get(ag_idx)
+        if not ag_id or not g.get("asin"): continue
+        ad_payloads.append({
+            "adProduct": "SPONSORED_PRODUCTS", "adType": "PRODUCT_AD",
+            "adGroupId": ag_id, "state": "ENABLED",
+            "creative": {"productCreative": {"productCreativeSettings": {
+                "advertisedProduct": {"productId": g["asin"], "productIdType": "ASIN"}
+            }}}
+        })
+    if ad_payloads:
+        print(f"  [DEBUG] ads payload: {json.dumps(ad_payloads, ensure_ascii=False)[:400]}")
+        rad = amz_post(endpoint, "/adsApi/v1/create/ads", headers, {"ads": ad_payloads})
+        print(f"  [DEBUG] create/ads status={rad.status_code}")
+        try:
+            rjad = rad.json()
+            print(f"  [DEBUG] ads response: {json.dumps(rjad, ensure_ascii=False)[:800]}")
+            ok = len(rjad.get("success",[])); err = len(rjad.get("error",[]))
+            print(f"    Ads: {ok} OK, {err} ошибок")
+            for item in rjad.get("error",[]):
+                errs = item.get("errors") or []
+                msgs = "; ".join(e.get("message","") for e in errs) or item.get("errorMessage","?")
+                print(f"    ✗ Ad: {msgs}")
+        except Exception as e:
+            print(f"  [DEBUG] ads parse error: {e}, raw: {rad.text[:400]}")
+
+    # 5. create/targets (MANUAL keywords)
+    kw_payloads = []
+    for ag_idx, (ci, cid, g) in enumerate(ag_meta):
+        ag_id = idx_to_ag_id.get(ag_idx)
+        if not ag_id: continue
+        c = camp_data[ci]
+        if c.get("type") != "manual": continue
+        for kw in g.get("keywords", []):
+            if isinstance(kw, dict):
+                kw_text = kw.get("text", "")
+                kw_mt   = kw.get("mt", g.get("matchType", "broad"))
+                kw_bid  = kw.get("bid")
+            else:
+                kw_text = str(kw)
+                kw_mt   = g.get("matchType", "broad")
+                kw_bid  = None
+            kw_text = kw_text.strip()
+            if not kw_text: continue
+            kw_payloads.append({
+                "adGroupId": ag_id,
+                "adProduct": "SPONSORED_PRODUCTS", "negative": False, "state": "ENABLED",
+                "targetType": "KEYWORD",
+                "targetDetails": {"keywordTarget": {
+                    "matchType": (kw_mt or "broad").upper(), "keyword": kw_text
+                }},
+                "bid": {"bid": float(kw_bid or g.get("bid") or 0), "currencyCode": currency},
+            })
+    if kw_payloads:
+        rkw = amz_post(endpoint, "/adsApi/v1/create/targets", headers, {"targets": kw_payloads})
+        print(f"  [DEBUG] create/targets (kw) status={rkw.status_code}")
+        try:
+            rjkw = rkw.json()
+            ok = len(rjkw.get("success",[])); err = len(rjkw.get("error",[]))
+            print(f"    Keywords: {ok} OK, {err} ошибок")
+            for item in rjkw.get("error",[]): print(f"    ✗ KW: {item.get('errorMessage','?')}")
+        except Exception: pass
+
+    return results
 
 
 def send_create_ad_groups(endpoint, headers, changes, dry_run=False):
@@ -819,6 +1039,7 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
             ("create_targets",    send_create_targets),
             ("delete_targets",    send_delete_targets),
             ("create_ad_groups",  send_create_ad_groups),
+            ("create_campaigns",  send_create_campaigns),
         ]
 
         mkt_success   = []

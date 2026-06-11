@@ -1,3 +1,4 @@
+from bq_client import get_client
 """
 kdp_earnings_routes.py — Blueprint для импорта KDP Sales Report (Combined Sales)
 
@@ -124,7 +125,7 @@ def parse_row(row):
 
 def run_kdp_earnings_import(filepath, job_id):
     try:
-        client    = bigquery.Client(project=PROJECT_ID)
+        client    = get_client()
         table_ref = f"{PROJECT_ID}.{DATASET}.{TABLE}"
 
         # Шаг 1: парсинг
@@ -250,7 +251,7 @@ def progress(job_id):
 @kdp_earnings_bp.route('/kdp-earnings/count')
 def count():
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
         res    = list(client.query(
             f"SELECT COUNT(*) AS cnt FROM `{PROJECT_ID}.{DATASET}.{TABLE}`"
         ).result())

@@ -1,3 +1,4 @@
+from bq_client import get_client
 import csv
 import os
 import re
@@ -150,7 +151,7 @@ def recreate_staging(client, staging_ref):
 def run_catalog_import(filepath, job_id):
     errors_log = []
     try:
-        client      = bigquery.Client(project=PROJECT_ID)
+        client      = get_client()
         staging_ref = f"{PROJECT_ID}.{DATASET}.{STAGING}"
         table_ref   = f"{PROJECT_ID}.{DATASET}.{TABLE}"
 

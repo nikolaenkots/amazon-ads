@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4f4f6; --surface:#fff; --surface2:#f0f0f2; --border:#e2e2e6; --border2:#d0d0d4;
+  --text:#1a1a1e; --muted:#6b6b72; --dim:#9898a0;
+  --accent:#c84b14; --accent-bg:#fdf0eb; --accent-border:#f5c4af;
+  --green:#1a7a3c; --green-bg:#eaf5ee; --red:#c0392b; --red-bg:#fdf0f0;
+  --amber:#92500e; --amber-bg:#fef3e2;
+  --blue:#1a56db; --blue-bg:#eef2ff; --blue-border:#c7d5f7;
+  --camp-row:#f0f4ff; --grp-row:#ffffff;
+  --r:6px; --r2:10px;
+}
+html{overflow-anchor:none;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;}
+
+/* hdr */
+.hdr{position:sticky;top:0;z-index:200;height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;}
+.hdr-title{font-size:13px;font-weight:600;}
+.hdr-sub{font-size:12px;color:var(--muted);}
+.gap{flex:1;}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+.lbl{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;}
+
+select{
+  height:30px;padding:0 22px 0 8px;border:1px solid var(--border2);border-radius:var(--r);
+  font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--surface);
+  outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b72'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;
+}
+select:focus{border-color:var(--accent);}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:0 11px;height:30px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-primary:hover{background:#b04010;border-color:#b04010;}
+.btn-amber{background:var(--amber-bg);border-color:#e8c88a;color:var(--amber);}
+.btn-amber:hover{background:#fde8c0;}
+.btn-ghost{color:var(--muted);border-color:transparent;background:transparent;}
+.btn-ghost:hover{background:var(--surface2);border-color:var(--border);}
+.btn-danger{color:var(--red);border-color:#f0b0b0;background:transparent;}
+.btn-danger:hover{background:var(--red-bg);}
+.btn:disabled{opacity:.45;pointer-events:none;}
+
+/* layout */
+.wrap{max-width:100%;margin:0 auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;}
+.card-head{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface);}
+.card-title{font-size:13px;font-weight:600;}
+.counts{display:flex;gap:12px;}
+.cnt{font-size:12px;color:var(--muted);}
+.cnt b{font-family:'DM Mono',monospace;color:var(--text);}
+
+.ctl{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#fafafa;}
+
+/* ── Sheet table ── */
+.sheet-wrap{overflow:auto;max-height:70vh;position:relative;}
+table.sheet{border-collapse:separate;border-spacing:0;table-layout:fixed;}
+table.sheet thead th{
+  position:sticky;top:0;z-index:20;
+  background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.03em;
+  padding:6px 8px;border-bottom:2px solid var(--border2);border-right:1px solid var(--border);
+  white-space:nowrap;text-align:left;position:relative;overflow:hidden;
+}
+.col-resizer{
+  position:absolute;top:0;right:0;width:6px;height:100%;cursor:col-resize;z-index:25;
+  user-select:none;touch-action:none;
+}
+.col-resizer:hover, .col-resizer.resizing{background:var(--accent);opacity:.4;}
+table.sheet thead th:first-child{
+  position:sticky;left:0;top:0;z-index:30;width:32px;min-width:32px;text-align:center;
+}
+table.sheet tbody td{
+  border-bottom:1px solid var(--border);border-right:1px solid var(--border);
+  padding:0;vertical-align:top;background:var(--grp-row);
+}
+table.sheet tbody tr.row-camp td{background:var(--camp-row);}
+table.sheet tbody tr.row-camp td{border-top:2px solid var(--blue-border);}
+
+td.rownum{
+  position:sticky;left:0;z-index:10;background:var(--surface2);
+  width:32px;min-width:32px;text-align:center;color:var(--dim);
+  font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;user-select:none;
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+tr.row-camp td.rownum{background:#e3eafe;}
+td.rownum:hover{color:var(--red);background:var(--red-bg)!important;}
+
+/* cell inputs */
+.cell-in{
+  display:block;width:100%;border:none;background:transparent;outline:none;
+  font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);
+  padding:6px 8px;resize:none;overflow:hidden;line-height:1.45;
+  min-height:32px;box-sizing:border-box;
+}
+.cell-in.mono{font-family:'DM Mono',monospace;}
+.cell-in:focus{background:#fffaf6;box-shadow:inset 0 0 0 2px var(--accent-border);}
+.cell-in.cell-err{background:var(--red-bg)!important;box-shadow:inset 0 0 0 1px var(--red);}
+.cell-in.cell-err:focus{box-shadow:inset 0 0 0 2px var(--red);}
+.cell-in.cell-dim{color:transparent;background:repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f3f3f5 6px,#f3f3f5 12px);}
+.cell-in.cell-dim:focus{color:var(--text);background:#fffaf6;}
+td.sel-cell{background:rgba(26,86,219,.12)!important;outline:1px solid rgba(26,86,219,.35);outline-offset:-1px;}
+td.sel-cell .cell-in{background:transparent!important;box-shadow:none!important;}
+.cell-in[disabled]{opacity:.2;pointer-events:none;}
+textarea.cell-in{white-space:pre;}
+
+select.cell-in{
+  appearance:none;cursor:pointer;padding-right:22px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b72'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;
+}
+
+/* col widths */
+.c-name{min-width:170px;}
+.c-type{min-width:78px;}
+.c-bidstrat{min-width:160px;}
+.c-mt{min-width:84px;}
+.c-asin{min-width:115px;}
+.c-grp{min-width:160px;}
+.c-kw{min-width:220px;}
+.c-num{min-width:64px;}
+.c-pf{min-width:160px;}
+.c-date{min-width:96px;}
+.c-neg{min-width:180px;}
+
+/* footer */
+.tbl-foot{padding:9px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;background:#fafafa;}
+.tbl-foot .hint{font-size:11px;color:var(--dim);margin-left:auto;}
+
+/* ── Preview modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:flex-start;justify-content:center;padding-top:50px;overflow-y:auto;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r2);width:680px;max-width:94vw;border:1px solid var(--border);overflow:hidden;margin-bottom:40px;}
+.modal-head{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
+.modal-body{padding:16px;max-height:60vh;overflow-y:auto;}
+.modal-foot{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:#fafafa;}
+
+.pt-camp{margin-bottom:14px;border:1px solid var(--blue-border);border-radius:var(--r);overflow:hidden;}
+.pt-camp-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--blue-bg);}
+.pt-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--border);background:#fafbff;}
+.pt-meta span{display:flex;gap:3px;align-items:center;}
+.pt-grp{padding:8px 10px;border-bottom:1px solid var(--border);}
+.pt-grp:last-child{border-bottom:none;}
+.pt-grp-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap;}
+.pt-asin{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface2);padding:1px 6px;border-radius:4px;}
+.pt-kw-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.pt-kw{font-size:11px;font-family:'DM Mono',monospace;color:var(--text);background:#fff;border:1px solid var(--border);border-radius:99px;padding:1px 8px;}
+.pt-neg{font-size:11px;color:var(--red);margin-top:4px;}
+.pt-neg b{font-weight:600;}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;white-space:nowrap;font-family:'DM Mono',monospace;}
+.b-auto{background:var(--blue-bg);color:var(--blue);}
+.b-manual{background:#f5f0ff;color:#6b2fdb;}
+.b-mt{background:var(--amber-bg);color:var(--amber);border:1px solid #e8c88a;}
+.err-list{background:var(--red-bg);border:1px solid #f0b0b0;border-radius:var(--r);padding:10px 12px;margin-bottom:12px;}
+.err-list li{font-size:12px;color:var(--red);padding:2px 0;list-style:disc;margin-left:14px;}
+
+/* log */
+.log-panel{display:none;}
+.log-panel.visible{display:block;}
+.log-body{padding:10px 14px;max-height:280px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:11px;line-height:1.7;}
+.log-line.ok{color:var(--green);}
+.log-line.err{color:var(--red);}
+.log-line.inf{color:var(--muted);}
+.sum-row{display:flex;gap:14px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.sum-item{font-size:12px;color:var(--muted);}
+.sum-item b{font-family:'DM Mono',monospace;font-size:14px;color:var(--text);display:block;}
+
+.toast{position:fixed;bottom:22px;right:22px;background:#1a1a1e;color:#fff;padding:9px 16px;border-radius:var(--r);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999;max-width:400px;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <a href="/" style="display:flex;align-items:center;color:var(--muted);text-decoration:none;">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+  </a>
+  <span class="hdr-title">Campaign Builder</span>
+  <span class="hdr-sub">Таблица как в Google Sheets — вставка/копирование, AUTO и MANUAL</span>
+  <div class="gap"></div>
+  <span class="lbl">Аккаунт:</span>
+  <select id="acct" onchange="onCtxChange()">
+    <option value="MERCH">Merch</option>
+    <option value="KDP">KDP</option>
+  </select>
+  <select id="mkt" onchange="onCtxChange()">
+    <option value="US">US</option><option value="UK">UK</option><option value="DE">DE</option>
+    <option value="FR">FR</option><option value="IT">IT</option><option value="ES">ES</option>
+    <option value="CA">CA</option><option value="AU">AU</option>
+  </select>
+  <div class="sep"></div>
+  <span class="lbl" id="pf-label" style="color:var(--dim);">портфолио…</span>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Черновик из Google Sheets</span>
+      <div class="gap"></div>
+      <button class="btn btn-ghost" id="draft-toggle" onclick="toggleDraft()">Показать</button>
+    </div>
+    <div id="draft-panel" style="display:none;">
+      <div class="ctl" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <span class="lbl">Вариант 1 — ссылка на Google Sheets (таблица должна быть доступна по ссылке "Просмотр" / "Anyone with the link"):</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="draft-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0" style="flex:1;height:32px;padding:0 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;font-family:'DM Mono',monospace;">
+          <button class="btn" onclick="loadDraftFromSheetUrl()">Загрузить по ссылке</button>
+        </div>
+        <span class="lbl" style="margin-top:6px;">Вариант 2 — скопируй диапазон из Google Sheets (15 колонок: Campaign Name, Type, Bid Strategy, Match Type, ASIN, Group Name, Keywords, Budget, Bid, Top%, Portfolio ID, Start, End, Group Negative, Campaign Negative — порядок колонок не важен, если есть строка заголовков) и вставь сюда:</span>
+        <textarea id="draft-input" placeholder="Вставьте сюда (Ctrl+V) скопированный диапазон из Google Sheets..." style="width:100%;min-height:120px;font-family:'DM Mono',monospace;font-size:11px;padding:8px;border:1px solid var(--border2);border-radius:var(--r);resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-primary" onclick="loadDraft()">Загрузить черновик в таблицу</button>
+          <label class="lbl" style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" id="draft-has-header" checked> первая строка — заголовки
+          </label>
+          <span class="hint" id="draft-status" style="margin-left:auto;color:var(--dim);"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Кампании</span>
+      <div class="counts">
+        <span class="cnt">Кампаний: <b id="cnt-camp">0</b></span>
+        <span class="cnt">Групп: <b id="cnt-grp">0</b></span>
+        <span class="cnt">Строк: <b id="cnt-rows">0</b></span>
+      </div>
+      <div class="gap"></div>
+    </div>
+    <div class="ctl">
+      <button class="btn" onclick="addRow('camp')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Кампания (+ группа)
+      </button>
+      <button class="btn" onclick="addRow('grp')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Группа
+      </button>
+      <div class="sep"></div>
+      <button class="btn btn-ghost" onclick="loadExample()">Пример</button>
+      <button class="btn btn-danger" onclick="clearAll()">Очистить всё</button>
+      <span class="lbl" style="margin-left:auto;">Выделение: зажмите и тяните по ячейкам · Ctrl+C / Ctrl+V — копирование диапазона</span>
+    </div>
+
+    <div class="sheet-wrap" id="sheet-wrap">
+      <table class="sheet" id="sheet">
+        <colgroup id="sheet-colgroup">
+          <col style="width:32px;">
+          <col style="width:170px;">
+          <col style="width:78px;">
+          <col style="width:160px;">
+          <col style="width:84px;">
+          <col style="width:115px;">
+          <col style="width:160px;">
+          <col style="width:220px;">
+          <col style="width:64px;">
+          <col style="width:64px;">
+          <col style="width:64px;">
+          <col style="width:160px;">
+          <col style="width:96px;">
+          <col style="width:96px;">
+          <col style="width:180px;">
+          <col style="width:180px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th data-col="-1">#</th>
+            <th class="c-name" data-col="0">Campaign Name (base)<span class="col-resizer"></span></th>
+            <th class="c-type" data-col="1">Type<span class="col-resizer"></span></th>
+            <th class="c-bidstrat" data-col="2">Bid Strategy<span class="col-resizer"></span></th>
+            <th class="c-mt" data-col="3">Match Type<span class="col-resizer"></span></th>
+            <th class="c-asin" data-col="4">ASIN<span class="col-resizer"></span></th>
+            <th class="c-grp" data-col="5">Group Name (theme)<span class="col-resizer"></span></th>
+            <th class="c-kw" data-col="6">Keywords<span class="col-resizer"></span></th>
+            <th class="c-num" data-col="7">Budget $<span class="col-resizer"></span></th>
+            <th class="c-num" data-col="8">Bid $<span class="col-resizer"></span></th>
+            <th class="c-num" data-col="9">Top %<span class="col-resizer"></span></th>
+            <th class="c-pf" data-col="10">Portfolio<span class="col-resizer"></span></th>
+            <th class="c-date" data-col="11">Start Date<span class="col-resizer"></span></th>
+            <th class="c-date" data-col="12">End Date<span class="col-resizer"></span></th>
+            <th class="c-neg" data-col="13">Group Negative<span class="col-resizer"></span></th>
+            <th class="c-neg" data-col="14">Campaign Negative<span class="col-resizer"></span></th>
+          </tr>
+        </thead>
+        <tbody id="sheet-body"></tbody>
+      </table>
+    </div>
+
+    <div class="tbl-foot">
+      <button class="btn btn-primary" onclick="openPreview()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Просмотр и отправка
+      </button>
+      <span class="hint">Tab/Enter — следующая ячейка · Ctrl+Delete — удалить строку · клик по # — удалить</span>
+    </div>
+  </div>
+
+  <div class="card log-panel" id="log-panel">
+    <div class="card-head">
+      <span class="card-title">Результат</span>
+      <div class="gap"></div>
+      <span id="log-status" style="font-size:12px;color:var(--muted);"></span>
+    </div>
+    <div class="sum-row" id="sum-row" style="display:none;">
+      <div class="sum-item"><b id="s-camps">0</b>кампаний в очереди</div>
+      <div class="sum-item"><b id="s-total">0</b>записей всего</div>
+    </div>
+    <div class="log-body" id="log-body"></div>
+  </div>
+
+</div>
+
+<!-- Preview modal -->
+<div class="modal-bg" id="preview-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>Структура кампаний</span>
+      <button class="btn btn-ghost" style="padding:0 6px;height:24px;" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body" id="preview-body"></div>
+    <div class="modal-foot">
+      <span style="font-size:11px;color:var(--muted);margin-right:auto;" id="preview-acct"></span>
+      <button class="btn btn-ghost" onclick="closePreview()">Отмена</button>
+      <button class="btn btn-amber" id="btn-queue" onclick="sendToPending()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Добавить в очередь
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// Columns definition. Each row is an object with these keys.
+// 'camp' fields only meaningful when isCampaign(row)===true
+// ─────────────────────────────────────────────────────────
+var COLS = [
+  {key:'campName', label:'Campaign Name (base)', type:'text',     cls:'c-name'},
+  {key:'type',     label:'Type',          type:'select',   cls:'c-type', options:['Manual','Auto']},
+  {key:'bidStrategy', label:'Bid Strategy', type:'select', cls:'c-bidstrat',
+    options:['Dynamic bids - down only','Dynamic bids - up and down','Fixed bid']},
+  {key:'mt',       label:'Match Type',    type:'select',   cls:'c-mt', options:['broad','phrase','exact']},
+  {key:'asin',     label:'ASIN',          type:'text',     cls:'c-asin', mono:true},
+  {key:'grpName',  label:'Group Name (theme)',    type:'text',     cls:'c-grp'},
+  {key:'keywords', label:'Keywords',      type:'textarea', cls:'c-kw', mono:true},
+  {key:'budget',   label:'Budget $',      type:'text',     cls:'c-num', mono:true},
+  {key:'bid',      label:'Bid $',         type:'text',     cls:'c-num', mono:true},
+  {key:'top',      label:'Top %',         type:'text',     cls:'c-num', mono:true},
+  {key:'portfolio',label:'Portfolio',     type:'pf',       cls:'c-pf'},
+  {key:'start',    label:'Start Date',    type:'text',     cls:'c-date', mono:true, ph:'YYYYMMDD'},
+  {key:'end',      label:'End Date',      type:'text',     cls:'c-date', mono:true, ph:'YYYYMMDD'},
+  {key:'grpNeg',   label:'Group Negative',     type:'textarea', cls:'c-neg', mono:true},
+  {key:'campNeg',  label:'Campaign Negative',  type:'textarea', cls:'c-neg', mono:true},
+];
+
+var R = [];   // rows
+var cellErrors = new Set(); // 'ri:key' -> highlighted as invalid
+var PF = [];  // portfolios [{id,name}]
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escA(s){ return String(s==null?'':s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function toast(msg,dur){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },dur||2400); }
+function todayCompact(){
+  var d=new Date(); var y=d.getFullYear(); var m=("0"+(d.getMonth()+1)).slice(-2); var day=("0"+d.getDate()).slice(-2);
+  return ''+y+m+day;
+}
+
+function blankRow(){
+  return {
+    id:uid(),
+    campName:'', type:'Manual', bidStrategy:'Dynamic bids - down only', mt:'broad', asin:'', grpName:'', keywords:'',
+    budget:'', bid:'1', top:'', portfolio:'', start:'', end:'', grpNeg:'', campNeg:''
+  };
+}
+
+// ─── Portfolios ───────────────────────────────────────────
+function onCtxChange(){ loadPF(); render(); }
+
+function loadPF(){
+  var acct=document.getElementById('acct').value, mkt=document.getElementById('mkt').value;
+  document.getElementById('pf-label').textContent='загрузка…';
+  fetch('/portfolios/list').then(function(r){return r.json();}).then(function(d){
+    PF=(d.portfolios||[])
+      .filter(function(p){return p.account_type===acct&&p.marketplace===mkt;})
+      .map(function(p){return{id:p.portfolio_id,name:p.portfolio_name};})
+      .sort(function(a,b){return a.name.localeCompare(b.name);});
+    document.getElementById('pf-label').textContent=PF.length+' портфолио';
+    render();
+  }).catch(function(){ document.getElementById('pf-label').textContent='ошибка'; });
+}
+
+function pfOpts(sel){
+  var h='<option value="">—</option>';
+  PF.forEach(function(p){ h+='<option value="'+escA(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+'</option>'; });
+  return h;
+}
+function pfNameById(id){
+  if(!id) return '';
+  var p=PF.find(function(x){return x.id===id;});
+  return p?p.name:id;
+}
+
+// ─── Row ops ─────────────────────────────────────────────
+function addRow(type){
+  if(type==='camp'){
+    var c=blankRow();
+    c.start=todayCompact();
+    c.budget='30'; c.top='30';
+    R.push(c);
+    render();
+    setTimeout(function(){ focusCell(R.length-1, 'campName'); },50);
+    return;
+  }
+
+  // type === 'grp': insert a new (group-only) row right after the
+  // currently selected/focused row, or at the end.
+  var insertAfter = R.length;
+  var refIdx = null;
+  if(selAnchor) refIdx = selAnchor.ri;
+  else {
+    var ae=document.activeElement;
+    if(ae && ae.dataset && ae.dataset.r!=null) refIdx=parseInt(ae.dataset.r);
+  }
+  if(refIdx!=null) insertAfter = refIdx+1;
+
+  var g2=blankRow();
+  R.splice(insertAfter, 0, g2);
+  clearSelection();
+  render();
+  setTimeout(function(){ focusCell(insertAfter, 'asin'); },50);
+}
+
+function delRow(i){
+  if(!R[i]) return;
+  if(isCampaign(R[i])){
+    // deleting a campaign's first row: also remove its group rows
+    var end=i+1;
+    while(end<R.length && !isCampaign(R[end])) end++;
+    var count=end-i;
+    if(count>1){
+      if(!confirm('Удалить кампанию "'+(R[i].campName||'')+'" вместе с '+(count-1)+' группами?')) return;
+    }
+    R.splice(i, count);
+  } else {
+    R.splice(i,1);
+  }
+  cellErrors=new Set();
+  render();
+}
+function clearAll(){ if(!R.length||confirm('Очистить всё?')){ R=[]; cellErrors=new Set(); render(); } }
+
+function isCampaign(r){ return !!(r.campName||'').trim(); }
+
+// ─── Render ───────────────────────────────────────────────
+function autosize(el){
+  el.style.height='auto';
+  el.style.height=(el.scrollHeight)+'px';
+}
+
+var CAMP_ONLY_KEYS = new Set(['campName','type','bidStrategy','budget','top','portfolio','start','end','campNeg']);
+
+function cellHtml(r, ri, col, isErr, campType){
+  var val = r[col.key]==null?'':r[col.key];
+  var errCls = isErr ? ' cell-err' : '';
+
+  // For group-only rows (no campaign name), hide campaign-level fields
+  // visually — keep them editable (in case the row is later turned into
+  // a campaign by typing a Campaign Name), but show them dimmed/empty.
+  var isGroupRow = !isCampaign(r);
+  var hideCampField = isGroupRow && CAMP_ONLY_KEYS.has(col.key) && col.key!=='campName';
+
+  // Match Type is irrelevant for AUTO campaigns (Amazon auto-targets) —
+  // hide it for every row belonging to an AUTO campaign.
+  if(col.key==='mt' && campType==='auto') hideCampField = true;
+
+  if(col.type==='select'){
+    if(hideCampField){
+      return '<select class="cell-in cell-dim'+errCls+'" data-r="'+ri+'" data-k="'+col.key+'">'
+        +'<option value="'+escA(val)+'" selected></option></select>';
+    }
+    var opts = col.options.map(function(o){
+      return '<option value="'+escA(o)+'"'+(o===val?' selected':'')+'>'+esc(o)+'</option>';
+    }).join('');
+    return '<select class="cell-in'+errCls+'" data-r="'+ri+'" data-k="'+col.key+'">'+opts+'</select>';
+  }
+  if(col.type==='pf'){
+    if(hideCampField){
+      return '<select class="cell-in cell-dim'+errCls+'" data-r="'+ri+'" data-k="'+col.key+'">'
+        +'<option value="'+escA(val)+'" selected></option></select>';
+    }
+    return '<select class="cell-in'+errCls+'" data-r="'+ri+'" data-k="'+col.key+'">'+pfOpts(val)+'</select>';
+  }
+  if(col.type==='textarea'){
+    var dispVal = hideCampField ? '' : val;
+    return '<textarea class="cell-in'+(col.mono?' mono':'')+(hideCampField?' cell-dim':'')+errCls+'" data-r="'+ri+'" data-k="'+col.key+'"'
+      +' rows="1" placeholder="'+escA(col.ph||'')+'">'+esc(dispVal)+'</textarea>';
+  }
+  // text
+  var dispVal2 = hideCampField ? '' : val;
+  return '<input type="text" class="cell-in'+(col.mono?' mono':'')+(hideCampField?' cell-dim':'')+errCls+'" data-r="'+ri+'" data-k="'+col.key+'"'
+    +' value="'+escA(dispVal2)+'" placeholder="'+escA(col.ph||'')+'"/>';
+}
+
+function render(){
+  var nCamp=0, nGrp=0;
+  var rowsHtml='';
+  var curCampType='manual';
+  R.forEach(function(r,ri){
+    if(isCampaign(r)){ nCamp++; curCampType=(r.type||'Manual').toLowerCase(); }
+    nGrp++; // every row is a group
+    var cls = isCampaign(r) ? 'row-camp' : 'row-grp';
+    rowsHtml += '<tr class="'+cls+'" data-ri="'+ri+'">'
+      + '<td class="rownum" onclick="delRow('+ri+')" title="Удалить строку">'+(ri+1)+'</td>';
+    COLS.forEach(function(col){
+      var isErr = cellErrors.has(ri+':'+col.key);
+      rowsHtml += '<td class="'+col.cls+'">'+cellHtml(r,ri,col,isErr,curCampType)+'</td>';
+    });
+    rowsHtml += '</tr>';
+  });
+
+  if(!R.length){
+    rowsHtml = '<tr><td colspan="'+(COLS.length+1)+'" style="text-align:center;padding:40px 20px;color:var(--dim);font-size:13px;">'
+      +'Нажмите «Кампания (+ группа)» или вставьте данные из Google Sheets (Ctrl+V)</td></tr>';
+  }
+
+  document.getElementById('sheet-body').innerHTML = rowsHtml;
+  document.getElementById('cnt-camp').textContent = nCamp;
+  document.getElementById('cnt-grp').textContent  = nGrp;
+  document.getElementById('cnt-rows').textContent = R.length;
+
+  attachEvents();
+
+  // autosize textareas
+  document.querySelectorAll('#sheet-body textarea.cell-in').forEach(autosize);
+}
+
+function attachEvents(){
+  document.querySelectorAll('#sheet-body .cell-in').forEach(function(el){
+    el.addEventListener('input', onCellInput);
+    el.addEventListener('change', onCellInput);
+    el.addEventListener('keydown', onCellKeydown);
+    el.addEventListener('paste', onCellPaste);
+    el.addEventListener('focus', function(){
+      if(this.classList.contains('cell-dim')){
+        var ri=parseInt(this.dataset.r), k=this.dataset.k;
+        var realVal = R[ri] && R[ri][k]!=null ? R[ri][k] : '';
+        if(this.tagName==='SELECT'){
+          // rebuild full options list so user can pick a real value
+          var col = COLS.find(function(c){return c.key===k;});
+          if(col){
+            if(col.type==='pf'){
+              this.innerHTML = pfOpts(realVal);
+            } else if(col.options){
+              this.innerHTML = col.options.map(function(o){
+                return '<option value="'+escA(o)+'"'+(o===realVal?' selected':'')+'>'+esc(o)+'</option>';
+              }).join('');
+            }
+          }
+        } else {
+          this.value = realVal;
+        }
+      }
+    });
+  });
+  attachSelectionHandlers();
+}
+
+// ─── Range selection (Excel-like, Google-Sheets style) ────
+var selAnchor = null; // {ri,ci}
+var selFocus  = null; // {ri,ci}
+var isSelecting = false;
+
+function cellTdAt(ri,ci){
+  var tr = document.querySelector('#sheet-body tr[data-ri="'+ri+'"]');
+  if(!tr) return null;
+  var tds = tr.querySelectorAll('td');
+  return tds[ci+1] || null; // +1 because col0 is rownum
+}
+
+function clearSelection(){
+  document.querySelectorAll('#sheet-body td.sel-cell').forEach(function(td){ td.classList.remove('sel-cell'); });
+  selAnchor=null; selFocus=null;
+}
+
+function isRangeSelection(){
+  return selAnchor && selFocus && (selAnchor.ri!==selFocus.ri || selAnchor.ci!==selFocus.ci);
+}
+
+function applySelectionHighlight(){
+  document.querySelectorAll('#sheet-body td.sel-cell').forEach(function(td){ td.classList.remove('sel-cell'); });
+  if(!selAnchor||!selFocus) return;
+  if(!isRangeSelection()) return; // single-cell: no highlight, just an editable input
+  var r0=Math.min(selAnchor.ri,selFocus.ri), r1=Math.max(selAnchor.ri,selFocus.ri);
+  var c0=Math.min(selAnchor.ci,selFocus.ci), c1=Math.max(selAnchor.ci,selFocus.ci);
+  for(var ri=r0;ri<=r1;ri++){
+    for(var ci=c0;ci<=c1;ci++){
+      var td=cellTdAt(ri,ci);
+      if(td) td.classList.add('sel-cell');
+    }
+  }
+}
+
+function attachSelectionHandlers(){
+  document.querySelectorAll('#sheet-body td').forEach(function(td){
+    if(td.classList.contains('rownum')) return;
+    var tr = td.closest('tr');
+    var ri = parseInt(tr.dataset.ri);
+    var tds = Array.from(tr.querySelectorAll('td')).filter(function(t){return !t.classList.contains('rownum');});
+    var ci = tds.indexOf(td);
+
+    // mousedown: start tracking selection, but DO NOT preventDefault —
+    // let the browser focus the underlying input normally (Sheets-like).
+    td.addEventListener('mousedown', function(e){
+      isSelecting = true;
+      selAnchor = {ri:ri, ci:ci};
+      selFocus  = {ri:ri, ci:ci};
+      applySelectionHighlight();
+    });
+    td.addEventListener('mouseenter', function(e){
+      if(!isSelecting) return;
+      selFocus = {ri:ri, ci:ci};
+      applySelectionHighlight();
+      // once a real range is being dragged, blur any focused input so
+      // the highlighted range (not a stray caret) is what Ctrl+C/Delete act on
+      if(isRangeSelection()){
+        var ae=document.activeElement;
+        if(ae && ae.classList && ae.classList.contains('cell-in')) ae.blur();
+      }
+    });
+    td.addEventListener('mouseup', function(){
+      isSelecting=false;
+    });
+  });
+}
+
+document.addEventListener('mouseup', function(){ isSelecting=false; });
+
+document.addEventListener('paste', function(e){
+  var ae=document.activeElement;
+
+  var inEditable = ae && ae.classList && ae.classList.contains('cell-in');
+  if(inEditable) return; // handled by onCellPaste
+  if(!selAnchor) return;
+  var clip=(e.clipboardData||window.clipboardData).getData('text');
+  if(!clip) return;
+  e.preventDefault();
+  var rows=parseTSV(clip.replace(/\r\n/g,'\n').replace(/\r/g,'\n'));
+  var startRi=selAnchor.ri, startCi=selAnchor.ci;
+  rows.forEach(function(cols,dr){
+    var ri=startRi+dr;
+    while(R.length<=ri) R.push(blankRow());
+    cols.forEach(function(val,dc){
+      var ci=startCi+dc;
+      if(ci<0||ci>=COLS.length) return;
+      R[ri][COLS[ci].key]=val;
+    });
+  });
+  cellErrors=new Set();
+  render();
+  toast('Вставлено: '+rows.length+' строк × '+(rows[0]?rows[0].length:0)+' столбцов');
+});
+
+document.addEventListener('keydown', function(e){
+  if(!selAnchor||!selFocus) return;
+  var isRange = isRangeSelection();
+  if(!isRange) return; // single cell: let native input behavior handle everything
+
+  if((e.ctrlKey||e.metaKey) && e.key==='c'){
+    e.preventDefault();
+    copySelectionToClipboard();
+    return;
+  }
+
+  if(e.key==='Delete' || e.key==='Backspace'){
+    e.preventDefault();
+    clearSelectionContents();
+  }
+});
+
+function clearSelectionContents(){
+  var r0=Math.min(selAnchor.ri,selFocus.ri), r1=Math.max(selAnchor.ri,selFocus.ri);
+  var c0=Math.min(selAnchor.ci,selFocus.ci), c1=Math.max(selAnchor.ci,selFocus.ci);
+  for(var ri=r0;ri<=r1;ri++){
+    if(!R[ri]) continue;
+    for(var ci=c0;ci<=c1;ci++){
+      var col=COLS[ci];
+      if(!col) continue;
+      var key='ri:'+ri+':'+col.key; // unused, just for clarity
+      R[ri][col.key] = (col.type==='select') ? (col.options?col.options[0]:'') : '';
+      cellErrors.delete(ri+':'+col.key);
+    }
+  }
+  // sensible defaults for selects when cleared
+  for(var ri2=r0;ri2<=r1;ri2++){
+    if(!R[ri2]) continue;
+    for(var ci2=c0;ci2<=c1;ci2++){
+      var col2=COLS[ci2];
+      if(col2 && col2.key==='mt') R[ri2][col2.key]='broad';
+      if(col2 && col2.key==='type') R[ri2][col2.key]='Manual';
+      if(col2 && col2.key==='bidStrategy') R[ri2][col2.key]='Dynamic bids - down only';
+    }
+  }
+  render();
+  toast('Очищено: '+(r1-r0+1)+'×'+(c1-c0+1));
+}
+
+function copySelectionToClipboard(){
+  var r0=Math.min(selAnchor.ri,selFocus.ri), r1=Math.max(selAnchor.ri,selFocus.ri);
+  var c0=Math.min(selAnchor.ci,selFocus.ci), c1=Math.max(selAnchor.ci,selFocus.ci);
+  var lines=[];
+  for(var ri=r0;ri<=r1;ri++){
+    var cols=[];
+    for(var ci=c0;ci<=c1;ci++){
+      var col=COLS[ci];
+      var r=R[ri];
+      var val = r ? (r[col.key]==null?'':String(r[col.key])) : '';
+      if(val.indexOf('\n')!==-1 || val.indexOf('\t')!==-1 || val.indexOf('"')!==-1){
+        val = '"'+val.replace(/"/g,'""')+'"';
+      }
+      cols.push(val);
+    }
+    lines.push(cols.join('\t'));
+  }
+  var text = lines.join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      toast('Скопировано: '+(r1-r0+1)+'×'+(c1-c0+1));
+    }).catch(function(){
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('Скопировано'); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+function onCellInput(){
+  var ri = parseInt(this.dataset.r), k = this.dataset.k;
+  if(!R[ri]) return;
+  R[ri][k] = this.value;
+  if(this.tagName==='TEXTAREA') autosize(this);
+  if(cellErrors.has(ri+':'+k)){
+    cellErrors.delete(ri+':'+k);
+    this.classList.remove('cell-err');
+  }
+}
+
+// ─── Keyboard navigation ────────────────────────────────
+function getGrid(){
+  return Array.from(document.querySelectorAll('#sheet-body tr')).map(function(tr){
+    return Array.from(tr.querySelectorAll('.cell-in'));
+  });
+}
+
+function focusCell(ri, key){
+  var idx = COLS.findIndex(function(c){return c.key===key;});
+  var grid = getGrid();
+  if(grid[ri] && grid[ri][idx]) grid[ri][idx].focus();
+}
+
+function onCellKeydown(e){
+  var ri = parseInt(this.dataset.r), k = this.dataset.k;
+  var ci = COLS.findIndex(function(c){return c.key===k;});
+
+  if(e.key==='Tab'){
+    e.preventDefault();
+    var grid=getGrid();
+    var dir = e.shiftKey?-1:1;
+    var nci=ci+dir, nri=ri;
+    if(nci<0){ nci=COLS.length-1; nri--; }
+    if(nci>=COLS.length){ nci=0; nri++; }
+    if(grid[nri] && grid[nri][nci]) grid[nri][nci].focus();
+    return;
+  }
+  if(e.key==='Enter' && this.tagName!=='TEXTAREA'){
+    e.preventDefault();
+    var grid=getGrid();
+    if(grid[ri+1] && grid[ri+1][ci]) grid[ri+1][ci].focus();
+    return;
+  }
+  if(e.key==='Enter' && this.tagName==='TEXTAREA' && !e.shiftKey && (e.ctrlKey||e.metaKey)){
+    e.preventDefault();
+    var grid=getGrid();
+    if(grid[ri+1] && grid[ri+1][ci]) grid[ri+1][ci].focus();
+    return;
+  }
+  if(e.key==='Delete' && e.ctrlKey){
+    e.preventDefault();
+    delRow(ri);
+  }
+}
+
+// ─── Paste handling (TSV, multi-cell) ────────────────────
+function parseTSV(text){
+  // Google Sheets / Excel TSV: cells separated by \t, rows by \n,
+  // multi-line cell values are wrapped in "..." with internal \n and "" for escaped quotes
+  text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var rows=[]; var row=[]; var cell=''; var inQuotes=false;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    if(inQuotes){
+      if(ch==='"'){
+        if(text[i+1]==='"'){ cell+='"'; i++; }
+        else inQuotes=false;
+      } else cell+=ch;
+    } else {
+      if(ch==='"' && cell===''){ inQuotes=true; }
+      else if(ch==='\t'){ row.push(cell); cell=''; }
+      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+      else cell+=ch;
+    }
+  }
+  row.push(cell); rows.push(row);
+  // drop trailing empty row (common after copy)
+  if(rows.length>1){
+    var last=rows[rows.length-1];
+    if(last.length===1 && last[0]==='') rows.pop();
+  }
+  return rows;
+}
+
+function onCellPaste(e){
+  var clip = (e.clipboardData||window.clipboardData).getData('text');
+  if(!clip) return;
+  e.stopPropagation();
+
+  var normClip = clip.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var hasTab = normClip.indexOf('\t') !== -1;
+
+  // Single-cell copy (no tabs at all) -> goes entirely into this one cell,
+  // even if it contains multiple lines (e.g. a multi-line Keywords cell).
+  if(!hasTab){
+    e.preventDefault();
+    var ri0 = parseInt(this.dataset.r), k0 = this.dataset.k;
+    var val = normClip.replace(/\n+$/,''); // strip trailing newline from copy
+    // Strip surrounding quotes if the whole cell is quoted (Sheets sometimes
+    // wraps single-cell multiline copies in quotes with "" escaping)
+    if(val.length>=2 && val[0]==='"' && val[val.length-1]==='"'){
+      val = val.slice(1,-1).replace(/""/g,'"');
+    }
+    if(this.tagName==='TEXTAREA'){
+      // insert at cursor
+      var start=this.selectionStart, end=this.selectionEnd;
+      var cur=this.value;
+      this.value = cur.slice(0,start)+val+cur.slice(end);
+      R[ri0][k0]=this.value;
+      autosize(this);
+    } else if(this.tagName==='SELECT'){
+      R[ri0][k0]=val;
+      cellErrors.delete(ri0+':'+k0);
+      render();
+    } else {
+      this.value = val;
+      R[ri0][k0]=this.value;
+    }
+    return;
+  }
+
+  var rows = parseTSV(clip);
+  e.preventDefault();
+
+  var startRi = parseInt(this.dataset.r);
+  var startKey = this.dataset.k;
+  var startCi = COLS.findIndex(function(c){return c.key===startKey;});
+
+  rows.forEach(function(cols, dr){
+    var ri = startRi+dr;
+    while(R.length<=ri){
+      R.push(blankRow());
+    }
+    cols.forEach(function(val, dc){
+      var ci = startCi+dc;
+      if(ci<0||ci>=COLS.length) return;
+      var col = COLS[ci];
+      R[ri][col.key] = val;
+    });
+  });
+
+  cellErrors=new Set();
+  render();
+  toast('Вставлено: '+rows.length+' строк × '+(rows[0]?rows[0].length:0)+' столбцов');
+}
+
+// ─── Build campaign tree ──────────────────────────────────
+function splitLines(s){
+  return String(s||'').split(/\r?\n|,/).map(function(x){return x.trim();}).filter(Boolean);
+}
+
+function buildTree(){
+  var camps=[];
+  var cur=null;
+  R.forEach(function(r,ri){
+    if(isCampaign(r)){
+      var ctype=(r.type||'Manual').toLowerCase();
+      var baseName=(r.campName||'').trim();
+      var fullName=[baseName, ctype].filter(Boolean).join('_').toUpperCase().replace(/\s+/g,'_');
+      cur = {
+        name: fullName,
+        baseName: baseName,
+        type: ctype, // 'manual' | 'auto'
+        bidStrategy: r.bidStrategy || 'Dynamic bids - down only',
+        budget: parseFloat(String(r.budget).replace(',','.'))||0,
+        bidadj: parseInt(r.top)||0,
+        portfolio: r.portfolio||'',
+        start: r.start||'',
+        end: r.end||'',
+        compneg: splitLines(r.campNeg),
+        groups: []
+      };
+      camps.push(cur);
+    }
+    if(!cur) return;
+    var theme = (r.grpName||'').trim();
+    var asin  = (r.asin||'').trim().toUpperCase();
+    var mtype = (r.mt||'broad').toLowerCase();
+    var computedName = (cur.type==='auto')
+      ? [asin, theme, 'AUTO'].filter(Boolean).join('_').toUpperCase().replace(/\s+/g,'_')
+      : [asin, theme, mtype].filter(Boolean).join('_').toUpperCase().replace(/\s+/g,'_');
+    cur.groups.push({
+      ri: ri,
+      name: computedName,
+      theme: theme,
+      asin: asin,
+      bid: parseFloat(String(r.bid).replace(',','.'))||0,
+      matchType: mtype,
+      keywords: cur.type==='auto' ? [] : splitLines(r.keywords),
+      negatives: splitLines(r.grpNeg),
+    });
+  });
+  return camps;
+}
+
+function validate(camps){
+  var errs=[];
+  var errCells=new Set(); // 'ri:key'
+
+  function mark(ri,key,msg){
+    errCells.add(ri+':'+key);
+    errs.push(msg);
+  }
+
+  if(!camps.length){
+    errs.push('Нет кампаний — заполните Campaign Name в первой строке группы');
+    return {errs:errs, errCells:errCells};
+  }
+
+  camps.forEach(function(c,ci){
+    var firstRi = c.groups.length ? c.groups[0].ri : null;
+    if(!c.baseName && firstRi!=null) mark(firstRi,'campName','Кампания '+(ci+1)+': пустое название');
+    if((!c.budget||c.budget<=0) && firstRi!=null) mark(firstRi,'budget','Кампания "'+(c.baseName||'#'+(ci+1))+'": бюджет обязателен');
+    if(!c.groups.length) errs.push('Кампания "'+(c.baseName||'#'+(ci+1))+'": нет групп');
+
+    c.groups.forEach(function(g,gi){
+      var label = 'Кампания "'+(c.baseName||'#'+(ci+1))+'", группа '+(gi+1)+(g.theme?' ("'+g.theme+'")':'');
+      if(!g.asin) mark(g.ri,'asin', label+': ASIN обязателен');
+      if(!g.bid||g.bid<=0) mark(g.ri,'bid', label+': ставка обязательна');
+      if(c.type==='manual' && !g.keywords.length) mark(g.ri,'keywords', label+': нет ключевых слов (MANUAL)');
+      if(c.type==='manual' && ['broad','phrase','exact'].indexOf(g.matchType)===-1) mark(g.ri,'mt', label+': неизвестный match type "'+g.matchType+'"');
+    });
+  });
+
+  return {errs:errs, errCells:errCells};
+}
+
+// ─── Preview ─────────────────────────────────────────────
+function openPreview(){
+  if(!R.length){ toast('Нет данных'); return; }
+  var camps = buildTree();
+  var v = validate(camps);
+  var errs = v.errs;
+  cellErrors = v.errCells;
+  render(); // re-render to show/clear highlighting
+  var body='';
+
+  if(errs.length){
+    body='<ul class="err-list">'+errs.map(function(e){return'<li>'+esc(e)+'</li>';}).join('')+'</ul>';
+  }
+
+  camps.forEach(function(c){
+    var pfName = c.portfolio ? pfNameById(c.portfolio) : '—';
+    body += '<div class="pt-camp">'
+      + '<div class="pt-camp-name">'
+        + (c.type==='auto' ? '<span class="badge b-auto">AUTO</span>' : '<span class="badge b-manual">MANUAL</span>')
+        + esc(c.name)
+      + '</div>'
+      + '<div class="pt-meta">'
+        + '<span>💰 $'+c.budget+'/день</span>'
+        + (c.bidadj?'<span>↑ Top '+c.bidadj+'%</span>':'')
+        + '<span>⚙ '+esc(c.bidStrategy)+'</span>'
+        + (c.portfolio?'<span>📁 '+esc(pfName)+'</span>':'')
+        + (c.start?'<span>📅 '+c.start+(c.end?' → '+c.end:'')+'</span>':'')
+      + '</div>';
+
+    if(c.compneg.length){
+      body += '<div class="pt-grp"><div class="pt-neg"><b>Campaign Negative:</b> '+c.compneg.map(esc).join(', ')+'</div></div>';
+    }
+
+    c.groups.forEach(function(g){
+      body += '<div class="pt-grp">'
+        + '<div class="pt-grp-name">'
+          + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
+          + esc(g.name||'(без названия)')
+          + '<span class="pt-asin">'+esc(g.asin)+'</span>'
+          + '<span style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--muted);">$'+g.bid+'</span>'
+          + (c.type==='manual' ? '<span class="badge b-mt">'+esc(g.matchType)+'</span>' : '')
+        + '</div>';
+      if(g.keywords.length){
+        body += '<div class="pt-kw-list">'+g.keywords.map(function(k){return '<span class="pt-kw">'+esc(k)+'</span>';}).join('')+'</div>';
+      }
+      if(g.negatives.length){
+        body += '<div class="pt-neg"><b>Negative:</b> '+g.negatives.map(esc).join(', ')+'</div>';
+      }
+      body += '</div>';
+    });
+    body += '</div>';
+  });
+
+  document.getElementById('preview-body').innerHTML = body;
+
+  var acct=document.getElementById('acct').value, mkt=document.getElementById('mkt').value;
+  document.getElementById('preview-acct').textContent = acct+' / '+mkt;
+  document.getElementById('btn-queue').disabled = (errs.length>0);
+  document.getElementById('preview-modal').classList.add('open');
+}
+
+function closePreview(){ document.getElementById('preview-modal').classList.remove('open'); }
+
+// ─── Send to pending_changes ──────────────────────────────
+function sendToPending(){
+  var camps=buildTree();
+  var v=validate(camps);
+  if(v.errs.length){ toast(v.errs[0]); return; }
+
+  document.getElementById('btn-queue').disabled=true;
+  var acct=document.getElementById('acct').value, mkt=document.getElementById('mkt').value;
+
+  fetch('/campaign-builder/queue',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_type:acct, marketplace:mkt, campaigns:camps})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    closePreview();
+    document.getElementById('log-panel').classList.add('visible');
+    document.getElementById('log-body').innerHTML='';
+    if(d.error){
+      logLine('✗ '+d.error,'err');
+      document.getElementById('log-status').textContent='Ошибка';
+      document.getElementById('btn-queue').disabled=false;
+    } else {
+      document.getElementById('sum-row').style.display='flex';
+      document.getElementById('s-camps').textContent=d.camps||0;
+      document.getElementById('s-total').textContent=d.total||0;
+      document.getElementById('log-status').textContent='Добавлено в очередь';
+      logLine('✓ '+d.camps+' кампаний добавлены в pending_changes','ok');
+      logLine('→ Перейдите в /control чтобы одобрить и отправить в Amazon','inf');
+      (d.names||[]).forEach(function(n){logLine('  • '+n,'inf');});
+    }
+  })
+  .catch(function(e){ closePreview(); logLine('✗ '+e,'err'); document.getElementById('btn-queue').disabled=false; });
+}
+
+function logLine(msg,cls){
+  var lb=document.getElementById('log-body');
+  var d=document.createElement('div');
+  d.className='log-line '+(cls||'inf');
+  d.textContent=msg;
+  lb.appendChild(d);
+  lb.scrollTop=lb.scrollHeight;
+}
+
+// ─── Example ─────────────────────────────────────────────
+function loadExample(){
+  if(R.length && !confirm('Загрузить пример? Текущие данные будут удалены.')) return;
+  R=[];
+  var t=todayCompact();
+
+  var c1=blankRow();
+  c1.campName='Classic Awesome Like Daughter Text'; c1.type='Manual'; c1.mt='broad';
+  c1.asin='B0H2B5ZL3Z'; c1.grpName='Awesome Like My Daughter';
+  c1.keywords='awesome like my daughter shirt\nlike my daughter gift';
+  c1.budget='30'; c1.bid='1'; c1.top='30';
+  c1.start=t; c1.end='';
+  R.push(c1);
+
+  var c2=blankRow();
+  c2.campName='Car Plate Men Best Ever'; c2.type='Manual'; c2.mt='broad';
+  c2.asin='B0H2B7N82S'; c2.grpName='Bonus Dad';
+  c2.keywords='Best bonus dad Ever shirt\nBest bonus dad Ever\nBest bonus dad shirt\nbonus dad shirt';
+  c2.budget='20'; c2.bid='1'; c2.top='20';
+  c2.start=t; c2.end='';
+  c2.grpNeg='dad joke';
+  R.push(c2);
+
+  var g2=blankRow();
+  g2.mt='broad'; g2.asin='B0H29V61RH'; g2.grpName='Dad';
+  g2.keywords='Best Dad Ever shirt';
+  g2.bid='1';
+  R.push(g2);
+
+  var g3=blankRow();
+  g3.mt='broad'; g3.asin='B0H2B2SKT2'; g3.grpName='Daddy';
+  g3.keywords='Best Daddy Ever shirt';
+  g3.bid='1';
+  R.push(g3);
+
+  cellErrors=new Set();
+  render();
+}
+
+// ─── Column resizing ───────────────────────────────────────
+function initColumnResize(){
+  var cols = document.querySelectorAll('#sheet-colgroup col');
+  document.querySelectorAll('#sheet thead th .col-resizer').forEach(function(handle){
+    var th = handle.closest('th');
+    var colIdx = parseInt(th.dataset.col) + 1; // +1 for rownum col
+    handle.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      var startX = e.clientX;
+      var col = cols[colIdx];
+      var startWidth = col.offsetWidth;
+      handle.classList.add('resizing');
+      document.body.style.cursor='col-resize';
+      document.body.style.userSelect='none';
+
+      function onMove(ev){
+        var dx = ev.clientX - startX;
+        var w = Math.max(40, startWidth + dx);
+        col.style.width = w+'px';
+      }
+      function onUp(){
+        handle.classList.remove('resizing');
+        document.body.style.cursor='';
+        document.body.style.userSelect='';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+// ─── Draft import from Google Sheets ──────────────────────
+function toggleDraft(){
+  var panel=document.getElementById('draft-panel');
+  var btn=document.getElementById('draft-toggle');
+  var open = panel.style.display!=='none';
+  panel.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'Показать' : 'Скрыть';
+  if(!open) document.getElementById('draft-input').focus();
+}
+
+// ─── Load draft directly from a Google Sheets URL ─────────
+function extractSheetId(url){
+  var m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+function extractGid(url){
+  var m = url.match(/[?#&]gid=([0-9]+)/);
+  return m ? m[1] : '0';
+}
+
+function parseCSV(text){
+  // Standard CSV parser (comma-separated, quoted fields with "" escaping)
+  text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var rows=[]; var row=[]; var cell=''; var inQuotes=false;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    if(inQuotes){
+      if(ch==='"'){
+        if(text[i+1]==='"'){ cell+='"'; i++; }
+        else inQuotes=false;
+      } else cell+=ch;
+    } else {
+      if(ch==='"' && cell===''){ inQuotes=true; }
+      else if(ch===','){ row.push(cell); cell=''; }
+      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+      else cell+=ch;
+    }
+  }
+  row.push(cell); rows.push(row);
+  if(rows.length>1){
+    var last=rows[rows.length-1];
+    if(last.length===1 && last[0]==='') rows.pop();
+  }
+  return rows;
+}
+
+function loadDraftFromSheetUrl(){
+  var url = document.getElementById('draft-sheet-url').value.trim();
+  if(!url){ toast('Вставьте ссылку на Google Sheets'); return; }
+  var sheetId = extractSheetId(url);
+  if(!sheetId){ toast('Не удалось распознать ссылку на Google Sheets'); return; }
+  var gid = extractGid(url);
+  var exportUrl = 'https://docs.google.com/spreadsheets/d/'+sheetId+'/export?format=csv&gid='+gid;
+
+  document.getElementById('draft-status').textContent='Загрузка из Google Sheets...';
+  document.getElementById('draft-status').style.color='var(--dim)';
+
+  fetch(exportUrl)
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status+' — проверьте доступ "Любой пользователь по ссылке"');
+      return r.text();
+    })
+    .then(function(csvText){
+      var rows = parseCSV(csvText);
+      // convert to TSV for the textarea + reuse loadDraft pipeline
+      var tsv = rows.map(function(cols){
+        return cols.map(function(c){
+          c = String(c==null?'':c);
+          if(c.indexOf('\t')!==-1 || c.indexOf('\n')!==-1 || c.indexOf('"')!==-1){
+            c = '"'+c.replace(/"/g,'""')+'"';
+          }
+          return c;
+        }).join('\t');
+      }).join('\n');
+      document.getElementById('draft-input').value = tsv;
+      loadDraft();
+    })
+    .catch(function(err){
+      document.getElementById('draft-status').textContent='Ошибка: '+err.message;
+      document.getElementById('draft-status').style.color='var(--red)';
+      toast('Ошибка загрузки: '+err.message, 4000);
+    });
+}
+
+// Header name aliases -> COLS key. Lowercase, trimmed comparison.
+var HEADER_ALIASES = {
+  'campaign name':'campName', 'campaign name (base)':'campName', 'campaignname':'campName',
+  'type':'type', 'type of campaign':'type', 'campaign type':'type',
+  'bid strategy':'bidStrategy', 'bidstrategy':'bidStrategy',
+  'match type':'mt', 'matchtype':'mt',
+  'asin':'asin',
+  'group name':'grpName', 'group name (theme)':'grpName', 'groupe name':'grpName', 'groupname':'grpName',
+  'keywords':'keywords',
+  'budget':'budget', 'budget $':'budget',
+  'bid':'bid', 'bid $':'bid', 'bid for group':'bid',
+  'top %':'top', 'top%':'top', 'placement top':'top', 'top':'top',
+  'portfolio':'portfolio', 'portfolio id':'portfolio', 'portfolio id':'portfolio', 'portfolioid':'portfolio',
+  'start date':'start', 'start':'start', 'startdate':'start',
+  'end date':'end', 'end':'end', 'enddate':'end', 'end dat':'end',
+  'group negative':'grpNeg', 'groupe minus':'grpNeg', 'group minus':'grpNeg', 'groupnegative':'grpNeg',
+  'campaign negative':'campNeg', 'company minus':'campNeg', 'campaign minus':'campNeg', 'campaignnegative':'campNeg',
+};
+
+function buildColumnMap(headerRow){
+  // Returns array: map[ci] = COLS key (or null if unrecognized)
+  return headerRow.map(function(h){
+    var key = String(h||'').trim().toLowerCase();
+    return HEADER_ALIASES[key] || null;
+  });
+}
+
+function loadDraft(){
+  var raw = document.getElementById('draft-input').value;
+  if(!raw.trim()){ toast('Вставьте данные черновика'); return; }
+
+  var hasHeader = document.getElementById('draft-has-header').checked;
+  var allRows = parseTSV(raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n'));
+
+  var colMap = null; // ci -> COLS key
+  var rows = allRows;
+  if(hasHeader && allRows.length){
+    colMap = buildColumnMap(allRows[0]);
+    rows = allRows.slice(1);
+  }
+
+  // drop fully-empty rows
+  rows = rows.filter(function(cols){
+    return cols.some(function(c){ return String(c||'').trim()!==''; });
+  });
+
+  if(!rows.length){ toast('Нет данных после заголовка'); return; }
+
+  if(R.length && !confirm('Загрузить черновик? Текущая таблица ('+R.length+' строк) будет заменена.')) return;
+
+  function normalizeValue(key, v){
+    v = String(v==null?'':v).trim();
+    if(key==='mt'){
+      v = v.toLowerCase();
+      if(['broad','phrase','exact'].indexOf(v)===-1) v = 'broad';
+    } else if(key==='type'){
+      v = (v.toLowerCase()==='auto') ? 'Auto' : 'Manual';
+    } else if(key==='bidStrategy'){
+      if(['Dynamic bids - down only','Dynamic bids - up and down','Fixed bid'].indexOf(v)===-1){
+        v = 'Dynamic bids - down only';
+      }
+    } else if(key==='start' || key==='end'){
+      v = v.replace(/-/g,'');
+    }
+    return v;
+  }
+
+  var newR = rows.map(function(cols){
+    var r = blankRow();
+    if(colMap){
+      // header-based mapping: place each source column into its matched key
+      colMap.forEach(function(key, ci){
+        if(!key) return; // unrecognized header column, skip
+        r[key] = normalizeValue(key, cols[ci]);
+      });
+    } else {
+      // no header: assume positional order matches COLS
+      COLS.forEach(function(col, ci){
+        r[col.key] = normalizeValue(col.key, cols[ci]);
+      });
+    }
+    return r;
+  });
+
+  R = newR;
+  cellErrors = new Set();
+  render();
+
+  // run validation immediately so issues are highlighted
+  var camps = buildTree();
+  var v = validate(camps);
+  cellErrors = v.errCells;
+  render();
+
+  var status = document.getElementById('draft-status');
+  var unrecognized = colMap ? colMap.filter(function(k){return !k;}).length : 0;
+  var msg = 'Загружено '+rows.length+' строк';
+  if(unrecognized) msg += ', не распознано колонок: '+unrecognized;
+  if(v.errs.length){
+    status.textContent = msg+', ошибок: '+v.errs.length;
+    status.style.color = 'var(--red)';
+  } else {
+    status.textContent = msg+', ошибок не найдено';
+    status.style.color = 'var(--green)';
+  }
+  toast('Черновик загружен: '+rows.length+' строк');
+}
+
+// ─── Init ─────────────────────────────────────────────────
+loadPF();
+render();
+initColumnResize();
+</script>
+</body>
+</html>

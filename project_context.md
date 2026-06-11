@@ -1590,3 +1590,206 @@ def get_client():
     return _client
 ```
 Затем: `sed -i 's/bigquery\.Client(project=PROJECT_ID)/get_client()/g' ~/amazon-ads/*_routes.py`
+
+---
+
+## Campaign Builder (campaign_builder.html + campaign_builder_routes.py) — июнь 2026
+
+### Назначение
+Google-Sheets-подобный интерфейс для массового создания AUTO/MANUAL Sponsored Products кампаний
+через тот же pending_changes → /control → send.py воркфлоу. Заменяет старый Google Apps Script
+bulk-генератор.
+
+### Модель данных (1 строка = 1 группа)
+Таблица — плоский список строк, каждая строка = группа объявлений (ad group).
+Первая строка кампании несёт ОБА набора полей: campaign-level (Campaign Name, Type, Bid Strategy,
+Budget, Top%, Portfolio, Start/End, Campaign Negative) И group-level (ASIN, Group Name/theme,
+Match Type, Keywords, Bid, Group Negative). Последующие строки группы той же кампании несут
+только group-level поля, campaign-level поля визуально скрыты (класс `cell-dim`,
+показываются при фокусе на случай редактирования).
+
+`isCampaign(row)` определяется просто: `!!(row.campName||'').trim()`.
+
+### Авто-вычисляемые имена
+- **Campaign Name** = `BASENAME_TYPE` (например `CLASSIC_AWESOME_LIKE_DAUGHTER_TEXT_MANUAL`),
+  верхний регистр, пробелы → `_`. Пользователь вводит только базовое имя в "Campaign Name (base)".
+- **Group Name**:
+  - MANUAL: `ASIN_THEME_MATCHTYPE` (например `B0H2B7N82S_BONUS_DAD_BROAD`)
+  - AUTO: `ASIN_THEME_AUTO` (например `B0H2B7N82S_BONUS_DAD_AUTO`), Match Type не используется
+- Для AUTO кампаний Match Type и Keywords визуально скрыты/неактивны и не валидируются,
+  `buildTree()` принудительно обнуляет `keywords: []` для `type==='auto'`.
+
+### UI: 15 колонок
+Campaign Name (base) | Type | Bid Strategy | Match Type | ASIN | Group Name (theme) | Keywords |
+Budget $ | Bid $ | Top % | Portfolio | Start Date | End Date | Group Negative | Campaign Negative
+
+Bid Strategy — select с тремя опциями: "Dynamic bids - down only" / "Dynamic bids - up and down" /
+"Fixed bid" — независимая ось от Type (auto/manual targeting).
+
+### Excel/Sheets-подобное поведение
+- **Колонки**: `<colgroup>` + `table-layout:fixed`, drag-resize через `.col-resizer` на правом крае `<th>`
+- **Range-selection**: mousedown+mouseenter по `td` (без preventDefault — не блокирует нативный
+  фокус инпута). При реальном drag (range > 1 cell) активный input блюрится, чтобы Ctrl+C/Delete
+  работали по диапазону, а не по тексту в инпуте. Одиночная ячейка — нативное поведение.
+- **Ctrl+C** на диапазоне → TSV в буфер (multiline ячейки оборачиваются в `"..."` с `""`-escaping)
+- **Delete/Backspace** на диапазоне → очищает все ячейки (selects → дефолты: mt→broad,
+  type→Manual, bidStrategy→Dynamic bids - down only)
+- **Paste**: если в буфере нет `\t` → весь текст идёт в одну ячейку (включая многострочные
+  Keywords/Negative), с снятием обрамляющих кавычек `"..."` → `...` и `""`→`"`. Если есть `\t` →
+  TSV распределяется по ячейкам/строкам, новые строки добавляются автоматически. Paste в `<select>`
+  (Portfolio/Type/etc.) теперь поддерживается — ID/значение подставляется и option выбирается.
+- **Удаление кампании**: клик по `#` на первой строке кампании удаляет её и все её группы (с
+  confirm если групп >1). Клик на group-only строке удаляет только её.
+- **+ Кампания (+группа)** — добавляет 1 строку с дефолтами (budget=30, top=30, start=сегодня)
+- **+ Группа** — добавляет пустую group-only строку после выделенной/сфокусированной строки
+
+### Импорт черновика из Google Sheets
+Блок "Черновик из Google Sheets" (toggle "Показать"):
+- **Вариант 1**: вставка ссылки на Sheets (`/export?format=csv&gid=...`), требует доступ
+  "Любой пользователь по ссылке — Просмотр". CORS может блокировать — fallback на вариант 2.
+- **Вариант 2**: textarea, вставка TSV-диапазона (Ctrl+V из Sheets/Excel)
+- **Маппинг колонок по заголовкам** (`HEADER_ALIASES` dict) — порядок колонок в исходной
+  таблице не важен, если есть строка заголовков (чекбокс "первая строка — заголовки").
+  Поддерживает варианты названий: "Type of Campaign"/"Campaign Type"→type, "Bid for Group"→bid,
+  "Groupe Minus"/"Group Minus"→grpNeg, "Placement Top"→top, и т.д.
+- После загрузки сразу запускается `validate()`, проблемные ячейки подсвечиваются красным
+  (`cellErrors` Set с ключами `'ri:colKey'`), статус показывает количество ошибок.
+- Нормализация при импорте: mt→lowercase (невалидное→broad), type→Auto если `auto`
+  (любой регистр) иначе Manual, bidStrategy→дефолт если не входит в список 3 валидных значений
+  (КРИТИЧНО: нельзя делать `v = v || default`, т.к. непустая невалидная строка типа `"auto"`
+  тогда "проходит" — нужно безусловное `v = default` если не в списке).
+- Даты: `-` удаляется (`YYYY-MM-DD` → `YYYYMMDD`)
+
+### Backend: campaign_builder_routes.py
+- `GET /campaign-builder` → отдаёт HTML
+- `POST /campaign-builder/queue` → валидирует, нормализует (`_norm_date`,
+  `clean_groups` с проверкой matchType), вставляет 1 строку на кампанию в
+  `pending_changes_merch/kdp` с `entity_type='campaign_create'`, `new_value` = JSON:
+```json
+{
+  "type": "auto|manual",
+  "name": "FULL_CAMPAIGN_NAME",
+  "bidStrategy": "Dynamic bids - down only",
+  "budget": 30.0, "bidadj": 30,
+  "portfolio": "39709167542056",
+  "start": "2026-06-11", "end": "2026-06-20",
+  "compneg": ["free"],
+  "groups": [{
+    "name": "ASIN_THEME_BROAD", "theme": "Bonus Dad", "asin": "B0H2B7N82S",
+    "bid": 0.6, "matchType": "broad",
+    "keywords": ["best dad ever shirt", "..."],
+    "negatives": ["custom"]
+  }]
+}
+```
+
+---
+
+## send.py: send_create_campaigns() — ВЫВЕРЕННЫЕ форматы (июнь 2026, протестировано live)
+
+Полный пайплайн: campaigns → adGroups → ads → targets (keywords), всё через
+`/adsApi/v1/create/*`, обрабатывает `campaign_create` записи из pending_changes.
+
+### 1. POST /adsApi/v1/create/campaigns
+```python
+strategy_map = {
+    "Dynamic bids - down only":   "SALES_DOWN_ONLY",
+    "Dynamic bids - up and down": "SALES_UP_AND_DOWN",
+    "Fixed bid":                  "MANUAL",
+}
+payload = {
+    "adProduct": "SPONSORED_PRODUCTS",
+    "name": c["name"],
+    "state": "ENABLED",
+    "marketplaceScope": "SINGLE_MARKETPLACE",   # строка, НЕ объект!
+    "marketplaces": [mkt],                      # отдельное поле, массив
+    "optimizations": {"bidSettings": {"bidStrategy": strategy}},
+    "budgets": [{
+        "budgetType": "MONETARY",
+        "recurrenceTimePeriod": "DAILY",
+        "budgetValue": {"monetaryBudgetValue": {
+            "monetaryBudget": {"value": budget},
+            "marketplaceSettings": [{"marketplace": mkt, "monetaryBudget": {"value": budget}}]
+        }}
+    }],
+    "autoCreationSettings": {"autoCreateTargets": (c["type"] == "auto")},  # ВСЕГДА присутствует,
+                                                                            # даже для MANUAL (false)
+}
+if start: payload["startDateTime"] = f"{start}T00:00:00Z"
+if end:   payload["endDateTime"]   = f"{end}T23:59:59{sign}{offset:02d}:00"
+if c.get("portfolio"): payload["portfolioId"] = c["portfolio"]
+
+# placementBidAdjustments — ВСТРОЕН в campaign payload, отдельного endpoint НЕ существует
+# (POST /create/campaigns/bidAdjustments возвращает 403)
+if bidadj > 0:
+    payload["optimizations"]["bidSettings"]["bidAdjustments"] = {
+        "placementBidAdjustments": [{"placement": "TOP_OF_SEARCH", "percentage": bidadj}]
+    }
+```
+
+**Парсинг ответа**: `campaignId` вложен в `item["campaign"]["campaignId"]`, НЕ на верхнем
+уровне `item["campaignId"]`. Если `index` отсутствует (`-1`) и в батче только 1 кампания —
+fallback на `index=0` (Amazon иногда не возвращает index для одиночных батчей).
+```python
+cid = item.get("campaignId") or (item.get("campaign") or {}).get("campaignId")
+```
+
+### 2. POST /adsApi/v1/create/adGroups
+```python
+{
+    "adProduct": "SPONSORED_PRODUCTS",
+    "campaignId": cid,
+    "name": g["name"],
+    "state": "ENABLED",
+    "bid": {"defaultBid": float(g["bid"])},   # ПЛОСКОЕ число, БЕЗ currencyCode,
+                                               # БЕЗ вложенности {"bid":..,"currencyCode":..}
+}
+```
+`adGroupId` в ответе: `item["adGroup"]["adGroupId"]` (с тем же fallback на `campaignId`-стиль
+вложенности что и у campaigns).
+
+### 3. POST /adsApi/v1/create/ads
+```python
+{
+    "adProduct": "SPONSORED_PRODUCTS",
+    "adType": "PRODUCT_AD",
+    "adGroupId": ag_id,        # campaignId здесь НЕ допускается схемой — убрать!
+    "state": "ENABLED",
+    "creative": {"productCreative": {"productCreativeSettings": {
+        "advertisedProduct": {
+            "productId": g["asin"],      # НЕ "asin" — обязательно "productId"
+            "productIdType": "ASIN",     # обязательное поле
+        }
+    }}}
+}
+```
+
+### 4. POST /adsApi/v1/create/targets (keywords, только MANUAL)
+Frontend теперь шлёт `keywords` как **массив строк** `["text1","text2"]`, не массив объектов.
+Match type и bid берутся с уровня группы (`g["matchType"]`, `g["bid"]`):
+```python
+for kw in g.get("keywords", []):
+    kw_text = str(kw).strip()
+    if not kw_text: continue
+    payload = {
+        "adGroupId": ag_id,             # campaignId НЕ нужен
+        "adProduct": "SPONSORED_PRODUCTS", "negative": False, "state": "ENABLED",
+        "targetType": "KEYWORD",
+        "targetDetails": {"keywordTarget": {
+            "matchType": g["matchType"].upper(), "keyword": kw_text
+        }},
+        "bid": {"bid": float(g["bid"]), "currencyCode": currency},
+    }
+```
+
+### Общий паттерн ошибок "Start of structure or map found where not expected"
+Эта ошибка Amazon = JSON-структура корня/поля имеет неправильный ТИП (объект вместо строки,
+или наоборот), не связана с отсутствующими полями. Встречалась трижды:
+1. `marketplaceScope` как объект `{...}` вместо строки `"SINGLE_MARKETPLACE"`
+2. `bidStrategy` enum значения: правильные — `SALES_DOWN_ONLY`/`SALES_UP_AND_DOWN`/`MANUAL`
+   (НЕ `LEGACY_FOR_SALES`/`AUTO_FOR_SALES` — это были придуманные значения)
+3. adGroup `bid` как `{"defaultBid": {...}}` (двойная вложенность) вместо `{"defaultBid": <float>}`
+
+### Live-проверенный результат (11.06.2026)
+4 кампании (2 AUTO + 2 MANUAL) → 5 ad groups → 5 product ads → 14 keywords,
+все шаги `✓ Готово: 4 успешно, 0 с ошибками`, включая placementBidAdjustments inline.

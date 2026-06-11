@@ -1,3 +1,4 @@
+from bq_client import get_client
 import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
@@ -146,7 +147,7 @@ def analytics_products_data():
     """
 
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
 
         def cvt(v):
             return float(v) if isinstance(v, decimal.Decimal) else v
@@ -249,7 +250,7 @@ def analytics_product_campaigns():
     """
 
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
 
         def cvt(v):
             return float(v) if isinstance(v, decimal.Decimal) else v

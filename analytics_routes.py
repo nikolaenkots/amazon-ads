@@ -1,3 +1,4 @@
+from bq_client import get_client
 import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
@@ -204,7 +205,7 @@ def analytics_campaigns_data():
     """
 
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
 
         # Два запроса: summary + paginated rows.
         # Оконные функции поверх GROUP BY не работают в BigQuery
@@ -303,7 +304,7 @@ def analytics_portfolios():
     ORDER BY portfolio_name
     """
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
         rows   = [{"id": r.portfolio_id, "name": r.portfolio_name}
                   for r in client.query(sql).result()]
         return jsonify({"portfolios": rows})
@@ -347,7 +348,7 @@ def analytics_campaigns_portfolios():
     ORDER BY name
     """
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
         rows = list(client.query(sql).result())
         portfolios = [{"id": r.id, "name": r.name or r.id} for r in rows]
         return jsonify({"portfolios": portfolios})
@@ -419,7 +420,7 @@ def analytics_campaign_structure():
 
 
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
         search_table = f"{PROJECT_ID}.{DATASET}.search_terms_{suffix}"
         search_sql = f"""
         SELECT
@@ -850,7 +851,7 @@ def debug_targeting():
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
 
     try:
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
 
         # product_ads из campaigns
         ads = [dict(r) for r in client.query(f"""
