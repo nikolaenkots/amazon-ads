@@ -1031,7 +1031,7 @@ function buildCampHtml(data, campId, mkt){
       const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
       const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
       h+=`<div class="ii st">
-          <input type="checkbox" class="st-cb" data-term="${xe(st.term||'')}" data-gid="${je(gid)}"
+          <input type="checkbox" class="st-cb" data-term="${je(st.term||'')}" data-gid="${je(gid)}"
             style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
             onchange="stCbChange('${je(gid)}')" onclick="event.stopPropagation()">
           <span class="it" title="${je(st.term||'')}">${st.term||'—'}</span>
