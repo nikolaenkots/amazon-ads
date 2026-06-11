@@ -46,6 +46,11 @@ def analytics_campaigns_page():
     return send_from_directory(BASE_DIR, 'campaigns_analytics.html')
 
 
+@analytics_bp.route('/campaigns-deleting')
+def campaigns_deleting_page():
+    return send_from_directory(BASE_DIR, 'campaigns_deleting.html')
+
+
 # ── API ───────────────────────────────────────────────────
 @analytics_bp.route('/analytics/campaigns/data')
 def analytics_campaigns_data():

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Удаление кампаний · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6; --surface:#fff; --surface2:#f0f0f3; --border:#e2e2e8; --border2:#ccccd4;
+  --text:#18181c; --muted:#6b6b7a; --dim:#aaaaB8;
+  --accent:#c84b14; --accent-bg:rgba(200,75,20,.07); --accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c; --green-bg:rgba(26,143,92,.08); --green-bd:rgba(26,143,92,.2);
+  --red:#d94040; --red-bd:rgba(217,64,64,.22); --red-bg:rgba(217,64,64,.07);
+  --amber:#b07800;
+  --blue:#1a6fd4; --blue-bg:rgba(26,111,212,.07); --blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+  --yellow:#d4a017;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+
+/* ── Layout ── */
+main{padding:18px 32px;max-width:1640px;margin:0 auto}
+
+/* ── Filters ── */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.btn-r{background:var(--red);color:#fff}.btn-r:hover{background:#bc3232}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Portfolio dropdown ── */
+.pdw{position:relative}
+.pdt{height:34px;min-width:180px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:border-color .15s;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{color:var(--muted);font-size:11px;flex-shrink:0;pointer-events:none}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:240px;max-height:280px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+
+/* ── Stats ── */
+.sr{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}.sv.r{color:var(--red)}
+
+/* ── Action bar (selection) ── */
+.actbar{display:none;align-items:center;gap:12px;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.actbar.on{display:flex}
+.actbar b{color:var(--accent)}
+
+/* ── Table ── */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:right;padding:9px 12px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2)}
+thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3){text-align:left}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3){text-align:left}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.sel{background:var(--accent-bg)}
+.cb{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+.cname{font-weight:500;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge.enabled{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.badge.paused{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.badge.archived{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.badge.auto{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.badge.manual{background:var(--purple-bg,rgba(108,63,201,.08));color:var(--purple);border:1px solid rgba(108,63,201,.2)}
+.pf{color:var(--muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.dv{color:var(--dim)}
+
+.act-btn{height:28px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.act-btn:hover{background:var(--surface2)}
+.act-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.act-btn.pri:hover{background:#a83d10}
+.act-btn.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.act-btn.danger:hover{background:#bc3232}
+
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border)}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── Confirm modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal{background:var(--surface);border-radius:10px;padding:20px;width:420px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal h3{font-size:15px;margin-bottom:10px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.modal-acts{display:flex;justify-content:flex-end;gap:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/campaigns">Кампании</a>
+    <a href="/analytics/campaigns">Аналитика</a>
+    <a href="/analytics/products">Продукты</a>
+    <a href="/control">Контроль</a>
+    <a href="/portfolios">Портфолио</a>
+    <a href="/campaign-builder">Билдер</a>
+    <a href="/campaigns-deleting" class="active">Удаление</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- Filters -->
+<div class="fp">
+  <div class="fr">
+    <div class="fg">
+      <span class="fl">Аккаунт</span>
+      <div class="at">
+        <button class="atb on" id="tabMerch" onclick="setAcct('MERCH')">Merch</button>
+        <button class="atb" id="tabKdp" onclick="setAcct('KDP')">KDP</button>
+      </div>
+    </div>
+    <div class="fg">
+      <span class="fl">Дата от</span>
+      <input type="date" id="dateFrom">
+    </div>
+    <div class="fg">
+      <span class="fl">Дата до</span>
+      <input type="date" id="dateTo">
+    </div>
+    <div class="fg">
+      <span class="fl">Маркетплейс</span>
+      <select id="filterMkt">
+        <option value="">Все</option>
+        <option>US</option><option>UK</option><option>DE</option>
+        <option>FR</option><option>IT</option><option>ES</option>
+      </select>
+    </div>
+    <div class="fg">
+      <span class="fl">Портфолио</span>
+      <div class="pdw" id="pdw">
+        <div class="pdt" id="pdtBtn" onclick="togglePd()">
+          <span id="pdtLabel">Все</span>
+          <span class="pda">▾</span>
+        </div>
+        <div class="pdd" id="pdd">
+          <input class="pds" placeholder="Поиск..." oninput="filterPd(this.value)">
+          <div id="pdList"></div>
+          <div style="display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border)">
+            <button class="act-btn pri" style="flex:1;height:26px;font-size:11px" onclick="applyPd()">Применить</button>
+            <button class="act-btn" style="height:26px;font-size:11px" onclick="clearPd()">Снять</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <span class="fl">Таргетинг</span>
+      <select id="filterTargeting">
+        <option value="">Все</option>
+        <option value="AUTO">Auto</option>
+        <option value="MANUAL">Manual</option>
+      </select>
+    </div>
+    <div class="fg">
+      <span class="fl">Статус</span>
+      <select id="filterState">
+        <option value="">Все (кроме архивных)</option>
+        <option value="ENABLED">Enabled</option>
+        <option value="PAUSED">Paused</option>
+        <option value="ARCHIVED">Archived</option>
+      </select>
+    </div>
+    <div class="fg">
+      <span class="fl">Активность</span>
+      <select id="filterActivity">
+        <option value="">Все</option>
+        <option value="has_clicks">Есть клики</option>
+        <option value="has_impressions">Есть показы</option>
+        <option value="no_clicks">Нет кликов</option>
+        <option value="no_impressions">Нет показов</option>
+      </select>
+    </div>
+    <div class="fg">
+      <span class="fl">Поиск</span>
+      <input type="text" id="filterName" placeholder="Название..." style="width:180px">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-left:auto">
+      <button class="btn btn-p" id="btnApply" onclick="applyFilters()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Применить
+      </button>
+      <button class="btn btn-s" onclick="resetFilters()">Сброс</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="sr" id="statsRow" style="display:none">
+  <div class="sc"><div class="sl">Кампаний</div><div class="sv" id="sTotalCamp">—</div></div>
+  <div class="sc"><div class="sl">Показы</div><div class="sv b" id="sImpr">—</div></div>
+  <div class="sc"><div class="sl">Клики</div><div class="sv" id="sClicks">—</div></div>
+  <div class="sc"><div class="sl">Расходы</div><div class="sv a" id="sCost">—</div></div>
+  <div class="sc"><div class="sl">Продажи 14d</div><div class="sv g" id="sSales">—</div></div>
+  <div class="sc"><div class="sl">ACOS</div><div class="sv" id="sAcos">—</div></div>
+</div>
+
+<!-- Selection action bar -->
+<div class="actbar" id="actBar">
+  <span>Выбрано: <b id="selCount">0</b></span>
+  <button class="act-btn danger" onclick="openConfirm('archive')">📦 Архивировать выбранные</button>
+  <button class="act-btn danger" onclick="openConfirm('delete')">🗑️ Удалить выбранные</button>
+  <button class="act-btn" onclick="clearSelection()">Снять выделение</button>
+</div>
+
+<!-- Table -->
+<div class="tw">
+  <div class="thr">
+    <span class="tt">Кампании</span>
+    <span class="tc" id="tableCount"></span>
+  </div>
+  <div class="tsx">
+    <div id="tableContainer"><div class="te">Выберите период и нажмите <b>Применить</b></div></div>
+  </div>
+  <div class="pg" id="paginationRow" style="display:none">
+    <span class="pi" id="pageInfo"></span>
+    <div class="pb" id="pageBtns"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmTitle">Архивировать кампании?</h3>
+    <p id="confirmText">
+      Будет добавлено <b id="confirmCount">0</b> изменений в очередь "Контроль".
+      Изменения не применятся к Amazon немедленно — их нужно будет одобрить на странице <b>/control</b>.
+    </p>
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeConfirm()">Отмена</button>
+      <button class="act-btn danger" id="confirmBtn" onclick="submitAction()">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toastWrap"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+const state = {
+  acct: 'MERCH',
+  page: 1,
+  perPage: 25,
+  total: 0,
+  sortBy: 'clicks',
+  sortDir: 'desc',
+  data: [],
+  selectedPortfolios: [],
+};
+let selectedIds = new Set(); // campaign_id set
+
+// ── Init dates (last 30 days) ───────────────────────────
+(function(){
+  const to=new Date(), from=new Date();
+  from.setDate(from.getDate()-30);
+  document.getElementById('dateTo').value=to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=from.toISOString().slice(0,10);
+})();
+
+// ── Account toggle ───────────────────────────────────────
+function setAcct(acct){
+  state.acct=acct;
+  document.getElementById('tabMerch').classList.toggle('on', acct==='MERCH');
+  document.getElementById('tabKdp').classList.toggle('on', acct==='KDP');
+  const mkt=document.getElementById('filterMkt');
+  const opts=acct==='KDP'?['','US','CA','UK','DE','FR','IT','ES','AU']:['','US','UK','DE','FR','IT','ES'];
+  mkt.innerHTML=opts.map(v=>`<option value="${v}">${v||'Все'}</option>`).join('');
+  loadPortfolios();
+}
+
+// ── Portfolio dropdown ───────────────────────────────────
+let _allPf=[], _pdOpen=false;
+document.addEventListener('click', e=>{ if(!e.target.closest('#pdw')&&_pdOpen) closePd(); });
+
+function togglePd(){
+  _pdOpen=!_pdOpen;
+  document.getElementById('pdd').classList.toggle('on',_pdOpen);
+  document.getElementById('pdtBtn').classList.toggle('on',_pdOpen);
+  if(_pdOpen) renderPdList('');
+}
+function closePd(){
+  _pdOpen=false;
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdtBtn').classList.remove('on');
+}
+function filterPd(q){ renderPdList(q); }
+function renderPdList(q){
+  const list=document.getElementById('pdList');
+  const filtered=q?_allPf.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())):_allPf;
+  if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';return;}
+  const sel=state.selectedPortfolios||[];
+  list.innerHTML=filtered.map(p=>`<div class="pdi"><input type="checkbox" name="pdcb" value="${p.id}" ${sel.includes(p.id)?'checked':''}><span title="${p.name}">${p.name}</span></div>`).join('');
+}
+function applyPd(){
+  state.selectedPortfolios=[...document.querySelectorAll('input[name="pdcb"]:checked')].map(el=>el.value);
+  const lbl=document.getElementById('pdtLabel');
+  lbl.textContent=state.selectedPortfolios.length?state.selectedPortfolios.length+' выбрано':'Все';
+  closePd(); state.page=1; fetchData();
+}
+function clearPd(){
+  state.selectedPortfolios=[];
+  document.querySelectorAll('input[name="pdcb"]').forEach(cb=>cb.checked=false);
+  document.getElementById('pdtLabel').textContent='Все';
+}
+
+async function loadPortfolios(){
+  try{
+    const r=await fetch('/portfolios/list');
+    const d=await r.json();
+    _allPf=(d.portfolios||[]).filter(p=>p.account_type===state.acct).map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+    renderPdList('');
+  }catch(e){}
+}
+
+// ── Build params ─────────────────────────────────────────
+function buildParams(page){
+  const p=new URLSearchParams();
+  p.set('account_type',state.acct);
+  p.set('page',page||state.page);
+  p.set('per_page',state.perPage);
+  p.set('sort_by',state.sortBy);
+  p.set('sort_dir',state.sortDir);
+  const df=document.getElementById('dateFrom').value;
+  const dt=document.getElementById('dateTo').value;
+  const mkt=document.getElementById('filterMkt').value;
+  const tgt=document.getElementById('filterTargeting').value;
+  const st=document.getElementById('filterState').value;
+  const act=document.getElementById('filterActivity').value;
+  const nm=document.getElementById('filterName').value.trim();
+  if(df) p.set('date_from',df);
+  if(dt) p.set('date_to',dt);
+  if(mkt) p.set('marketplace',mkt);
+  const sel=state.selectedPortfolios||[];
+  if(sel.length===1) p.set('portfolio_id',sel[0]);
+  else if(sel.length>1) p.set('portfolio_ids',sel.join(','));
+  if(tgt) p.set('targeting_type',tgt);
+  if(st) p.set('campaign_state',st);
+  if(act) p.set('activity',act);
+  if(nm) p.set('name',nm);
+  return p;
+}
+
+function applyFilters(){ state.page=1; fetchData(); }
+function resetFilters(){
+  const to=new Date(), from=new Date();
+  from.setDate(from.getDate()-30);
+  document.getElementById('dateTo').value=to.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=from.toISOString().slice(0,10);
+  ['filterMkt','filterTargeting','filterState','filterActivity'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('filterName').value='';
+  state.selectedPortfolios=[];
+  document.getElementById('pdtLabel').textContent='Все';
+  state.page=1; fetchData();
+}
+
+// ── Fetch data ───────────────────────────────────────────
+async function fetchData(){
+  const btn=document.getElementById('btnApply');
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span> Загрузка...';
+  document.getElementById('tableContainer').innerHTML='<div class="te"><span class="sp"></span></div>';
+  document.getElementById('paginationRow').style.display='none';
+  document.getElementById('statsRow').style.display='none';
+  try{
+    const params=buildParams(state.page);
+    const r=await fetch('/analytics/campaigns/data?'+params);
+    const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    state.data=d.rows||[]; state.total=d.total||0;
+    renderTable(d); renderStats(d.summary); renderPagination(d.total,d.page,d.per_page);
+    document.getElementById('tableCount').textContent=(d.total||0).toLocaleString('ru')+' кампаний';
+    document.getElementById('statsRow').style.display='grid';
+  }catch(e){
+    document.getElementById('tableContainer').innerHTML=`<div class="te" style="color:var(--red)">✕ ${e.message}</div>`;
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Применить';
+  }
+}
+
+// ── Stats ──────────────────────────────────────────────
+function fmtN(n){ return Number(n||0).toLocaleString('ru'); }
+function fmt2(n){ return Number(n||0).toFixed(2); }
+function renderStats(s){
+  if(!s) return;
+  document.getElementById('sTotalCamp').textContent=fmtN(s.total_campaigns);
+  document.getElementById('sImpr').textContent=fmtN(s.total_impressions);
+  document.getElementById('sClicks').textContent=fmtN(s.total_clicks);
+  document.getElementById('sCost').textContent='$'+fmt2(s.total_cost);
+  document.getElementById('sSales').textContent='$'+fmt2(s.total_sales_14d);
+  const acos=s.total_sales_14d>0?(s.total_cost/s.total_sales_14d*100):null;
+  document.getElementById('sAcos').textContent=acos!=null?acos.toFixed(2)+'%':'—';
+}
+
+// ── Table render ─────────────────────────────────────────
+function xe(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderTable(d){
+  const rows=d.rows||[];
+  const cont=document.getElementById('tableContainer');
+  if(!rows.length){ cont.innerHTML='<div class="te">Нет данных по выбранным фильтрам</div>'; return; }
+
+  const arr=state.sortDir==='desc'?'↓':'↑';
+  let html=`<table><thead><tr>
+    <th style="width:36px"><input type="checkbox" class="cb" id="cbAll" onchange="toggleAll(this.checked)"></th>
+    <th onclick="setSort('campaign_name')" style="cursor:pointer">Кампания ${state.sortBy==='campaign_name'?arr:''}</th>
+    <th>Портфолио</th>
+    <th>Маркетплейс</th>
+    <th>Таргетинг</th>
+    <th>Статус</th>
+    <th onclick="setSort('daily_budget')" style="cursor:pointer">Бюджет ${state.sortBy==='daily_budget'?arr:''}</th>
+    <th onclick="setSort('impressions')" style="cursor:pointer">Показы ${state.sortBy==='impressions'?arr:''}</th>
+    <th onclick="setSort('clicks')" style="cursor:pointer">Клики ${state.sortBy==='clicks'?arr:''}</th>
+    <th onclick="setSort('cost')" style="cursor:pointer">Расходы ${state.sortBy==='cost'?arr:''}</th>
+    <th onclick="setSort('sales_14d')" style="cursor:pointer">Продажи 14d ${state.sortBy==='sales_14d'?arr:''}</th>
+    <th onclick="setSort('acos')" style="cursor:pointer">ACOS ${state.sortBy==='acos'?arr:''}</th>
+  </tr></thead><tbody>`;
+
+  for(const r of rows){
+    const cid=r.campaign_id;
+    const isSel=selectedIds.has(cid);
+    const isArchived=(r.campaign_state||'').toUpperCase()==='ARCHIVED';
+    const stCls=(r.campaign_state||'').toLowerCase();
+    const tgtCls=(r.targeting_type||'').toLowerCase();
+    const pf=r.portfolio_name?`<span class="pf" title="${xe(r.portfolio_name)}">${xe(r.portfolio_name)}</span>`:'<span class="dv">—</span>';
+    const acos=r.acos!=null?Number(r.acos).toFixed(2)+'%':'—';
+    html+=`<tr class="${isSel?'sel':''}" data-cid="${xe(cid)}" data-mkt="${xe(r.marketplace)}" data-state="${xe(r.campaign_state||'')}">
+      <td><input type="checkbox" class="cb row-cb" ${isSel?'checked':''} onchange="toggleRow('${xe(cid)}',this.checked)"></td>
+      <td><span class="cname" title="${xe(r.campaign_name)}">${xe(r.campaign_name)}</span></td>
+      <td>${pf}</td>
+      <td>${xe(r.marketplace||'')}</td>
+      <td><span class="badge ${tgtCls}">${xe(r.targeting_type||'—')}</span></td>
+      <td><span class="badge ${stCls}">${xe(r.campaign_state||'—')}</span></td>
+      <td>$${fmt2(r.daily_budget)}</td>
+      <td>${fmtN(r.impressions)}</td>
+      <td>${fmtN(r.clicks)}</td>
+      <td>$${fmt2(r.cost)}</td>
+      <td>$${fmt2(r.sales_14d)}</td>
+      <td>${acos}</td>
+    </tr>`;
+  }
+  html+='</tbody></table>';
+  cont.innerHTML=html;
+  updateActBar();
+}
+
+// ── Sort ───────────────────────────────────────────────
+function setSort(col){
+  if(state.sortBy===col) state.sortDir=state.sortDir==='desc'?'asc':'desc';
+  else { state.sortBy=col; state.sortDir='desc'; }
+  fetchData();
+}
+
+// ── Selection ────────────────────────────────────────────
+function toggleRow(cid,checked){
+  if(checked) selectedIds.add(cid); else selectedIds.delete(cid);
+  const tr=document.querySelector(`tr[data-cid="${cid}"]`);
+  if(tr) tr.classList.toggle('sel',checked);
+  updateActBar();
+}
+function toggleAll(checked){
+  document.querySelectorAll('.row-cb').forEach(cb=>{
+    cb.checked=checked;
+    const cid=cb.closest('tr').dataset.cid;
+    if(checked) selectedIds.add(cid); else selectedIds.delete(cid);
+    cb.closest('tr').classList.toggle('sel',checked);
+  });
+  updateActBar();
+}
+function clearSelection(){
+  selectedIds.clear();
+  document.querySelectorAll('.row-cb').forEach(cb=>{cb.checked=false; cb.closest('tr').classList.remove('sel');});
+  const all=document.getElementById('cbAll'); if(all) all.checked=false;
+  updateActBar();
+}
+function updateActBar(){
+  const bar=document.getElementById('actBar');
+  const cnt=selectedIds.size;
+  document.getElementById('selCount').textContent=cnt;
+  bar.classList.toggle('on',cnt>0);
+}
+
+// ── Pagination ───────────────────────────────────────────
+function renderPagination(total,page,perPage){
+  const row=document.getElementById('paginationRow');
+  if(!total){ row.style.display='none'; return; }
+  row.style.display='flex';
+  const pages=Math.ceil(total/perPage);
+  document.getElementById('pageInfo').textContent=`${(page-1)*perPage+1}–${Math.min(page*perPage,total)} из ${total}`;
+  const btns=document.getElementById('pageBtns');
+  let html='';
+  html+=`<button class="act-btn" ${page<=1?'disabled':''} onclick="gotoPage(${page-1})">‹</button>`;
+  const start=Math.max(1,page-2), end=Math.min(pages,page+2);
+  for(let i=start;i<=end;i++){
+    html+=`<button class="act-btn ${i===page?'pri':''}" onclick="gotoPage(${i})">${i}</button>`;
+  }
+  html+=`<button class="act-btn" ${page>=pages?'disabled':''} onclick="gotoPage(${page+1})">›</button>`;
+  btns.innerHTML=html;
+}
+function gotoPage(p){ state.page=p; fetchData(); }
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg,ok=true){const w=document.getElementById('toastWrap');const d=document.createElement('div');d.className='toast-item '+(ok?'ok':'err');d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;w.appendChild(d);setTimeout(()=>d.remove(),3500);}
+
+// ── Profiles ─────────────────────────────────────────────
+window._pm={};
+fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+function getProfileId(acct,mkt){return (window._pm||{})[acct+'_'+mkt]||'';}
+
+async function ctrlAddBatch(payloads){
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(d.error) throw new Error(d.error);
+  return d;
+}
+
+// ── Confirm modal ─────────────────────────────────────────
+let _confirmMode='archive';
+function openConfirm(mode){
+  if(!selectedIds.size){ toast('Ничего не выбрано',false); return; }
+  _confirmMode=mode;
+  document.getElementById('confirmCount').textContent=selectedIds.size;
+  if(mode==='delete'){
+    document.getElementById('confirmTitle').textContent='Удалить кампании?';
+    document.getElementById('confirmText').innerHTML=`Будет добавлено <b id="confirmCount">${selectedIds.size}</b> изменений в очередь "Контроль"
+      (POST /adsApi/v1/delete/campaigns). Изменения не применятся к Amazon немедленно —
+      их нужно будет одобрить на странице <b>/control</b>.<br><br>
+      <b style="color:var(--red)">Это полное удаление кампании из Amazon Ads — действие необратимо.</b>`;
+    document.getElementById('confirmBtn').textContent='Удалить';
+  } else {
+    document.getElementById('confirmTitle').textContent='Архивировать кампании?';
+    document.getElementById('confirmText').innerHTML=`Будет добавлено <b id="confirmCount">${selectedIds.size}</b> изменений в очередь "Контроль"
+      (статус → <b>ARCHIVED</b>). Изменения не применятся к Amazon немедленно —
+      их нужно будет одобрить на странице <b>/control</b>.<br><br>
+      Архивация необратима через Amazon Ads UI/API напрямую — переключить кампанию
+      обратно в Enabled/Paused после архивации нельзя.`;
+    document.getElementById('confirmBtn').textContent='Архивировать';
+  }
+  document.getElementById('confirmModal').classList.add('on');
+}
+function closeConfirm(){ document.getElementById('confirmModal').classList.remove('on'); }
+
+async function submitAction(){
+  const ids=[...selectedIds];
+  const payloads=[];
+  for(const cid of ids){
+    const tr=document.querySelector(`tr[data-cid="${cid}"]`);
+    if(!tr) continue;
+    const mkt=tr.dataset.mkt;
+    const oldState=tr.dataset.state||'';
+    if(_confirmMode==='archive'){
+      if(oldState.toUpperCase()==='ARCHIVED') continue; // уже архивная
+      payloads.push({
+        account_type: state.acct,
+        marketplace: mkt,
+        profile_id: getProfileId(state.acct,mkt),
+        entity_type: 'campaign',
+        entity_id: cid,
+        field_name: 'state',
+        old_value: oldState,
+        new_value: 'ARCHIVED'
+      });
+    } else {
+      payloads.push({
+        account_type: state.acct,
+        marketplace: mkt,
+        profile_id: getProfileId(state.acct,mkt),
+        entity_type: 'campaign_delete',
+        entity_id: cid,
+        field_name: '—',
+        old_value: oldState,
+        new_value: 'DELETED'
+      });
+    }
+  }
+  closeConfirm();
+  if(!payloads.length){ toast('Нечего отправить (всё уже архивное)',false); return; }
+  try{
+    const r=await ctrlAddBatch(payloads);
+    const ok=r.inserted||0, fail=(r.errors||[]).length;
+    const verb=_confirmMode==='delete'?'удалений':'архивирований';
+    toast(`В очередь добавлено: ${ok} ${verb}${fail?', ошибок: '+fail:''}. Подтвердите на /control`,fail===0);
+    clearSelection();
+    fetchData();
+  }catch(err){
+    toast(err.message,false);
+  }
+}
+
+// ── Init ───────────────────────────────────────────────
+loadPortfolios();
+fetchData();
+</script>
+</body>
+</html>

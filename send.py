@@ -207,6 +207,8 @@ def update_campaigns_bq(bq, account_type, marketplace, updates):
             sql = f"UPDATE `{table}` SET ad_state='{val}' WHERE ad_id='{eid}' AND marketplace='{mkt}'"
         elif et in ("negative_delete",):
             sql = f"DELETE FROM `{table}` WHERE keyword_id='{eid}' AND marketplace='{mkt}' AND entity_type='negative_keyword'"
+        elif et == "campaign_delete":
+            sql = f"DELETE FROM `{table}` WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
         else:
             continue  # keyword_add, negative_add — вставка, не обновление
 
@@ -235,6 +237,7 @@ def group_changes(changes):
         "delete_targets":    [],
         "create_ad_groups":  [],
         "create_campaigns":  [],
+        "delete_campaigns":  [],
     }
     for c in changes:
         et = c["entity_type"]
@@ -262,6 +265,8 @@ def group_changes(changes):
             groups["delete_targets"].append(c)
         elif et == "campaign_create":
             groups["create_campaigns"].append(c)
+        elif et == "campaign_delete":
+            groups["delete_campaigns"].append(c)
         else:
             print(f"  Неизвестный тип: {et}/{fn}, пропускаем")
     return groups
@@ -530,6 +535,25 @@ def send_delete_targets(endpoint, headers, changes, dry_run=False):
 
     resp = amz_post(endpoint, "/adsApi/v1/delete/targets", headers, {"targets": payloads})
     return parse_multi_response(resp, "targets", len(changes))
+
+
+def send_delete_campaigns(endpoint, headers, changes, dry_run=False):
+    """Удалить кампании целиком (POST /adsApi/v1/delete/campaigns, до 1000 за раз)"""
+    campaign_ids = [c["entity_id"] for c in changes]
+
+    if dry_run:
+        print(f"  [DRY RUN] delete/campaigns: {campaign_ids}")
+        return {i: "SUCCESS" for i in range(len(changes))}
+
+    resp = amz_post(endpoint, "/adsApi/v1/delete/campaigns", headers, {"campaignIds": campaign_ids})
+    print(f"  [DEBUG] delete/campaigns status={resp.status_code}")
+    try:
+        rj = resp.json()
+        print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:600]}")
+    except Exception:
+        print(f"  [DEBUG] raw: {resp.text[:400]}")
+
+    return parse_multi_response(resp, "campaigns", len(changes))
 
 
 def send_create_campaigns(endpoint, headers, changes, dry_run=False):
@@ -1040,6 +1064,7 @@ def send_changes(account_type="MERCH", marketplace_filter=None, dry_run=False):
             ("delete_targets",    send_delete_targets),
             ("create_ad_groups",  send_create_ad_groups),
             ("create_campaigns",  send_create_campaigns),
+            ("delete_campaigns",  send_delete_campaigns),
         ]
 
         mkt_success   = []

@@ -1793,3 +1793,76 @@ for kw in g.get("keywords", []):
 ### Live-проверенный результат (11.06.2026)
 4 кампании (2 AUTO + 2 MANUAL) → 5 ad groups → 5 product ads → 14 keywords,
 все шаги `✓ Готово: 4 успешно, 0 с ошибками`, включая placementBidAdjustments inline.
+
+---
+
+## Страница "Удаление кампаний" (/campaigns-deleting) — июнь 2026
+
+### Назначение
+Массовый просмотр, архивация и удаление кампаний из Amazon Ads. Создана для очистки
+большого числа тестовых кампаний (созданных через Campaign Builder).
+
+### Фронтенд: campaigns_deleting.html
+- Та же модель фильтров/статистики, что в campaigns_analytics.html (без drill-down):
+  аккаунт MERCH/KDP, даты, маркетплейс, портфолио, таргетинг, статус (включая ARCHIVED),
+  активность, поиск по названию.
+- Таблица кампаний с чекбоксами слева, sortable-колонки.
+- При выборе строк появляется панель действий:
+  - **📦 Архивировать выбранные** — campaign.state → ARCHIVED через update/campaigns
+  - **🗑️ Удалить выбранные** — полное удаление через delete/campaigns
+- Confirm-модалка адаптируется под выбранное действие, показывает количество и предупреждение
+  о необратимости.
+- Уже-`ARCHIVED` кампании пропускаются при архивации (Amazon не позволяет повторный переход).
+- Маршрут зарегистрирован в `analytics_routes.py`: `GET /campaigns-deleting` →
+  `send_from_directory(BASE_DIR, 'campaigns_deleting.html')`.
+- Карточка добавлена на главную `/` (раздел "Управление").
+
+### Backend: send.py — send_delete_campaigns()
+```python
+def send_delete_campaigns(endpoint, headers, changes, dry_run=False):
+    """Удалить кампании целиком (POST /adsApi/v1/delete/campaigns, до 1000 за раз)"""
+    campaign_ids = [c["entity_id"] for c in changes]
+    resp = amz_post(endpoint, "/adsApi/v1/delete/campaigns", headers, {"campaignIds": campaign_ids})
+    return parse_multi_response(resp, "campaigns", len(changes))
+```
+- Новый `entity_type='campaign_delete'` в `group_changes()` → группа `delete_campaigns`,
+  зарегистрирована в `send_funcs` dispatch (после `create_campaigns`).
+- `update_campaigns_bq()`: при успехе `campaign_delete` → `DELETE FROM campaigns_table
+  WHERE campaign_id=... AND marketplace=...` (полная очистка из BQ).
+
+### Backend: control_routes.py
+- `campaign_delete` добавлен в `ALLOWED_OPS` (`["—"]`) и в `LABELS`
+  (`"🗑️ Удалить кампанию"`).
+- `campaign_delete` добавлен в `NO_DUP_CHECK` (оба места — `/control/add` и
+  `/control/add_batch`), иначе `/control/add_batch` возвращал
+  `400 "не поддерживается в batch"`.
+- `camp_ids` для подтягивания `campaign_name` в `/control/pending` теперь объединяет
+  `by_type["campaign"]` и `by_type["campaign_delete"]`, чтобы названия кампаний
+  отображались и для записей на удаление.
+
+### Workflow удаления
+1. Выбор кампаний на `/campaigns-deleting` → "Удалить" → confirm
+2. Batch `entity_type='campaign_delete', field_name='—', new_value='DELETED'`
+   → `POST /control/add_batch` → запись в `pending_changes_merch/kdp` (status=PENDING)
+3. Одобрение на `/control` (label "🗑️ Удалить кампанию", имя кампании подтягивается)
+4. `send.py` → `send_delete_campaigns` → `POST /adsApi/v1/delete/campaigns`
+5. При успехе строка кампании удаляется из `campaigns_merch/kdp` в BigQuery
+
+### Важный баг-фикс (та же сессия): _AMZ NameError в control_routes.py
+В какой-то момент в `control_routes.py` пропал блок загрузки секретов:
+```python
+AMZ_SECRETS_PATH = os.path.join(BASE_DIR, 'config', 'amazon_secrets.json')
+with open(AMZ_SECRETS_PATH) as _f:
+    _AMZ = json.load(_f)
+```
+Без него `/control/profiles` падал с `NameError: name '_AMZ' is not defined` (500),
+из-за чего фронтенд получал пустой `profile_id` и `/control/add_batch` возвращал
+400 "Нет валидных элементов". Блок восстановлен сразу после `BASE_DIR/PROJECT_ID/DATASET`.
+
+### Известный риск при ручном редактировании файлов через str_replace
+При добавлении `send_delete_campaigns` в send.py случайно была удалена строка
+`def send_create_campaigns(endpoint, headers, changes, dry_run=False):` — остался
+docstring без `def`, что вызывало `NameError: name 'send_create_campaigns' is not defined`
+при обращении к dispatch-таблице `send_funcs`. После каждой правки длинных файлов
+через `str_replace` — обязательно `python3 -m py_compile` + `diff` с версией на GitHub
+перед коммитом, проверяя что не пропали соседние строки/определения функций.

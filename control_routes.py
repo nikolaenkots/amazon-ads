@@ -28,6 +28,10 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
+AMZ_SECRETS_PATH = os.path.join(BASE_DIR, 'config', 'amazon_secrets.json')
+with open(AMZ_SECRETS_PATH) as _f:
+    _AMZ = json.load(_f)
+
 PENDING_TABLES = {
     "MERCH": f"{PROJECT_ID}.{DATASET}.pending_changes_merch",
     "KDP":   f"{PROJECT_ID}.{DATASET}.pending_changes_kdp",
@@ -54,6 +58,7 @@ ALLOWED_OPS = {
     "ad_group_add":       ["—"],  # new_value = JSON {name, default_bid, campaign_id}
     "product_ad_add":     ["—"],  # new_value = JSON {asin, campaign_id, ad_group_id?, ad_group_name?}
     "product_ad":         ["state"],
+    "campaign_delete":    ["—"],   # entity_id = campaign_id, удаление кампании целиком
 }
 
 LABELS = {
@@ -76,6 +81,7 @@ LABELS = {
     ("ad_group_add","—"):          lambda nv: f'➕ Новая группа: {nv[:60]}',
     ("product_ad",  "state"):       lambda nv: "▶ Включить объявление" if nv == "ENABLED" else "⏸ Выключить объявление",
     ("product_ad_add","—"):         lambda nv: f'🖼 Объявление ASIN: {nv[:60]}',
+    ("campaign_delete","—"):        lambda nv: '🗑️ Удалить кампанию',
 }
 
 
@@ -145,7 +151,7 @@ def add_change():
     table = PENDING_TABLES[account_type]
 
     # Для операций добавления разрешаем несколько записей (несколько минусов/ключей в одну группу)
-    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add'}
+    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add', 'campaign_delete'}
     if entity_type not in NO_DUP_CHECK:
         fn_clause = f"AND field_name = '{field_name}'" if field_name != '—' else ''
         dup_sql = f"""
@@ -202,7 +208,7 @@ def add_change_batch():
     if len(items) > 500:
         return jsonify({"error": "Максимум 500 элементов за раз"}), 400
 
-    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add'}
+    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add', 'campaign_delete'}
 
     rows = []
     now  = datetime.now(tz=timezone.utc).isoformat()
@@ -432,7 +438,7 @@ def get_pending():
             pass
 
     # Кампании → campaign_name
-    camp_ids = by_type.get("campaign", set())
+    camp_ids = by_type.get("campaign", set()) | by_type.get("campaign_delete", set())
     if camp_ids:
         fetch_names(camp_ids, "campaign_id", "campaign_name",
                     "AND entity_type = 'campaign'")
