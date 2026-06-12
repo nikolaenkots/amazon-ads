@@ -259,6 +259,22 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
     <span class="mode-lbl">Режим</span>
     <button class="mbt on" id="mbGroups" onclick="setMode('groups')">Группы</button>
     <button class="mbt" id="mbTargets" onclick="setMode('targets')">Таргеты</button>
+    <!-- group filters -->
+    <div class="sep" id="grpSep1"></div>
+    <span class="ttype-lbl" id="grpTgtTypeLbl">тип</span>
+    <div class="ttype-btns" id="grpTgtTypeBtns">
+      <button class="ttype-btn on" onclick="setGroupTgtType('')">Все</button>
+      <button class="ttype-btn" onclick="setGroupTgtType('AUTO')">Авто</button>
+      <button class="ttype-btn" onclick="setGroupTgtType('MANUAL')">Ручная</button>
+    </div>
+    <div class="sep" id="grpSep2"></div>
+    <span class="ttype-lbl" id="grpStateLbl">статус</span>
+    <div class="ttype-btns" id="grpStateBtns">
+      <button class="ttype-btn on" onclick="setGroupState('')">Все</button>
+      <button class="ttype-btn" onclick="setGroupState('ENABLED')">Активные</button>
+      <button class="ttype-btn" onclick="setGroupState('PAUSED')">На паузе</button>
+    </div>
+    <!-- target type filters -->
     <div class="sep" id="typeSep" style="display:none"></div>
     <span class="ttype-lbl" id="ttypeLbl" style="display:none">Тип</span>
     <div class="ttype-btns" id="ttypeBtns" style="display:none">
@@ -356,7 +372,7 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-let S={acct:'MERCH',mode:'groups',ttype:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
+let S={acct:'MERCH',mode:'groups',ttype:'',groupTgtType:'',groupState:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
 
 (function(){
   const now=new Date();
@@ -367,6 +383,10 @@ let S={acct:'MERCH',mode:'groups',ttype:'',df:'',dt:'',mkt:'',portfolios:[],pfs:
   S.df=from; S.dt=to;
   setMkts('MERCH');
   loadPortfolios();
+  // init mode-row visibility (groups mode by default)
+  ['grpSep1','grpSep2','grpTgtTypeLbl','grpTgtTypeBtns','grpStateLbl','grpStateBtns'].forEach(id=>{
+    document.getElementById(id).style.display='';
+  });
   load(1);
   fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
 })();
@@ -392,12 +412,31 @@ function setMode(m){
   S.mode=m; S.sort='clicks'; S.dir='desc'; S.page=1;
   document.getElementById('mbGroups').classList.toggle('on',m==='groups');
   document.getElementById('mbTargets').classList.toggle('on',m==='targets');
-  const show=m==='targets';
-  document.getElementById('typeSep').style.display=show?'':'none';
-  document.getElementById('ttypeLbl').style.display=show?'':'none';
-  document.getElementById('ttypeBtns').style.display=show?'':'none';
-  document.getElementById('tblTitle').textContent=m==='groups'?'Группы объявлений':'Таргеты';
-  document.getElementById('sumLbl').textContent=m==='groups'?'Групп':'Таргетов';
+  const isG=m==='groups', isT=m==='targets';
+  ['grpSep1','grpSep2','grpTgtTypeLbl','grpTgtTypeBtns','grpStateLbl','grpStateBtns'].forEach(id=>{
+    document.getElementById(id).style.display=isG?'':'none';
+  });
+  document.getElementById('typeSep').style.display=isT?'':'none';
+  document.getElementById('ttypeLbl').style.display=isT?'':'none';
+  document.getElementById('ttypeBtns').style.display=isT?'':'none';
+  document.getElementById('tblTitle').textContent=isG?'Группы объявлений':'Таргеты';
+  document.getElementById('sumLbl').textContent=isG?'Групп':'Таргетов';
+  load(1);
+}
+
+function setGroupTgtType(t){
+  S.groupTgtType=t;
+  document.querySelectorAll('#grpTgtTypeBtns .ttype-btn').forEach((b,i)=>{
+    b.classList.toggle('on',['','AUTO','MANUAL'][i]===t);
+  });
+  load(1);
+}
+
+function setGroupState(s){
+  S.groupState=s;
+  document.querySelectorAll('#grpStateBtns .ttype-btn').forEach((b,i)=>{
+    b.classList.toggle('on',['','ENABLED','PAUSED'][i]===s);
+  });
   load(1);
 }
 
@@ -484,11 +523,13 @@ function load(pg){
   S.name=document.getElementById('srch').value.trim();
   S.state=document.getElementById('stateF').value;
   S.campState=document.getElementById('campStateF').value;
+  const stateVal=S.mode==='groups'?S.groupState:S.state;
   const params=new URLSearchParams({
     account_type:S.acct,mode:S.mode,date_from:S.df,date_to:S.dt,
     marketplace:S.mkt,portfolio_ids:S.portfolios.join(','),
-    name:S.name,state:S.state,campaign_state:S.campState,
-    target_type:S.ttype,sort_by:S.sort,sort_dir:S.dir,
+    name:S.name,state:stateVal,campaign_state:S.campState,
+    target_type:S.ttype,group_targeting_type:S.groupTgtType,
+    sort_by:S.sort,sort_dir:S.dir,
     page:S.page,per_page:S.perPage
   });
   for(const[k,v]of Object.entries(S.numFilters)){
@@ -605,23 +646,47 @@ function renderTargets(rows){
     ${thNum('acos','ACoS')}
   </tr>`;
   if(!rows.length){tbody.innerHTML='<tr><td colspan="13" class="te">Нет данных</td></tr>';return;}
-  tbody.innerHTML=rows.map(r=>`<tr class="dr" style="cursor:default">
-    <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
-    <td>${kwTypeBadge(r.keyword_type)}</td>
-    <td><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span></td>
-    <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.campaign_name||'—')}</span>
-      <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
-    </div></td>
-    <td class="r"><span class="n">${r.bid!=null?'$'+r.bid.toFixed(2):'—'}</span></td>
-    <td>${stateBadge(r.target_state)}</td>
-    <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
-    <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
-    <td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td>
-    <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td>
-    <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td>
-    <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
-    <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
-  </tr>`).join('');
+  tbody.innerHTML=rows.map((r,ri)=>{
+    const ownBid=r.bid!=null?Number(r.bid).toFixed(2):null;
+    const grpBid=r.ad_group_default_bid!=null?Number(r.ad_group_default_bid).toFixed(2):null;
+    const displayBid=ownBid||grpBid;
+    const isGrpBid=!ownBid&&grpBid!=null;
+    const eid=esc(String(r.keyword_id||ri));
+    const itType=r.match_type?'keyword':'target';
+    const bidId='tbid_fl_'+ri;
+    const bidCell=displayBid
+      ?`<span id="${bidId}">
+          <button class="bid-btn${isGrpBid?' grp':''}" title="${isGrpBid?'Ставка группы':''}"
+            onclick="event.stopPropagation();openBidEdit('${bidId}')">$${displayBid}${isGrpBid?' (г)':''}</button>
+          <span class="bid-edit">
+            <input class="bid-inp" type="number" value="${displayBid}" min="0.02" step="0.01"
+              onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(r.marketplace||'')}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
+              onclick="event.stopPropagation()">
+            <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(r.marketplace||'')}')">✓</button>
+            <button class="bid-cx" onclick="event.stopPropagation();closeBidEdit('${bidId}')">✕</button>
+          </span>
+        </span>`
+      :'<span class="dv">—</span>';
+    return `<tr class="dr" style="cursor:default">
+      <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
+      <td>${kwTypeBadge(r.keyword_type)}</td>
+      <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span>
+        <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.group_state)}</div>
+      </div></td>
+      <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.campaign_name||'—')}</span>
+        <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
+      </div></td>
+      <td class="r">${bidCell}</td>
+      <td>${stateBadge(r.target_state)}</td>
+      <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
+      <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
+      <td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td>
+      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td>
+      <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
+      <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Group expand ──────────────────────────────────────────
@@ -667,24 +732,31 @@ function loadGroupDetail(gid,mkt,el){
 function renderGroupDetail(el,d,gid,mkt){
   const tgts=d.targets||[];
   const negs=d.negatives||[];
+  const sts=d.search_terms||[];
   const gi=d.group_info||{};
   const cid=esc(gi.campaign_id||'');
   const groupBid=gi.ad_group_default_bid;
+  const egid=esc(gid);
+  const emkt=esc(mkt);
 
   el.innerHTML=`
     <div class="gg-head">
-      <span class="gg-title">Группа · ${tgts.length} таргетов · ${negs.length} минус слов${groupBid?' · ставка группы $'+groupBid.toFixed(2):''}</span>
+      <span class="gg-title">Группа · ${tgts.length} таргетов · ${negs.length} минус слов · ${sts.length} запросов${groupBid?' · ставка $'+groupBid.toFixed(2):''}</span>
       <div class="gg-acts">
-        <button class="act-btn" onclick="openAddKw('${esc(gid)}','${cid}','${esc(mkt)}')">+ Ключевое слово</button>
-        <button class="act-btn" onclick="openAddNeg('${esc(gid)}','${cid}','${esc(mkt)}')">+ Минус слово</button>
+        <button class="act-btn st-neg-btn" id="stnb_${egid}" style="display:none;background:var(--accent);color:#fff;border-color:var(--accent)"
+          onclick="openNegFromSt('${egid}','${cid}','${emkt}')">→ Минус (<span class="st-neg-cnt" id="stnc_${egid}">0</span>)</button>
+        <button class="act-btn" onclick="openAddKw('${egid}','${cid}','${emkt}')">+ Ключевое слово</button>
+        <button class="act-btn" onclick="openAddNeg('${egid}','${cid}','${emkt}')">+ Минус слово</button>
       </div>
     </div>
-    <div class="itabs" id="itabs_${esc(gid)}">
-      <div class="itab on" onclick="switchITab(this,'itp_tgts_${esc(gid)}')">Таргеты <span class="itb">${tgts.length}</span></div>
-      <div class="itab" onclick="switchITab(this,'itp_negs_${esc(gid)}')">Минус слова <span class="itb">${negs.length}</span></div>
+    <div class="itabs" id="itabs_${egid}">
+      <div class="itab on" onclick="switchITab(this,'itp_tgts_${egid}')">Таргеты <span class="itb">${tgts.length}</span></div>
+      <div class="itab" onclick="switchITab(this,'itp_st_${egid}')">Поисковые запросы <span class="itb">${sts.length}</span></div>
+      <div class="itab" onclick="switchITab(this,'itp_negs_${egid}')">Минус слова <span class="itb">${negs.length}</span></div>
     </div>
-    <div class="itp on" id="itp_tgts_${esc(gid)}">${renderGroupTargets(tgts,gid,mkt,groupBid)}</div>
-    <div class="itp" id="itp_negs_${esc(gid)}">${renderGroupNegatives(negs)}</div>
+    <div class="itp on" id="itp_tgts_${egid}">${renderGroupTargets(tgts,gid,mkt,groupBid)}</div>
+    <div class="itp" id="itp_st_${egid}">${renderGroupSearchTerms(sts,gid)}</div>
+    <div class="itp" id="itp_negs_${egid}">${renderGroupNegatives(negs)}</div>
   `;
 }
 
@@ -757,6 +829,56 @@ function renderGroupNegatives(rows){
     <span><span class="b bm">${esc(r.match_type||'—')}</span></span>
     <span>${stateBadge(r.keyword_state)}</span>
   </div>`).join('');
+}
+
+function renderGroupSearchTerms(rows,gid){
+  if(!rows.length)return'<div class="ge">Нет поисковых запросов</div>';
+  const hdr=`<div class="ih2" style="grid-template-columns:20px 1fr 90px 70px 65px 65px 88px 85px 72px">
+    <span style="text-align:left"></span>
+    <span style="text-align:left">Запрос</span>
+    <span style="text-align:left">Таргет/Тип</span>
+    <span>Показы</span><span>Клики</span>
+    <span>Расход</span><span>Продажи</span><span>Заказы</span><span>ACoS</span>
+  </div>`;
+  const egid=esc(gid);
+  return hdr+rows.map((r,i)=>{
+    const isAuto=r.keyword_type&&r.keyword_type.includes('EXPRESSION');
+    const mt=isAuto?'AUTO':(r.match_type||'');
+    const kw=isAuto?(r.keyword||r.targeting||'—'):(r.keyword||'—');
+    const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,14):'')):kw.slice(0,18);
+    return `<div class="ii2" style="grid-template-columns:20px 1fr 90px 70px 65px 65px 88px 85px 72px">
+      <span><input type="checkbox" class="st-cb" data-term="${esc(r.search_term||'')}" data-gid="${egid}"
+        style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer"
+        onchange="stCbChange('${egid}')" onclick="event.stopPropagation()"></span>
+      <span class="it2" title="${esc(r.search_term||'')}">${esc(r.search_term||'—')}</span>
+      <span class="ir2" style="font-size:10px" title="${esc(mt+' '+kw)}">${esc(combined)}</span>
+      <span class="ir2">${fmtNum(r.impressions)}</span>
+      <span class="ir2">${fmtNum(r.clicks)}</span>
+      <span class="ir2 ${(r.cost||0)>0?'an':''}">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span>
+      <span class="ir2 ${(r.sales_14d||0)>0?'gn':''}">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span>
+      <span class="ir2">${fmtNum(r.purchases_14d)}</span>
+      <span class="ir2 ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+function stCbChange(gid){
+  const cnt=document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`).length;
+  const btn=document.getElementById('stnb_'+gid);
+  const cntEl=document.getElementById('stnc_'+gid);
+  if(btn){btn.style.display=cnt?'':'none';}
+  if(cntEl)cntEl.textContent=cnt;
+}
+
+function openNegFromSt(gid,cid,mkt){
+  const cbs=document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`);
+  if(!cbs.length){toast('Выберите поисковые запросы',false);return;}
+  const terms=Array.from(cbs).map(cb=>cb.dataset.term.trim()).filter(Boolean);
+  document.getElementById('mnGid').value=gid;
+  document.getElementById('mnCid').value=cid;
+  document.getElementById('mnMkt').value=mkt;
+  document.getElementById('mnText').value=terms.join('\n');
+  openModal('modalNeg');
 }
 
 // ── Bid edit ──────────────────────────────────────────────
