@@ -12,14 +12,14 @@
   --text:#18181c;--muted:#6b6b7a;--dim:#aaaaB8;
   --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
   --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
-  --red:#d94040;--red-bd:rgba(217,64,64,.22);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
   --amber:#b07800;
   --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
   --purple:#6c3fc9;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-anchor:none}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
-
 header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
 .logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
@@ -27,9 +27,7 @@ nav{display:flex;gap:2px}
 nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
 nav a:hover{color:var(--text);background:var(--surface2)}
 nav a.active{color:var(--accent);background:var(--accent-bg)}
-
 main{padding:18px 32px;max-width:1720px;margin:0 auto}
-
 .fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
 .fg{display:flex;flex-direction:column;gap:4px}
@@ -40,8 +38,9 @@ main{padding:18px 32px;max-width:1720px;margin:0 auto}
 .atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
 .atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
-.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
-.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover:not(:disabled){background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover:not(:disabled){background:var(--surface2)}
 .mode-row{display:flex;align-items:center;gap:8px;padding-top:10px;margin-top:10px;border-top:1px solid var(--border)}
 .mode-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .mbt{height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
@@ -51,6 +50,7 @@ main{padding:18px 32px;max-width:1720px;margin:0 auto}
 .ttype-btns{display:flex;gap:3px}
 .ttype-btn{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;color:var(--muted);transition:all .15s}
 .ttype-btn.on{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-bd)}
+/* portfolio dropdown */
 .pdw{position:relative}
 .pdt{height:34px;min-width:180px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
 .pdt:hover,.pdt.on{border-color:var(--accent)}
@@ -64,11 +64,13 @@ main{padding:18px 32px;max-width:1720px;margin:0 auto}
 .pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
 .pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pd-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+/* stats */
 .sr{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:14px}
 .sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
 .sv{font-size:16px;font-weight:600}
 .sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
+/* table */
 .tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
 .tt{font-size:14px;font-weight:600}
@@ -87,6 +89,14 @@ tr.dr.exp{background:var(--accent-bg)}
 td{padding:9px 11px;vertical-align:middle}
 tr.er td{padding:0}
 .ei{background:#f7f7fb;border-top:2px solid var(--accent-bd)}
+/* expand inner – groups style like products */
+.gg{margin:10px;border:1px solid var(--border);border-radius:6px;overflow:visible}
+.gg-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
+.gg-title{font-size:12px;color:var(--muted)}
+.gg-acts{display:flex;gap:4px;align-items:center}
+.act-btn{height:26px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.act-btn:hover{background:var(--surface2)}
+/* tabs */
 .itabs{display:flex;border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px}
 .itab{padding:5px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
 .itab:hover{color:var(--text)}
@@ -94,14 +104,15 @@ tr.er td{padding:0}
 .itb{display:inline-block;min-width:15px;padding:0 3px;margin-left:3px;border-radius:99px;font-size:9px;background:var(--surface2);color:var(--dim);text-align:center}
 .itab.on .itb{background:var(--accent-bg);color:var(--accent)}
 .itp{display:none}.itp.on{display:block}
+/* inner table header/rows */
 .ih2{display:grid;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
 .ih2 span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
 .ih2 span:first-child,.ih2 span:nth-child(2){text-align:left}
 .ii2{display:grid;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
 .ii2:last-child{border-bottom:none}
 .ii2:hover{background:var(--surface2)}
-.grid-tgts{grid-template-columns:22px 1fr 90px 80px 70px 65px 88px 85px 72px}
-.grid-negs{grid-template-columns:22px 1fr 90px 100px}
+.grid-tgts{grid-template-columns:20px 1fr 80px 100px 70px 65px 88px 85px 72px}
+.grid-negs{grid-template-columns:20px 1fr 90px 100px}
 .it2{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ir2{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted);white-space:nowrap}
 .ge{padding:12px;text-align:center;color:var(--dim);font-size:11px}
@@ -121,7 +132,7 @@ tr.er td{padding:0}
 td.r{text-align:right}
 .gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
 .ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
-.eb{background:rgba(217,64,64,.07);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
+.eb{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
 .te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
 .sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -142,20 +153,46 @@ thead th.s .sa{opacity:1;color:var(--accent)}
 .th-fi{width:14px;height:14px;display:flex;align-items:center;justify-content:center;border-radius:3px;cursor:pointer;color:var(--dim);flex-shrink:0;transition:color .1s}
 .th-fi:hover{color:var(--accent);background:var(--accent-bg)}
 .th-fi.on{color:var(--accent)}
-.npop{position:absolute;top:calc(100%+4px);right:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none}
+.npop{position:absolute;top:calc(100% + 4px);right:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none}
 .npop.op{display:block}
 .npop-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
 .npop-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
 .npop-op{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 6px;outline:none;flex-shrink:0}
-.npop-op:focus{border-color:var(--accent)}
 .npop-v{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 7px;outline:none;flex:1;min-width:0}
-.npop-v:focus{border-color:var(--accent)}
 .npop-acts{display:flex;gap:6px;margin-top:8px}
 .npop-apply{height:26px;padding:0 10px;border-radius:5px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:500;cursor:pointer}
 .npop-apply:hover{background:#a83d10}
 .npop-clear{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
 .npop-clear:hover{background:var(--surface2)}
 .stl{padding:18px;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+/* bid edit */
+.bid-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);padding:1px 4px;border-radius:3px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.bid-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd)}
+.bid-btn.grp{color:var(--dim);font-style:italic}
+.bid-edit{display:none;align-items:center;gap:4px}
+.bid-edit.on{display:inline-flex}
+.bid-inp{width:64px;height:26px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:12px;padding:0 6px;outline:none;background:var(--surface);color:var(--text)}
+.bid-ok{height:26px;min-width:28px;padding:0 8px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.bid-ok:hover{background:#a83d10}
+.bid-cx{height:26px;min-width:26px;padding:0 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.bid-cx:hover{background:var(--surface2)}
+/* modals */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;font-family:'DM Mono',monospace}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* toast */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}
+.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -186,28 +223,28 @@ thead th.s .sa{opacity:1;color:var(--accent)}
     </div>
     <div class="fg"><div class="fl">Дата от</div><input type="date" id="df" style="width:148px"></div>
     <div class="fg"><div class="fl">Дата до</div><input type="date" id="dt" style="width:148px"></div>
-    <div class="fg"><div class="fl">Маркетплейс</div><select id="mkt" style="width:100px"></select></div>
+    <div class="fg"><div class="fl">Маркетплейс</div><select id="mkt" style="width:100px" onchange="loadPortfolios()"></select></div>
     <div class="fg"><div class="fl">Портфолио</div>
       <div class="pdw" id="pdw">
         <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
         <svg class="pda" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         <div class="pdd" id="pdd">
           <input class="pds" id="pds" placeholder="Поиск…" oninput="pfSearch(this.value)">
-          <div id="pdlist"></div>
+          <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
         </div>
       </div>
     </div>
-    <div class="fg"><div class="fl">Поиск</div><input type="text" id="srch" placeholder="Название…" style="width:200px" onkeydown="if(event.key==='Enter')load(1)"></div>
+    <div class="fg"><div class="fl">Поиск</div><input type="text" id="srch" placeholder="Название…" style="width:180px" onkeydown="if(event.key==='Enter')load(1)"></div>
     <div class="fg"><div class="fl">Статус</div>
-      <select id="stateF" style="width:120px">
+      <select id="stateF" style="width:110px">
         <option value="">Все</option>
         <option value="ENABLED">Активные</option>
         <option value="PAUSED">Паузные</option>
         <option value="ARCHIVED">Архив</option>
       </select>
     </div>
-    <div class="fg"><div class="fl">Статус кампании</div>
-      <select id="campStateF" style="width:120px">
+    <div class="fg"><div class="fl">Кампания</div>
+      <select id="campStateF" style="width:110px">
         <option value="">Все</option>
         <option value="ENABLED">Активные</option>
         <option value="PAUSED">Паузные</option>
@@ -232,7 +269,9 @@ thead th.s .sa{opacity:1;color:var(--accent)}
     </div>
   </div>
 </div>
+
 <div class="eb" id="err" style="display:none"></div>
+
 <div class="sr" id="sumRow">
   <div class="sc"><div class="sl" id="sumLbl">Групп</div><div class="sv" id="sumTotal">—</div></div>
   <div class="sc"><div class="sl">Показы</div><div class="sv b" id="sumImpr">—</div></div>
@@ -243,6 +282,7 @@ thead th.s .sa{opacity:1;color:var(--accent)}
   <div class="sc"><div class="sl">Заказы</div><div class="sv" id="sumPurch">—</div></div>
   <div class="sc"><div class="sl">ACoS</div><div class="sv" id="sumAcos">—</div></div>
 </div>
+
 <div class="tw">
   <div class="thr">
     <span class="tt" id="tblTitle">Группы объявлений</span>
@@ -256,41 +296,619 @@ thead th.s .sa{opacity:1;color:var(--accent)}
 </div>
 </main>
 
+<!-- modal: add keyword -->
+<div class="modal-bg" id="modalKw">
+  <div class="modal">
+    <div class="modal-title">+ Ключевое слово</div>
+    <input type="hidden" id="mkwGid">
+    <input type="hidden" id="mkwCid">
+    <input type="hidden" id="mkwMkt">
+    <div class="modal-row">
+      <div class="modal-label">Слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mkwText" placeholder="running shoes&#10;yoga mat"></textarea>
+    </div>
+    <div class="modal-row" style="flex-direction:row;gap:10px">
+      <div style="flex:1">
+        <div class="modal-label">Match type</div>
+        <select class="modal-inp" id="mkwMatch">
+          <option value="EXACT">EXACT</option>
+          <option value="PHRASE">PHRASE</option>
+          <option value="BROAD">BROAD</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="modal-label">Ставка ($)</div>
+        <input class="modal-inp" id="mkwBid" type="number" value="0.50" min="0.02" step="0.01">
+      </div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalKw')">Отмена</button>
+      <button class="btn btn-p" onclick="submitAddKw()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: add negative -->
+<div class="modal-bg" id="modalNeg">
+  <div class="modal">
+    <div class="modal-title">+ Минус слово</div>
+    <input type="hidden" id="mnGid">
+    <input type="hidden" id="mnCid">
+    <input type="hidden" id="mnMkt">
+    <div class="modal-row">
+      <div class="modal-label" id="mnTextLabel">Слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mnText" placeholder="free&#10;cheap"></textarea>
+    </div>
+    <div class="modal-row" id="mnMatchRow">
+      <div class="modal-label">Match type</div>
+      <select class="modal-inp" id="mnMatch">
+        <option value="NEGATIVE_EXACT">NEGATIVE_EXACT</option>
+        <option value="NEGATIVE_PHRASE">NEGATIVE_PHRASE</option>
+      </select>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalNeg')">Отмена</button>
+      <button class="btn btn-p" onclick="submitAddNeg()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
 <script>
-let S={acct:'MERCH',mode:'groups',ttype:'',df:'',dt:'',mkt:'',portfolios:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
-let allPortfolios=[];
-(function(){const now=new Date();const to=fmtDate(now);const from=fmtDate(new Date(now-30*864e5));document.getElementById('df').value=from;document.getElementById('dt').value=to;S.df=from;S.dt=to;loadPortfolios();load(1);})();
+let S={acct:'MERCH',mode:'groups',ttype:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
+
+(function(){
+  const now=new Date();
+  const to=fmtDate(now);
+  const from=fmtDate(new Date(now-30*864e5));
+  document.getElementById('df').value=from;
+  document.getElementById('dt').value=to;
+  S.df=from; S.dt=to;
+  setMkts('MERCH');
+  loadPortfolios();
+  load(1);
+  fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+})();
+
 function fmtDate(d){return d.toISOString().slice(0,10);}
-function setAcct(a){S.acct=a;document.getElementById('tbM').classList.toggle('on',a==='MERCH');document.getElementById('tbK').classList.toggle('on',a==='KDP');loadPortfolios();load(1);}
-function setMode(m){S.mode=m;S.sort='clicks';S.dir='desc';S.page=1;document.getElementById('mbGroups').classList.toggle('on',m==='groups');document.getElementById('mbTargets').classList.toggle('on',m==='targets');const show=m==='targets';document.getElementById('typeSep').style.display=show?'':'none';document.getElementById('ttypeLbl').style.display=show?'':'none';document.getElementById('ttypeBtns').style.display=show?'':'none';document.getElementById('tblTitle').textContent=m==='groups'?'Группы объявлений':'Таргеты';document.getElementById('sumLbl').textContent=m==='groups'?'Групп':'Таргетов';load(1);}
-function setTType(t){S.ttype=t;document.querySelectorAll('.ttype-btn').forEach((b,i)=>{const vals=['','keyword','auto','product'];b.classList.toggle('on',vals[i]===t);});load(1);}
-function loadPortfolios(){fetch(`/portfolios/list?account_type=${S.acct}`).then(r=>r.json()).then(d=>{allPortfolios=d.portfolios||[];renderPfList('');}).catch(()=>{});}
-function pfToggle(e){e.stopPropagation();const d=document.getElementById('pdd');const t=document.getElementById('pdt');const open=d.classList.toggle('on');t.classList.toggle('on',open);if(open)document.getElementById('pds').focus();}
-function pfSearch(q){renderPfList(q.toLowerCase());}
-function renderPfList(q){const el=document.getElementById('pdlist');const items=allPortfolios.filter(p=>!q||p.portfolio_name.toLowerCase().includes(q));if(!items.length){el.innerHTML='<div class="pd-empty">Нет портфолио</div>';return;}el.innerHTML=items.map(p=>`<label class="pdi"><input type="checkbox" value="${p.portfolio_id}" ${S.portfolios.includes(p.portfolio_id)?'checked':''} onchange="pfChange()"><span>${esc(p.portfolio_name)}</span></label>`).join('');}
-function pfChange(){S.portfolios=[...document.querySelectorAll('#pdlist input:checked')].map(x=>x.value);document.getElementById('pdl').textContent=S.portfolios.length?`${S.portfolios.length} выбрано`:'Все';}
-document.addEventListener('click',e=>{if(!document.getElementById('pdw').contains(e.target)){document.getElementById('pdd').classList.remove('on');document.getElementById('pdt').classList.remove('on');}});
-function load(pg){S.page=pg||1;S.df=document.getElementById('df').value;S.dt=document.getElementById('dt').value;S.mkt=document.getElementById('mkt').value;S.name=document.getElementById('srch').value.trim();S.state=document.getElementById('stateF').value;S.campState=document.getElementById('campStateF').value;const params=new URLSearchParams({account_type:S.acct,mode:S.mode,date_from:S.df,date_to:S.dt,marketplace:S.mkt,portfolio_ids:S.portfolios.join(','),name:S.name,state:S.state,campaign_state:S.campState,target_type:S.ttype,sort_by:S.sort,sort_dir:S.dir,page:S.page,per_page:S.perPage});for(const[k,v]of Object.entries(S.numFilters)){if(v.op&&v.val!==''){params.set(k+'_op',v.op);params.set(k+'_val',v.val);}if(v.min!=='')params.set(k+'_min',v.min);if(v.max!=='')params.set(k+'_max',v.max);}document.getElementById('tbody').innerHTML='<tr><td colspan="20" class="te"><span class="sp"></span></td></tr>';document.getElementById('err').style.display='none';document.getElementById('pgWrap').style.display='none';fetch(`/targets/data?${params}`).then(r=>r.json()).then(d=>{if(d.error){showErr(d.error);return;}S.total=d.total;renderSummary(d.summary);if(S.mode==='groups')renderGroups(d.rows);else renderTargets(d.rows);renderPagination(d.total,d.page,d.per_page);document.getElementById('tblCount').textContent=`${d.total.toLocaleString()} записей`;}).catch(e=>showErr(e.message));}
+
+function setMkts(a){
+  const opts=a==='KDP'?['','US','CA','UK','DE','FR','IT','ES','AU']:['','US','UK','DE','FR','IT','ES'];
+  document.getElementById('mkt').innerHTML=opts.map(v=>`<option value="${v}">${v||'Все'}</option>`).join('');
+}
+
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('tbM').classList.toggle('on',a==='MERCH');
+  document.getElementById('tbK').classList.toggle('on',a==='KDP');
+  setMkts(a);
+  S.portfolios=[]; pfLabel();
+  loadPortfolios();
+  load(1);
+}
+
+function setMode(m){
+  S.mode=m; S.sort='clicks'; S.dir='desc'; S.page=1;
+  document.getElementById('mbGroups').classList.toggle('on',m==='groups');
+  document.getElementById('mbTargets').classList.toggle('on',m==='targets');
+  const show=m==='targets';
+  document.getElementById('typeSep').style.display=show?'':'none';
+  document.getElementById('ttypeLbl').style.display=show?'':'none';
+  document.getElementById('ttypeBtns').style.display=show?'':'none';
+  document.getElementById('tblTitle').textContent=m==='groups'?'Группы объявлений':'Таргеты';
+  document.getElementById('sumLbl').textContent=m==='groups'?'Групп':'Таргетов';
+  load(1);
+}
+
+function setTType(t){
+  S.ttype=t;
+  document.querySelectorAll('.ttype-btn').forEach((b,i)=>{
+    const vals=['','keyword','auto','product'];
+    b.classList.toggle('on',vals[i]===t);
+  });
+  load(1);
+}
+
+// ── Portfolio ─────────────────────────────────────────────
+async function loadPortfolios(){
+  document.getElementById('pdlist').innerHTML='<div class="pd-empty">Загрузка...</div>';
+  const mkt=document.getElementById('mkt').value;
+  try{
+    const d=await fetch(`/portfolios/list`).then(r=>r.json());
+    let pfs=[];
+    if(Array.isArray(d.portfolios)){
+      pfs=d.portfolios
+        .filter(p=>p.account_type===S.acct&&(p.portfolio_name||p.portfolio_id))
+        .filter(p=>!mkt||!p.marketplace||p.marketplace===mkt)
+        .map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+    }
+    S.pfs=pfs;
+    // drop selected ids that no longer exist in filtered list
+    const ids=new Set(pfs.map(p=>p.id));
+    S.portfolios=S.portfolios.filter(x=>ids.has(x));
+    pfLabel();
+    pfRender();
+  }catch(e){
+    document.getElementById('pdlist').innerHTML='<div class="pd-empty" style="color:var(--red)">Ошибка загрузки</div>';
+  }
+}
+
+function pfToggle(e){
+  e.stopPropagation();
+  const d=document.getElementById('pdd');
+  const t=document.getElementById('pdt');
+  const open=d.classList.toggle('on');
+  t.classList.toggle('on',open);
+  if(open)document.getElementById('pds').focus();
+}
+
+function pfSearch(q){
+  document.querySelectorAll('#pdlist .pdi').forEach(el=>{
+    el.style.display=!q||el.dataset.n.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+
+function pfLabel(){
+  const el=document.getElementById('pdl');
+  if(!S.portfolios.length){el.textContent='Все';return;}
+  if(S.portfolios.length===1){const f=S.pfs.find(p=>p.id===S.portfolios[0]);el.textContent=(f?f.name:S.portfolios[0]).slice(0,26);}
+  else el.textContent=S.portfolios.length+' выбрано';
+}
+
+function pfRender(){
+  const el=document.getElementById('pdlist');
+  if(!S.pfs.length){el.innerHTML='<div class="pd-empty">Нет портфолио</div>';return;}
+  el.innerHTML=S.pfs.map(p=>`<label class="pdi" data-n="${esc(p.name)}"><input type="checkbox" value="${esc(p.id)}" ${S.portfolios.includes(p.id)?'checked':''} onchange="pfCk(this)"><span>${esc(p.name)}</span></label>`).join('');
+}
+
+function pfCk(cb){
+  if(cb.checked){if(!S.portfolios.includes(cb.value))S.portfolios.push(cb.value);}
+  else{S.portfolios=S.portfolios.filter(x=>x!==cb.value);}
+  pfLabel();
+}
+
+document.addEventListener('click',e=>{
+  if(!document.getElementById('pdw').contains(e.target)){
+    document.getElementById('pdd').classList.remove('on');
+    document.getElementById('pdt').classList.remove('on');
+  }
+});
+
+// ── Load data ─────────────────────────────────────────────
+function load(pg){
+  S.page=pg||1;
+  S.df=document.getElementById('df').value;
+  S.dt=document.getElementById('dt').value;
+  S.mkt=document.getElementById('mkt').value;
+  S.name=document.getElementById('srch').value.trim();
+  S.state=document.getElementById('stateF').value;
+  S.campState=document.getElementById('campStateF').value;
+  const params=new URLSearchParams({
+    account_type:S.acct,mode:S.mode,date_from:S.df,date_to:S.dt,
+    marketplace:S.mkt,portfolio_ids:S.portfolios.join(','),
+    name:S.name,state:S.state,campaign_state:S.campState,
+    target_type:S.ttype,sort_by:S.sort,sort_dir:S.dir,
+    page:S.page,per_page:S.perPage
+  });
+  for(const[k,v]of Object.entries(S.numFilters)){
+    if(v.op&&v.val!==''){params.set(k+'_op',v.op);params.set(k+'_val',v.val);}
+    if(v.min!=='')params.set(k+'_min',v.min);
+    if(v.max!=='')params.set(k+'_max',v.max);
+  }
+  document.getElementById('tbody').innerHTML='<tr><td colspan="20" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('err').style.display='none';
+  document.getElementById('pgWrap').style.display='none';
+  fetch(`/targets/data?${params}`).then(r=>r.json()).then(d=>{
+    if(d.error){showErr(d.error);return;}
+    S.total=d.total;
+    renderSummary(d.summary);
+    if(S.mode==='groups') renderGroups(d.rows);
+    else renderTargets(d.rows);
+    renderPagination(d.total,d.page,d.per_page);
+    document.getElementById('tblCount').textContent=`${d.total.toLocaleString()} записей`;
+  }).catch(e=>showErr(e.message));
+}
+
 function showErr(msg){const el=document.getElementById('err');el.textContent='Ошибка: '+msg;el.style.display='';}
-function renderSummary(s){if(!s)return;document.getElementById('sumTotal').textContent=(s.total||0).toLocaleString();document.getElementById('sumImpr').textContent=fmtNum(s.impressions);document.getElementById('sumClicks').textContent=fmtNum(s.clicks);document.getElementById('sumCtr').textContent=s.ctr!=null?s.ctr.toFixed(3)+'%':'—';document.getElementById('sumCost').textContent=s.cost!=null?'$'+s.cost.toFixed(2):'—';document.getElementById('sumSales').textContent=s.sales_14d!=null?'$'+s.sales_14d.toFixed(2):'—';document.getElementById('sumPurch').textContent=fmtNum(s.purchases);document.getElementById('sumAcos').textContent=s.acos!=null?s.acos.toFixed(1)+'%':'—';}
-function renderGroups(rows){const thead=document.getElementById('thead');const tbody=document.getElementById('tbody');thead.innerHTML=`<tr>${thSort('ad_group_name','Группа','left')}${thSort('campaign_name','Кампания','left')}${thSort('portfolio_name','Портфолио','left')}${th('Маркетплейс','ns')}${thNum('ad_group_default_bid','Ставка')}${th('Статус','ns')}${thNum('impressions','Показы')}${thNum('clicks','Клики')}${thNum('ctr','CTR')}${thNum('cost','Расход')}${thNum('sales_14d','Продажи')}${thNum('purchases_14d','Заказы')}${thNum('acos','ACoS')}<th class="ns" style="width:28px"></th></tr>`;if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}tbody.innerHTML=rows.map(r=>`<tr class="dr" id="gr_${r.ad_group_id}" onclick="toggleGroup('${r.ad_group_id}','${r.marketplace||''}')"><td><div class="name-cell"><span class="name-main">${esc(r.ad_group_name||'—')}</span></div></td><td><div class="name-cell"><span class="name-sub">${esc(r.campaign_name||'—')}</span><div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div></div></td><td><span class="n" style="font-size:11px;color:var(--muted)">${esc(r.portfolio_name||'—')}</span></td><td><span class="b bm">${esc(r.marketplace||'—')}</span></td><td class="r"><span class="n">${r.ad_group_default_bid!=null?'$'+r.ad_group_default_bid.toFixed(2):'—'}</span></td><td>${stateBadge(r.ad_group_state)}</td><td class="r"><span class="n">${fmtNum(r.impressions)}</span></td><td class="r"><span class="n">${fmtNum(r.clicks)}</span></td><td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td><td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td><td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td><td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td><td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td><td class="r"><svg class="rchev" id="chev_${r.ad_group_id}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></td></tr><tr class="er" id="er_${r.ad_group_id}" style="display:none"><td colspan="14"><div class="ei" id="ei_${r.ad_group_id}"></div></td></tr>`).join('');}
-function renderTargets(rows){const thead=document.getElementById('thead');const tbody=document.getElementById('tbody');thead.innerHTML=`<tr>${thSort('kw_text','Таргет','left')}${th('Тип','ns')}${th('Match','ns')}${thSort('ad_group_name','Группа','left')}${thSort('campaign_name','Кампания','left')}${thNum('bid','Ставка')}${th('Статус','ns')}${thNum('impressions','Показы')}${thNum('clicks','Клики')}${thNum('ctr','CTR')}${thNum('cost','Расход')}${thNum('sales_14d','Продажи')}${thNum('purchases_14d','Заказы')}${thNum('acos','ACoS')}</tr>`;if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}tbody.innerHTML=rows.map(r=>`<tr class="dr" style="cursor:default"><td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td><td>${kwTypeBadge(r.keyword_type)}</td><td>${r.match_type?`<span class="b bm">${esc(r.match_type)}</span>`:'<span class="dv">—</span>'}</td><td><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span></td><td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.campaign_name||'—')}</span><div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div></div></td><td class="r"><span class="n">${r.bid!=null?'$'+r.bid.toFixed(2):'—'}</span></td><td>${stateBadge(r.target_state)}</td><td class="r"><span class="n">${fmtNum(r.impressions)}</span></td><td class="r"><span class="n">${fmtNum(r.clicks)}</span></td><td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td><td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td><td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td><td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td><td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td></tr>`).join('');}
-function toggleGroup(gid,mkt){const tr=document.getElementById('gr_'+gid);const er=document.getElementById('er_'+gid);const chev=document.getElementById('chev_'+gid);const ei=document.getElementById('ei_'+gid);const isOpen=er.style.display!=='none';if(S.openGroupId&&S.openGroupId!==gid){const otr=document.getElementById('gr_'+S.openGroupId);const oer=document.getElementById('er_'+S.openGroupId);const och=document.getElementById('chev_'+S.openGroupId);if(oer)oer.style.display='none';if(otr)otr.classList.remove('exp');if(och)och.classList.remove('op');}if(isOpen){er.style.display='none';tr.classList.remove('exp');chev.classList.remove('op');S.openGroupId=null;S.openGroupMkt=null;}else{er.style.display='';tr.classList.add('exp');chev.classList.add('op');S.openGroupId=gid;S.openGroupMkt=mkt;loadGroupDetail(gid,mkt,ei);}}
-function loadGroupDetail(gid,mkt,el){el.innerHTML='<div class="stl"><span class="sp"></span> Загрузка…</div>';const p=new URLSearchParams({ad_group_id:gid,marketplace:mkt,account_type:S.acct,date_from:S.df,date_to:S.dt});fetch(`/targets/group?${p}`).then(r=>r.json()).then(d=>{if(d.error){el.innerHTML=`<div class="ge" style="color:var(--red)">${esc(d.error)}</div>`;return;}renderGroupDetail(el,d);}).catch(e=>{el.innerHTML=`<div class="ge" style="color:var(--red)">${esc(e.message)}</div>`;});}
-function renderGroupDetail(el,d){const tgts=d.targets||[];const negs=d.negatives||[];el.innerHTML=`<div class="itabs"><div class="itab on" onclick="switchITab(this,'itp_tgts')">Таргеты <span class="itb">${tgts.length}</span></div><div class="itab" onclick="switchITab(this,'itp_negs')">Минус слова <span class="itb">${negs.length}</span></div></div><div class="itp on" id="itp_tgts">${renderGroupTargets(tgts)}</div><div class="itp" id="itp_negs">${renderGroupNegatives(negs)}</div>`;}
-function switchITab(btn,panelId){btn.closest('.ei').querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));btn.closest('.ei').querySelectorAll('.itp').forEach(t=>t.classList.remove('on'));btn.classList.add('on');btn.closest('.ei').querySelector('#'+panelId).classList.add('on');}
-function renderGroupTargets(rows){if(!rows.length)return'<div class="ge">Нет таргетов</div>';const hdr=`<div class="ih2 grid-tgts"><span></span><span style="text-align:left">Таргет</span><span style="text-align:left">Тип</span><span>Показы</span><span>Клики</span><span>CTR</span><span>Расход</span><span>Продажи</span><span>ACoS</span></div>`;return hdr+rows.map(r=>`<div class="ii2 grid-tgts"><span>${kwTypeIcon(r.keyword_type)}</span><span class="it2">${esc(r.keyword||r.targeting||'—')}</span><span>${kwTypeBadge(r.keyword_type)}</span><span class="ir2">${fmtNum(r.impressions)}</span><span class="ir2">${fmtNum(r.clicks)}</span><span class="ir2">${r.ctr!=null?r.ctr.toFixed(3)+'%':'—'}</span><span class="ir2 ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span><span class="ir2 ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span><span class="ir2 ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span></div>`).join('');}
-function renderGroupNegatives(rows){if(!rows.length)return'<div class="ge">Нет минус слов</div>';const hdr=`<div class="ih2 grid-negs"><span></span><span style="text-align:left">Слово</span><span style="text-align:left">Match</span><span style="text-align:left">Статус</span></div>`;return hdr+rows.map(r=>`<div class="ii2 grid-negs"><span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span><span class="it2" style="font-family:'DM Mono',monospace;font-size:11px">${esc(r.keyword_text||'—')}</span><span><span class="b bm">${esc(r.match_type||'—')}</span></span><span>${stateBadge(r.keyword_state)}</span></div>`).join('');}
-function renderPagination(total,page,perPage){const pages=Math.ceil(total/perPage)||1;const wrap=document.getElementById('pgWrap');const info=document.getElementById('pgInfo');const btns=document.getElementById('pgBtns');wrap.style.display='';const from=(page-1)*perPage+1,to=Math.min(page*perPage,total);info.textContent=`${from}–${to} из ${total.toLocaleString()}`;let html=`<button class="pbb" ${page<=1?'disabled':''} onclick="load(${page-1})">‹</button>`;const range=pageRange(page,pages);for(const p of range){if(p==='…')html+=`<button class="pbb" disabled>…</button>`;else html+=`<button class="pbb ${p===page?'on':''}" onclick="load(${p})">${p}</button>`;}html+=`<button class="pbb" ${page>=pages?'disabled':''} onclick="load(${page+1})">›</button>`;btns.innerHTML=html;}
+
+function renderSummary(s){
+  if(!s)return;
+  document.getElementById('sumTotal').textContent=(s.total||0).toLocaleString();
+  document.getElementById('sumImpr').textContent=fmtNum(s.impressions);
+  document.getElementById('sumClicks').textContent=fmtNum(s.clicks);
+  document.getElementById('sumCtr').textContent=s.ctr!=null?s.ctr.toFixed(3)+'%':'—';
+  document.getElementById('sumCost').textContent=s.cost!=null?'$'+s.cost.toFixed(2):'—';
+  document.getElementById('sumSales').textContent=s.sales_14d!=null?'$'+s.sales_14d.toFixed(2):'—';
+  document.getElementById('sumPurch').textContent=fmtNum(s.purchases);
+  document.getElementById('sumAcos').textContent=s.acos!=null?s.acos.toFixed(1)+'%':'—';
+}
+
+// ── Groups table ──────────────────────────────────────────
+function renderGroups(rows){
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+  thead.innerHTML=`<tr>
+    ${thSort('ad_group_name','Группа','left')}
+    ${thSort('campaign_name','Кампания','left')}
+    ${thSort('portfolio_name','Портфолио','left')}
+    ${th('Маркет','ns')}
+    ${thNum('ad_group_default_bid','Ставка')}
+    ${th('Статус','ns')}
+    ${thNum('impressions','Показы')}
+    ${thNum('clicks','Клики')}
+    ${thNum('ctr','CTR')}
+    ${thNum('cost','Расход')}
+    ${thNum('sales_14d','Продажи')}
+    ${thNum('purchases_14d','Заказы')}
+    ${thNum('acos','ACoS')}
+    <th class="ns" style="width:28px"></th>
+  </tr>`;
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}
+  tbody.innerHTML=rows.map(r=>{
+    const gid=esc(r.ad_group_id);
+    const bidVal=r.ad_group_default_bid!=null?r.ad_group_default_bid.toFixed(2):'';
+    const bidId='gbid_'+gid.replace(/[^a-z0-9]/gi,'_');
+    const bidCell=bidVal
+      ? `<span id="${bidId}">
+           <button class="bid-btn" onclick="event.stopPropagation();openBidEdit('${bidId}')">$${bidVal}</button>
+           <span class="bid-edit">
+             <input class="bid-inp" type="number" value="${bidVal}" min="0.02" step="0.01"
+               onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${esc(r.marketplace||'')}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
+               onclick="event.stopPropagation()">
+             <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${esc(r.marketplace||'')}')">✓</button>
+             <button class="bid-cx" onclick="event.stopPropagation();closeBidEdit('${bidId}')">✕</button>
+           </span>
+         </span>`
+      : '<span class="dv">—</span>';
+    return `<tr class="dr" id="gr_${gid}" onclick="toggleGroup('${gid}','${esc(r.marketplace||'')}')">
+      <td><div class="name-cell"><span class="name-main">${esc(r.ad_group_name||'—')}</span></div></td>
+      <td><div class="name-cell"><span class="name-sub">${esc(r.campaign_name||'—')}</span>
+        <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
+      </div></td>
+      <td><span class="n" style="font-size:11px;color:var(--muted)">${esc(r.portfolio_name||'—')}</span></td>
+      <td><span class="b bm">${esc(r.marketplace||'—')}</span></td>
+      <td class="r">${bidCell}</td>
+      <td>${stateBadge(r.ad_group_state)}</td>
+      <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
+      <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
+      <td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td>
+      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td>
+      <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
+      <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><svg class="rchev" id="chev_${gid}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></td>
+    </tr>
+    <tr class="er" id="er_${gid}" style="display:none">
+      <td colspan="14"><div class="ei" id="ei_${gid}"></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Targets table ─────────────────────────────────────────
+function renderTargets(rows){
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+  thead.innerHTML=`<tr>
+    ${thSort('kw_text','Таргет','left')}
+    ${thSort('keyword_type','Тип','left')}
+    ${thSort('ad_group_name','Группа','left')}
+    ${thSort('campaign_name','Кампания','left')}
+    ${thNum('bid','Ставка')}
+    ${th('Статус','ns')}
+    ${thNum('impressions','Показы')}
+    ${thNum('clicks','Клики')}
+    ${thNum('ctr','CTR')}
+    ${thNum('cost','Расход')}
+    ${thNum('sales_14d','Продажи')}
+    ${thNum('purchases_14d','Заказы')}
+    ${thNum('acos','ACoS')}
+  </tr>`;
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="13" class="te">Нет данных</td></tr>';return;}
+  tbody.innerHTML=rows.map(r=>`<tr class="dr" style="cursor:default">
+    <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
+    <td>${kwTypeBadge(r.keyword_type)}</td>
+    <td><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span></td>
+    <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.campaign_name||'—')}</span>
+      <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
+    </div></td>
+    <td class="r"><span class="n">${r.bid!=null?'$'+r.bid.toFixed(2):'—'}</span></td>
+    <td>${stateBadge(r.target_state)}</td>
+    <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
+    <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
+    <td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td>
+    <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span></td>
+    <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span></td>
+    <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
+    <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+  </tr>`).join('');
+}
+
+// ── Group expand ──────────────────────────────────────────
+function toggleGroup(gid,mkt){
+  const tr=document.getElementById('gr_'+gid);
+  const er=document.getElementById('er_'+gid);
+  const chev=document.getElementById('chev_'+gid);
+  const ei=document.getElementById('ei_'+gid);
+  const isOpen=er.style.display!=='none';
+  if(S.openGroupId&&S.openGroupId!==gid){
+    const oer=document.getElementById('er_'+S.openGroupId);
+    const otr=document.getElementById('gr_'+S.openGroupId);
+    const och=document.getElementById('chev_'+S.openGroupId);
+    if(oer)oer.style.display='none';
+    if(otr)otr.classList.remove('exp');
+    if(och)och.classList.remove('op');
+  }
+  if(isOpen){
+    er.style.display='none';
+    tr.classList.remove('exp');
+    chev.classList.remove('op');
+    S.openGroupId=null;S.openGroupMkt=null;
+  }else{
+    const sy=window.scrollY;
+    er.style.display='';
+    tr.classList.add('exp');
+    chev.classList.add('op');
+    S.openGroupId=gid;S.openGroupMkt=mkt;
+    loadGroupDetail(gid,mkt,ei);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,sy)));
+  }
+}
+
+function loadGroupDetail(gid,mkt,el){
+  el.innerHTML='<div class="stl"><span class="sp"></span> Загрузка…</div>';
+  const p=new URLSearchParams({ad_group_id:gid,marketplace:mkt,account_type:S.acct,date_from:S.df,date_to:S.dt});
+  fetch(`/targets/group?${p}`).then(r=>r.json()).then(d=>{
+    if(d.error){el.innerHTML=`<div class="ge" style="color:var(--red)">${esc(d.error)}</div>`;return;}
+    renderGroupDetail(el,d,gid,mkt);
+  }).catch(e=>{el.innerHTML=`<div class="ge" style="color:var(--red)">${esc(e.message)}</div>`;});
+}
+
+function renderGroupDetail(el,d,gid,mkt){
+  const tgts=d.targets||[];
+  const negs=d.negatives||[];
+  const gi=d.group_info||{};
+  const cid=esc(gi.campaign_id||'');
+  const groupBid=gi.ad_group_default_bid;
+
+  el.innerHTML=`
+    <div class="gg-head">
+      <span class="gg-title">Группа · ${tgts.length} таргетов · ${negs.length} минус слов${groupBid?' · ставка группы $'+groupBid.toFixed(2):''}</span>
+      <div class="gg-acts">
+        <button class="act-btn" onclick="openAddKw('${esc(gid)}','${cid}','${esc(mkt)}')">+ Ключевое слово</button>
+        <button class="act-btn" onclick="openAddNeg('${esc(gid)}','${cid}','${esc(mkt)}')">+ Минус слово</button>
+      </div>
+    </div>
+    <div class="itabs" id="itabs_${esc(gid)}">
+      <div class="itab on" onclick="switchITab(this,'itp_tgts_${esc(gid)}')">Таргеты <span class="itb">${tgts.length}</span></div>
+      <div class="itab" onclick="switchITab(this,'itp_negs_${esc(gid)}')">Минус слова <span class="itb">${negs.length}</span></div>
+    </div>
+    <div class="itp on" id="itp_tgts_${esc(gid)}">${renderGroupTargets(tgts,gid,mkt,groupBid)}</div>
+    <div class="itp" id="itp_negs_${esc(gid)}">${renderGroupNegatives(negs)}</div>
+  `;
+}
+
+function switchITab(btn,panelId){
+  const ei=btn.closest('.ei');
+  ei.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
+  ei.querySelectorAll('.itp').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  ei.querySelector('#'+panelId).classList.add('on');
+}
+
+function renderGroupTargets(rows,gid,mkt,groupBid){
+  if(!rows.length)return'<div class="ge">Нет таргетов</div>';
+  const hdr=`<div class="ih2 grid-tgts">
+    <span style="text-align:left"></span>
+    <span style="text-align:left">Таргет</span>
+    <span style="text-align:left">Тип</span>
+    <span>Ставка</span>
+    <span>Показы</span>
+    <span>Клики</span>
+    <span>Расход</span>
+    <span>Продажи</span>
+    <span>ACoS</span>
+  </div>`;
+  return hdr+rows.map((r,i)=>{
+    const eid=esc(String(r.keyword_id||i));
+    const bidId='tbid_'+gid.replace(/[^a-z0-9]/gi,'_')+'_'+i;
+    const ownBid=r.bid!=null?Number(r.bid).toFixed(2):null;
+    const displayBid=ownBid||(groupBid!=null?groupBid.toFixed(2):null);
+    const isGroupBid=!ownBid&&groupBid!=null;
+    const itType=r.match_type?'keyword':'target';
+    const bidCell=displayBid
+      ? `<span id="${bidId}">
+           <button class="bid-btn${isGroupBid?' grp':''}"
+             title="${isGroupBid?'Ставка группы (своя не задана)':''}"
+             onclick="openBidEdit('${bidId}')">$${displayBid}${isGroupBid?' (г)':''}</button>
+           <span class="bid-edit">
+             <input class="bid-inp" type="number" value="${displayBid}" min="0.02" step="0.01"
+               onkeydown="if(event.key==='Enter')saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}'); if(event.key==='Escape')closeBidEdit('${bidId}')">
+             <button class="bid-ok" onclick="saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}')">✓</button>
+             <button class="bid-cx" onclick="closeBidEdit('${bidId}')">✕</button>
+           </span>
+         </span>`
+      : '<span class="ir2">—</span>';
+    return `<div class="ii2 grid-tgts">
+      <span>${kwTypeIcon(r.keyword_type)}</span>
+      <span class="it2" title="${esc(r.keyword||r.targeting||'')}">${esc(r.keyword||r.targeting||'—')}</span>
+      <span>${kwTypeBadge(r.keyword_type)}</span>
+      <span class="ir2" style="text-align:right">${bidCell}</span>
+      <span class="ir2">${fmtNum(r.impressions)}</span>
+      <span class="ir2">${fmtNum(r.clicks)}</span>
+      <span class="ir2 ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span>
+      <span class="ir2 ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span>
+      <span class="ir2 ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderGroupNegatives(rows){
+  if(!rows.length)return'<div class="ge">Нет минус слов</div>';
+  const hdr=`<div class="ih2 grid-negs">
+    <span style="text-align:left"></span>
+    <span style="text-align:left">Слово</span>
+    <span style="text-align:left">Match</span>
+    <span style="text-align:left">Статус</span>
+  </div>`;
+  return hdr+rows.map(r=>`<div class="ii2 grid-negs">
+    <span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+    <span class="it2" style="font-family:'DM Mono',monospace;font-size:11px">${esc(r.keyword_text||'—')}</span>
+    <span><span class="b bm">${esc(r.match_type||'—')}</span></span>
+    <span>${stateBadge(r.keyword_state)}</span>
+  </div>`).join('');
+}
+
+// ── Bid edit ──────────────────────────────────────────────
+function openBidEdit(id){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  wrap.querySelector('.bid-btn').style.display='none';
+  const be=wrap.querySelector('.bid-edit');
+  be.style.display='inline-flex';be.classList.add('on');
+  const inp=wrap.querySelector('.bid-inp');
+  if(inp){inp.focus();inp.select();}
+}
+function closeBidEdit(id){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  wrap.querySelector('.bid-btn').style.display='';
+  const be=wrap.querySelector('.bid-edit');
+  be.style.display='none';be.classList.remove('on');
+}
+async function saveBid(id,entityType,entityId,oldBid,mkt){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  const inp=wrap.querySelector('.bid-inp');
+  const newBid=parseFloat(inp.value);
+  if(isNaN(newBid)||newBid<0.02){toast('Минимальная ставка $0.02',false);return;}
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'bid',
+      old_value:String(oldBid),new_value:String(newBid)});
+    if(d){
+      wrap.querySelector('.bid-btn').textContent='$'+newBid.toFixed(2)+' ✓';
+      closeBidEdit(id);
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+}
+
+// ── Add keyword ───────────────────────────────────────────
+function openAddKw(gid,cid,mkt){
+  document.getElementById('mkwGid').value=gid;
+  document.getElementById('mkwCid').value=cid;
+  document.getElementById('mkwMkt').value=mkt;
+  document.getElementById('mkwText').value='';
+  openModal('modalKw');
+}
+async function submitAddKw(){
+  const text=document.getElementById('mkwText').value.trim();
+  const match=document.getElementById('mkwMatch').value;
+  const bid=parseFloat(document.getElementById('mkwBid').value);
+  const gid=document.getElementById('mkwGid').value;
+  const cid=document.getElementById('mkwCid').value;
+  const mkt=document.getElementById('mkwMkt').value;
+  if(!text){toast('Введите ключевые слова',false);return;}
+  if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}
+  const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  try{
+    const res=await ctrlAddBatch(kws.map(kw=>({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'keyword_add',entity_id:gid,field_name:'—',old_value:'',
+      new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:gid,campaign_id:cid})})));
+    closeModal('modalKw');
+    toast(`Добавлено: ${res.inserted} kw${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+  }catch(err){toast(err.message,false);}
+}
+
+// ── Add negative ──────────────────────────────────────────
+function openAddNeg(gid,cid,mkt){
+  document.getElementById('mnGid').value=gid;
+  document.getElementById('mnCid').value=cid;
+  document.getElementById('mnMkt').value=mkt;
+  document.getElementById('mnText').value='';
+  openModal('modalNeg');
+}
+async function submitAddNeg(){
+  const text=document.getElementById('mnText').value.trim();
+  const match=document.getElementById('mnMatch').value;
+  const gid=document.getElementById('mnGid').value;
+  const cid=document.getElementById('mnCid').value;
+  const mkt=document.getElementById('mnMkt').value;
+  if(!text){toast('Введите слова',false);return;}
+  const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  try{
+    const res=await ctrlAddBatch(items.map(w=>({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'negative_add',entity_id:gid,field_name:'—',old_value:'',
+      new_value:JSON.stringify({text:w,match_type:match,ad_group_id:gid,campaign_id:cid})})));
+    closeModal('modalNeg');
+    toast(`Добавлено: ${res.inserted}${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+  }catch(err){toast(err.message,false);}
+}
+
+// ── API helpers ───────────────────────────────────────────
+function getProfileId(mkt){return(window._pm||{})[S.acct+'_'+mkt]||'';}
+
+async function ctrlAdd(payload){
+  const r=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json();
+  if(r.status===409){toast('Уже есть ожидающее изменение',false);return null;}
+  if(d.error)throw new Error(d.error);
+  return d;
+}
+
+async function ctrlAddBatch(payloads){
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Batch error');
+  return d;
+}
+
+function openModal(id){document.getElementById(id).classList.add('op');}
+function closeModal(id){document.getElementById(id).classList.remove('op');}
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('op');});
+});
+
+function toast(msg,ok=true){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast-item '+(ok?'ok':'err');
+  d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;
+  w.appendChild(d);
+  setTimeout(()=>d.remove(),3500);
+}
+
+// ── Pagination ────────────────────────────────────────────
+function renderPagination(total,page,perPage){
+  const pages=Math.ceil(total/perPage)||1;
+  const wrap=document.getElementById('pgWrap');
+  const info=document.getElementById('pgInfo');
+  const btns=document.getElementById('pgBtns');
+  wrap.style.display='';
+  const from=(page-1)*perPage+1,to=Math.min(page*perPage,total);
+  info.textContent=`${from}–${to} из ${total.toLocaleString()}`;
+  let html=`<button class="pbb" ${page<=1?'disabled':''} onclick="load(${page-1})">‹</button>`;
+  const range=pageRange(page,pages);
+  for(const p of range){
+    if(p==='…')html+=`<button class="pbb" disabled>…</button>`;
+    else html+=`<button class="pbb ${p===page?'on':''}" onclick="load(${p})">${p}</button>`;
+  }
+  html+=`<button class="pbb" ${page>=pages?'disabled':''} onclick="load(${page+1})">›</button>`;
+  btns.innerHTML=html;
+}
 function pageRange(p,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);if(p<=4)return[1,2,3,4,5,'…',t];if(p>=t-3)return[1,'…',t-4,t-3,t-2,t-1,t];return[1,'…',p-1,p,p+1,'…',t];}
+
+// ── Sort / filters ────────────────────────────────────────
 function sortBy(col){if(S.sort===col)S.dir=S.dir==='asc'?'desc':'asc';else{S.sort=col;S.dir='desc';}load(S.page);}
 function openNumPop(col,el){document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));const p=document.getElementById('np_'+col);if(p){p.classList.add('op');el.classList.add('on');}}
 function applyNumFilter(col){const op=document.getElementById('nop_'+col)?.value||'';const val=document.getElementById('nval_'+col)?.value||'';const mn=document.getElementById('nmin_'+col)?.value||'';const mx=document.getElementById('nmax_'+col)?.value||'';S.numFilters[col]={op,val,min:mn,max:mx};document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));const fi=document.querySelector(`[data-fi="${col}"]`);if(fi)fi.classList.toggle('on',!!(op&&val)||mn||mx);load(1);}
 function clearNumFilter(col){S.numFilters[col]={op:'',val:'',min:'',max:''};['nop_','nval_','nmin_','nmax_'].forEach(pfx=>{const el=document.getElementById(pfx+col);if(el)el.value='';});const fi=document.querySelector(`[data-fi="${col}"]`);if(fi)fi.classList.remove('on');document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));load(1);}
 document.addEventListener('click',e=>{if(!e.target.closest('.th-wrap'))document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));});
+
+// ── TH helpers ────────────────────────────────────────────
 function thSort(col,label,align){const a=align||'right',isAct=S.sort===col;const arr=isAct?(S.dir==='asc'?'↑':'↓'):'';return`<th class="${isAct?'s':''}" onclick="sortBy('${col}')"><div class="th-wrap ${a==='left'?'left':''}"><div class="th-sort ${a==='left'?'left':''}">${label} <span class="sa">${arr}</span></div></div></th>`;}
 function th(label,cls){return`<th class="${cls||'ns'}">${label}</th>`;}
 function thNum(col,label){const isAct=S.sort===col;const nf=S.numFilters[col]||{};const hasFilter=(nf.op&&nf.val!=='')||nf.min||nf.max;const arr=isAct?(S.dir==='asc'?'↑':'↓'):'';return`<th class="${isAct?'s':''}"><div class="th-wrap"><div class="th-sort" onclick="sortBy('${col}')">${label} <span class="sa">${arr}</span></div><div class="th-fi ${hasFilter?'on':''}" data-fi="${col}" onclick="openNumPop('${col}',this)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div><div class="npop" id="np_${col}"><div class="npop-title">${label}</div><div class="npop-row"><select class="npop-op" id="nop_${col}"><option value="">—</option><option value="gt">&gt;</option><option value="gte">&ge;</option><option value="lt">&lt;</option><option value="lte">&le;</option><option value="eq">=</option></select><input class="npop-v" id="nval_${col}" type="number" placeholder="Значение"></div><div class="npop-row"><input class="npop-v" id="nmin_${col}" type="number" placeholder="Мин"><input class="npop-v" id="nmax_${col}" type="number" placeholder="Макс"></div><div class="npop-acts"><button class="npop-apply" onclick="applyNumFilter('${col}')">Применить</button><button class="npop-clear" onclick="clearNumFilter('${col}')">Сбросить</button></div></div></div></th>`;}
+
+// ── Badge helpers ─────────────────────────────────────────
 function stateBadge(s){if(!s)return'';if(s==='ENABLED')return'<span class="b be">ACTIVE</span>';if(s==='PAUSED')return'<span class="b bp">PAUSED</span>';if(s==='ARCHIVED')return'<span class="b bm">ARCH</span>';return`<span class="b bm">${esc(s)}</span>`;}
 function typeBadge(t){if(!t)return'';if(t==='AUTO')return'<span class="b bauto">AUTO</span>';if(t==='MANUAL')return'<span class="b bman">MANUAL</span>';return`<span class="b bm">${esc(t)}</span>`;}
 function kwTypeBadge(t){if(!t)return'<span class="dv">—</span>';if(t==='BROAD')return'<span class="b bkw">BROAD</span>';if(t==='PHRASE')return'<span class="b bkw">PHRASE</span>';if(t==='EXACT')return'<span class="b bkw">EXACT</span>';if(t==='TARGETING_EXPRESSION_PREDEFINED')return'<span class="b bauto">AUTO</span>';if(t==='TARGETING_EXPRESSION')return'<span class="b bpt">PRODUCT</span>';return`<span class="b bm">${esc(t)}</span>`;}

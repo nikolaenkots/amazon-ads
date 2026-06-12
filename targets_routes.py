@@ -367,24 +367,60 @@ def targets_group():
     if date_to:   date_conds.append(f"date <= '{date_to}'")
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
 
+    # Group info (default bid + campaign_id)
+    sql_group_info = f"""
+    SELECT ad_group_default_bid, campaign_id
+    FROM `{camp_table}`
+    WHERE entity_type = 'ad_group'
+      AND ad_group_id = '{safe_gid}'
+      {mkt_cond}
+    ORDER BY synced_at DESC
+    LIMIT 1
+    """
+
     sql_targets = f"""
+    WITH stats AS (
+        SELECT
+            keyword_id, keyword, targeting, keyword_type,
+            SUM(impressions)          AS impressions,
+            SUM(clicks)               AS clicks,
+            ROUND(SUM(cost), 2)       AS cost,
+            ROUND(SUM(sales_14d), 2)  AS sales_14d,
+            SUM(purchases_14d)        AS purchases_14d,
+            CASE WHEN SUM(impressions)>0
+                 THEN ROUND(SUM(clicks)/SUM(impressions)*100, 3) ELSE NULL END AS ctr,
+            CASE WHEN SUM(sales_14d)>0
+                 THEN ROUND(SUM(cost)/SUM(sales_14d)*100, 1) ELSE NULL END AS acos
+        FROM `{stat_table}`
+        WHERE ad_group_id = '{safe_gid}'
+          AND keyword_type IN {ALL_TYPES}
+          {mkt_cond} {date_where}
+        GROUP BY keyword_id, keyword, targeting, keyword_type
+    ),
+    kw_raw AS (
+        SELECT
+            CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END AS stat_key,
+            SAFE_CAST(CASE WHEN entity_type='keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
+            CASE WHEN entity_type='keyword' THEN keyword_state ELSE target_state END AS state,
+            entity_type,
+            match_type,
+            ROW_NUMBER() OVER (
+                PARTITION BY CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END
+                ORDER BY synced_at DESC
+            ) rn
+        FROM `{camp_table}`
+        WHERE entity_type IN ('keyword','product_targeting')
+          AND ad_group_id = '{safe_gid}'
+          {mkt_cond}
+    ),
+    kw AS (SELECT * FROM kw_raw WHERE rn = 1)
     SELECT
-        keyword_id, keyword, targeting, keyword_type,
-        SUM(impressions)          AS impressions,
-        SUM(clicks)               AS clicks,
-        ROUND(SUM(cost), 2)       AS cost,
-        ROUND(SUM(sales_14d), 2)  AS sales_14d,
-        SUM(purchases_14d)        AS purchases_14d,
-        CASE WHEN SUM(impressions)>0
-             THEN ROUND(SUM(clicks)/SUM(impressions)*100, 3) ELSE NULL END AS ctr,
-        CASE WHEN SUM(sales_14d)>0
-             THEN ROUND(SUM(cost)/SUM(sales_14d)*100, 1) ELSE NULL END AS acos
-    FROM `{stat_table}`
-    WHERE ad_group_id = '{safe_gid}'
-      AND keyword_type IN {ALL_TYPES}
-      {mkt_cond} {date_where}
-    GROUP BY keyword_id, keyword, targeting, keyword_type
-    ORDER BY clicks DESC
+        s.keyword_id, s.keyword, s.targeting, s.keyword_type,
+        kw.bid, kw.state AS target_state, kw.match_type, kw.entity_type,
+        s.impressions, s.clicks, s.cost, s.sales_14d, s.purchases_14d, s.ctr, s.acos
+    FROM stats s
+    LEFT JOIN kw ON kw.stat_key = s.keyword_id
+    ORDER BY s.clicks DESC
     LIMIT 500
     """
 
@@ -407,10 +443,18 @@ def targets_group():
 
     try:
         client = get_client()
+        group_rows = list(client.query(sql_group_info).result())
+        group_info = {}
+        if group_rows:
+            r = dict(group_rows[0])
+            group_info = {
+                'ad_group_default_bid': _cvt(r.get('ad_group_default_bid')),
+                'campaign_id': r.get('campaign_id', ''),
+            }
         targets   = [{k: _cvt(v) for k, v in dict(r).items()}
                      for r in client.query(sql_targets).result()]
         negatives = [{k: _cvt(v) for k, v in dict(r).items()}
                      for r in client.query(sql_negatives).result()]
-        return jsonify({'targets': targets, 'negatives': negatives})
+        return jsonify({'group_info': group_info, 'targets': targets, 'negatives': negatives})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
