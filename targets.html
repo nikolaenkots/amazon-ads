@@ -165,6 +165,13 @@ thead th.s .sa{opacity:1;color:var(--accent)}
 .npop-clear{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
 .npop-clear:hover{background:var(--surface2)}
 .stl{padding:18px;text-align:center;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+/* toggle */
+.stog{width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s;outline:none}
+.stog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .2s}
+.stog.en{background:var(--green)}.stog.pa{background:var(--dim)}
+.stog.en::after{transform:translateX(12px)}
+.stog.ld{opacity:.5;cursor:not-allowed}
+.stog.pend{background:var(--amber)}.stog.pend::after{transform:translateX(6px)}
 /* bid edit */
 .bid-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);padding:1px 4px;border-radius:3px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
 .bid-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd)}
@@ -283,6 +290,13 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
       <button class="ttype-btn" onclick="setTType('auto')">Авто</button>
       <button class="ttype-btn" onclick="setTType('product')">Продуктовые</button>
     </div>
+    <div class="sep" id="tgtGrpSep" style="display:none"></div>
+    <span class="ttype-lbl" id="tgtGrpStateLbl" style="display:none">Статус группы</span>
+    <div class="ttype-btns" id="tgtGrpStateBtns" style="display:none">
+      <button class="ttype-btn on" onclick="setTgtGroupState('')">Все</button>
+      <button class="ttype-btn" onclick="setTgtGroupState('ENABLED')">Активные</button>
+      <button class="ttype-btn" onclick="setTgtGroupState('PAUSED')">На паузе</button>
+    </div>
   </div>
 </div>
 
@@ -372,7 +386,7 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-let S={acct:'MERCH',mode:'groups',ttype:'',groupTgtType:'',groupState:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
+let S={acct:'MERCH',mode:'groups',ttype:'',groupTgtType:'',groupState:'',tgtGroupState:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
 
 (function(){
   const now=new Date();
@@ -416,9 +430,9 @@ function setMode(m){
   ['grpSep1','grpSep2','grpTgtTypeLbl','grpTgtTypeBtns','grpStateLbl','grpStateBtns'].forEach(id=>{
     document.getElementById(id).style.display=isG?'':'none';
   });
-  document.getElementById('typeSep').style.display=isT?'':'none';
-  document.getElementById('ttypeLbl').style.display=isT?'':'none';
-  document.getElementById('ttypeBtns').style.display=isT?'':'none';
+  ['typeSep','ttypeLbl','ttypeBtns','tgtGrpSep','tgtGrpStateLbl','tgtGrpStateBtns'].forEach(id=>{
+    document.getElementById(id).style.display=isT?'':'none';
+  });
   document.getElementById('tblTitle').textContent=isG?'Группы объявлений':'Таргеты';
   document.getElementById('sumLbl').textContent=isG?'Групп':'Таргетов';
   load(1);
@@ -435,6 +449,14 @@ function setGroupTgtType(t){
 function setGroupState(s){
   S.groupState=s;
   document.querySelectorAll('#grpStateBtns .ttype-btn').forEach((b,i)=>{
+    b.classList.toggle('on',['','ENABLED','PAUSED'][i]===s);
+  });
+  load(1);
+}
+
+function setTgtGroupState(s){
+  S.tgtGroupState=s;
+  document.querySelectorAll('#tgtGrpStateBtns .ttype-btn').forEach((b,i)=>{
     b.classList.toggle('on',['','ENABLED','PAUSED'][i]===s);
   });
   load(1);
@@ -529,6 +551,7 @@ function load(pg){
     marketplace:S.mkt,portfolio_ids:S.portfolios.join(','),
     name:S.name,state:stateVal,campaign_state:S.campState,
     target_type:S.ttype,group_targeting_type:S.groupTgtType,
+    group_state_filter:S.mode==='targets'?S.tgtGroupState:'',
     sort_by:S.sort,sort_dir:S.dir,
     page:S.page,per_page:S.perPage
   });
@@ -770,16 +793,14 @@ function switchITab(btn,panelId){
 
 function renderGroupTargets(rows,gid,mkt,groupBid){
   if(!rows.length)return'<div class="ge">Нет таргетов</div>';
-  const hdr=`<div class="ih2 grid-tgts">
-    <span style="text-align:left"></span>
+  const cols='28px 1fr 80px 90px 65px 65px 88px 85px 72px';
+  const hdr=`<div class="ih2" style="grid-template-columns:${cols}">
+    <span></span>
     <span style="text-align:left">Таргет</span>
     <span style="text-align:left">Тип</span>
     <span>Ставка</span>
-    <span>Показы</span>
-    <span>Клики</span>
-    <span>Расход</span>
-    <span>Продажи</span>
-    <span>ACoS</span>
+    <span>Показы</span><span>Клики</span>
+    <span>Расход</span><span>Продажи</span><span>ACoS</span>
   </div>`;
   return hdr+rows.map((r,i)=>{
     const eid=esc(String(r.keyword_id||i));
@@ -788,6 +809,8 @@ function renderGroupTargets(rows,gid,mkt,groupBid){
     const displayBid=ownBid||(groupBid!=null?groupBid.toFixed(2):null);
     const isGroupBid=!ownBid&&groupBid!=null;
     const itType=r.match_type?'keyword':'target';
+    const curState=(r.target_state||'ENABLED').toUpperCase();
+    const isEn=curState==='ENABLED';
     const bidCell=displayBid
       ? `<span id="${bidId}">
            <button class="bid-btn${isGroupBid?' grp':''}"
@@ -801,8 +824,9 @@ function renderGroupTargets(rows,gid,mkt,groupBid){
            </span>
          </span>`
       : '<span class="ir2">—</span>';
-    return `<div class="ii2 grid-tgts">
-      <span>${kwTypeIcon(r.keyword_type)}</span>
+    return `<div class="ii2" style="grid-template-columns:${cols}">
+      <span><button class="stog ${isEn?'en':'pa'}"
+        onclick="toggleState(event,'${itType}','${eid}','${curState}','${esc(mkt)}')"></button></span>
       <span class="it2" title="${esc(r.keyword||r.targeting||'')}">${esc(r.keyword||r.targeting||'—')}</span>
       <span>${kwTypeBadge(r.keyword_type)}</span>
       <span class="ir2" style="text-align:right">${bidCell}</span>
@@ -817,18 +841,27 @@ function renderGroupTargets(rows,gid,mkt,groupBid){
 
 function renderGroupNegatives(rows){
   if(!rows.length)return'<div class="ge">Нет минус слов</div>';
-  const hdr=`<div class="ih2 grid-negs">
-    <span style="text-align:left"></span>
-    <span style="text-align:left">Слово</span>
+  const cols='16px 1fr 110px 80px 80px';
+  const hdr=`<div class="ih2" style="grid-template-columns:${cols}">
+    <span></span>
+    <span style="text-align:left">Слово / Таргет</span>
     <span style="text-align:left">Match</span>
+    <span style="text-align:left">Тип</span>
     <span style="text-align:left">Статус</span>
   </div>`;
-  return hdr+rows.map(r=>`<div class="ii2 grid-negs">
-    <span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
-    <span class="it2" style="font-family:'DM Mono',monospace;font-size:11px">${esc(r.keyword_text||'—')}</span>
-    <span><span class="b bm">${esc(r.match_type||'—')}</span></span>
-    <span>${stateBadge(r.keyword_state)}</span>
-  </div>`).join('');
+  return hdr+rows.map(r=>{
+    const isPt=r.entity_type==='negative_product_targeting';
+    const text=isPt?(r.targeting_expression||'—'):(r.keyword_text||'—');
+    const matchType=r.match_type||'';
+    const state=isPt?r.target_state:r.keyword_state;
+    return `<div class="ii2" style="grid-template-columns:${cols}">
+      <span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+      <span class="it2" style="font-family:'DM Mono',monospace;font-size:11px" title="${esc(text)}">${esc(text)}</span>
+      <span>${matchType?`<span class="b bm">${esc(matchType)}</span>`:''}</span>
+      <span>${isPt?'<span class="b bpt">PRODUCT</span>':'<span class="b bkw">KW</span>'}</span>
+      <span>${stateBadge(state)}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderGroupSearchTerms(rows,gid){
@@ -879,6 +912,26 @@ function openNegFromSt(gid,cid,mkt){
   document.getElementById('mnMkt').value=mkt;
   document.getElementById('mnText').value=terms.join('\n');
   openModal('modalNeg');
+}
+
+// ── State toggle ──────────────────────────────────────────
+async function toggleState(e,entityType,entityId,currentState,mkt){
+  e.stopPropagation();
+  const btn=e.currentTarget;
+  if(btn.classList.contains('ld')||btn.classList.contains('pend'))return;
+  const newState=currentState==='ENABLED'?'PAUSED':'ENABLED';
+  btn.classList.add('ld');
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'state',
+      old_value:currentState,new_value:newState});
+    if(d){
+      btn.classList.remove('en','pa','ld');
+      btn.classList.add('pend');
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+  finally{btn.classList.remove('ld');}
 }
 
 // ── Bid edit ──────────────────────────────────────────────

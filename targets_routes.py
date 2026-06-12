@@ -97,6 +97,8 @@ def targets_data():
 
     group_tgt_type = request.args.get('group_targeting_type', '')
 
+    group_state_filter = request.args.get('group_state_filter', '')
+
     camp_conds = []
     if marketplace:
         safe_mkt = marketplace.replace("'", "''")
@@ -216,6 +218,9 @@ def targets_data():
         if state_filter:
             sf = state_filter.replace("'", "''")
             extra_conds.append(f"kw.state = '{sf}'")
+        if group_state_filter:
+            gsf = group_state_filter.replace("'", "''")
+            extra_conds.append(f"g.ad_group_state = '{gsf}'")
         base_extra = ('AND ' + ' AND '.join(extra_conds)) if extra_conds else ''
 
         sql = f"""
@@ -434,19 +439,22 @@ def targets_group():
     """
 
     sql_negatives = f"""
-    SELECT keyword_id, keyword_text, match_type, keyword_state
+    SELECT entity_type, keyword_id, target_id,
+           keyword_text, targeting_expression, match_type, keyword_state, target_state
     FROM (
-        SELECT *,
-            ROW_NUMBER() OVER (
-                PARTITION BY keyword_id, marketplace ORDER BY synced_at DESC
-            ) rn
+        SELECT entity_type, keyword_id, target_id,
+               keyword_text, targeting_expression, match_type, keyword_state, target_state,
+               ROW_NUMBER() OVER (
+                   PARTITION BY COALESCE(keyword_id, target_id), marketplace
+                   ORDER BY synced_at DESC
+               ) rn
         FROM `{camp_table}`
-        WHERE entity_type = 'negative_keyword'
+        WHERE entity_type IN ('negative_keyword', 'negative_product_targeting')
           AND ad_group_id = '{safe_gid}'
           {mkt_cond}
     )
     WHERE rn = 1
-    ORDER BY keyword_text
+    ORDER BY keyword_text, targeting_expression
     LIMIT 500
     """
 
