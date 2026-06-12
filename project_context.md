@@ -366,6 +366,7 @@ function toast(msg, ok=true){
 | `portfolios.py` | `portfolios_bp` | `/portfolios` — управление именами портфолио |
 | `analytics_routes.py` | `analytics_bp` | `/analytics/campaigns` — аналитика кампаний |
 | `products_routes.py` | `products_bp` | `/analytics/products` — аналитика по рекламируемым ASIN |
+| `targets_routes.py` | `targets_bp` | `/targets` — анализ таргетов (ключевые слова, авто/мануал) |
 | `control_routes.py` | `control_bp` | `/control` — управление рекламой через pending_changes |
 
 ### HTML страницы
@@ -736,6 +737,173 @@ const anyHasAsin = groups.some(g => g.ads.some(a => a.asin === filterAsin));
 // AUTO: нет ASIN в ads → группы с clicks > 0
 // Ads есть но asin null → группы с clicks > 0
 ```
+
+---
+
+## Targets Page (targets_routes.py + targets.html)
+
+### Назначение
+Страница `/targets` — анализ и управление таргетами (ключевые слова, авто/мануал) на уровне групп объявлений. Два режима: **Группы** (агрегированная статистика по группам) и **Таргеты** (плоский список всех таргетов).
+
+### Blueprint
+```python
+targets_bp = Blueprint('targets', __name__)
+# Зарегистрирован в app.py: app.register_blueprint(targets_bp)
+# HTML: GET /targets → targets.html
+```
+
+### GET /targets/data
+Основной endpoint таблицы. Параметр `mode` переключает между режимами.
+
+**Общие параметры:** `account_type` (MERCH/KDP), `mode` (groups/targets), `date_from`, `date_to`, `marketplace`, `portfolio_ids` (через запятую), `name`, `state` (ad_group_state), `camp_state` (campaign_state), `sort_by`, `sort_dir`, `page`, `per_page`
+
+**Числовые фильтры:** `impressions_op/val/min/max`, `clicks_*`, `cost_*`, `ctr_*`, `sales_14d_*`, `purchases_14d_*`, `acos_*`
+
+**Режим `mode=groups`:**
+- Дополнительные параметры: `ttype` (targeting_type: keyword/auto/product), `group_state` (ALL/ACTIVE/PAUSED)
+- SQL: агрегирует `targets_stats_{suffix}` с JOIN `campaigns_{suffix}` по ad_group_id, фильтр по targeting_type группы
+- Возвращает поля: `ad_group_id`, `ad_group_name`, `campaign_name`, `portfolio_name`, `marketplace`, `ad_group_state`, `campaign_state`, `ad_group_default_bid`, `targeting_type`, `impressions`, `clicks`, `cost`, `sales_14d`, `purchases_14d`, `ctr`, `acos`
+
+**Режим `mode=targets`:**
+- Дополнительные параметры: `ttype` (тип таргета), `group_state` (статус группы для фильтрации)
+- SQL: `targets_stats_{suffix}` LEFT JOIN `campaigns_{suffix}` (для ad_group_state)
+- Возвращает поля: `keyword_id`, `kw_text`, `keyword_type`, `match_type`, `bid`, `target_state`, `ad_group_name`, `campaign_name`, `ad_group_state`, `ad_group_default_bid`, `impressions`, `clicks`, `cost`, `sales_14d`, `purchases_14d`, `ctr`, `acos`
+
+**Важно:** В режиме таргетов `ad_group_default_bid` берётся из поля `g.ad_group_default_bid` в CTE `g` (через ROW_NUMBER OVER PARTITION BY ad_group_id из campaigns), объединённого с stats LEFT JOIN. Это позволяет показывать ставку группы в качестве fallback когда ставка таргета не задана.
+
+### GET /targets/group
+Детальная информация о группе: структура + статистика. Реализован по **паттерну products**: два отдельных BigQuery запроса (struct + stats), join в Python.
+
+**Параметры:** `group_id`, `campaign_id`, `marketplace`, `account_type`, `date_from`, `date_to`
+
+**4 параллельных запроса:**
+1. `sql_group_info` — дефолтная ставка и campaign_id группы из campaigns_{suffix}
+2. `sql_struct` — ВСЕ сущности группы (keyword, product_targeting, negative_keyword, negative_product_targeting) из campaigns_{suffix}, дедупликация через ROW_NUMBER OVER PARTITION BY entity_id ORDER BY synced_at DESC
+3. `sql_stats` — агрегированная статистика по keyword_id из targets_stats_{suffix} с `ANY_VALUE(keyword_type)`
+4. `sql_search_terms` — поисковые запросы из search_terms_{suffix}
+
+**SQL struct (ключевой паттерн):**
+```sql
+SELECT entity_type, keyword_id, keyword_text, match_type, keyword_bid, keyword_state,
+       target_id, targeting_expression, target_bid, target_state
+FROM (
+    SELECT ...,
+           ROW_NUMBER() OVER (
+               PARTITION BY CASE WHEN entity_type IN ('keyword','negative_keyword')
+                            THEN keyword_id ELSE target_id END
+               ORDER BY synced_at DESC
+           ) rn
+    FROM `{camp_table}`
+    WHERE entity_type IN ('keyword','product_targeting','negative_keyword','negative_product_targeting')
+      AND ad_group_id = '{safe_gid}' {mkt_cond}
+) WHERE rn = 1
+```
+
+**Python join:**
+```python
+stats_by_id = {r['keyword_id']: r for r in stats_rows}
+for row in struct_rows:
+    eid = row.get('keyword_id') or row.get('target_id')
+    st = stats_by_id.get(eid, {})
+    # keyword_type: из stats или fallback
+    ktype = st.get('keyword_type') or (row['match_type'].upper() if row['match_type'] else 'TARGETING_EXPRESSION')
+    # ... сборка targets[] и negatives[]
+```
+
+**Возвращает:**
+```json
+{
+  "group_bid": 0.5,
+  "campaign_id": "...",
+  "targets": [{"id":"...","text":"...","type":"BROAD","bid":null,"state":"ENABLED","stats":{...}}],
+  "negatives": [{"id":"...","text":"...","type":"EXACT","neg_type":"keyword|product"}],
+  "search_terms": [{"search_term":"...","keyword_id":"...","keyword":"...","impressions":...}]
+}
+```
+
+**Почему struct из campaigns, а не из stats:** паузированные таргеты не имеют статистики → если начинать с stats, они не появятся. Паттерн "struct → LEFT JOIN stats" гарантирует отображение всех таргетов независимо от состояния.
+
+**keyword_type из campaigns:** поле `keyword_type` существует в `targets_stats_{suffix}`, но НЕ в `campaigns_{suffix}`. Для получения используется `ANY_VALUE(keyword_type)` в stats-запросе, для новых таргетов — fallback `UPPER(match_type)` или `'TARGETING_EXPRESSION'`.
+
+### targets.html — Состояние (S)
+```js
+S = {
+  acct, mode, ttype, groupTgtType, groupState, tgtGroupState,
+  df, dt, mkt, portfolios, pfs, name, state, campState,
+  sort, dir, page, perPage, total, numFilters,
+  openGroupId, openGroupMkt
+}
+```
+
+### targets.html — Режимы и фильтры
+- **Режим Группы**: фильтры тип AUTO/MANUAL + статус ALL/ACTIVE/PAUSED
+- **Режим Таргеты**: фильтры тип таргета + статус группы
+- Портфолио dropdown (как в products): фильтрует по account_type + geo
+
+### targets.html — renderGroups()
+Таблица групп. Колонки: Группа / Кампания / Маркетплейс / Ставка / Показы / Клики / Расходы / Продажи / Заказы / ACOS.
+- Inline редактирование ставки группы (`openBidEdit` / `saveBid`)
+- Разворачивание группы по клику на шевроне → `loadGroupDetail(groupId, mkt)`
+
+### targets.html — renderTargets()
+Таблица таргетов с колонкой toggle слева.
+- Toggle `.stog` для включения/паузы каждого таргета
+- Fallback bid: если `target.bid` null → показывается `ad_group_default_bid` серым курсивом с `(г)`
+- Бейдж статуса группы под именем группы (`.bp` amber для PAUSED)
+- Inline редактирование ставки
+
+### targets.html — renderGroupDetail()
+Products-style layout с вкладками `.tabs`/`.tab`/`.tp`:
+- Вкладка **Таргеты** — `renderGroupTargets()`
+- Вкладка **Поисковые запросы** — `renderGroupSearchTerms()`
+- Вкладка **Минус слова** — `renderGroupNegatives()`
+
+### targets.html — renderGroupTargets()
+Grid `.ih`/`.ii` (как в products):
+```
+24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px
+Toggle · Текст · Тип · Ставка · Показы · Клики · Заказы · Расходы · Продажи · ACOS
+```
+- `.stog` toggle (`.en`/`.pa`) с `toggleState()` → `.pend` amber после успешного запроса
+- Ставка с fallback на ставку группы (серый курсив + `(г)`)
+- Inline редактирование ставки → `ctrlAdd` с entity_type `keyword` или `target`
+
+### targets.html — renderGroupSearchTerms()
+Grid `.ih.st`/`.ii.st` с чекбоксами.
+- Кнопка **«→ Минус (N)»** при выборе строк
+- `openNegFromSt(groupId, campId, mkt)` — разделяет ASINы и слова, открывает modalNeg
+- `isAsin(str)` — `/^[Bb][0-9A-Za-z]{9}$/`
+
+### targets.html — renderGroupNegatives()
+Grid `.in2` с бейджами типа KW/PRODUCT:
+- Негативные ключи (negative_keyword) → тип "KW" + match type
+- Негативные продукты (negative_product_targeting) → тип "PRODUCT" + ASIN из targeting_expression
+
+### targets.html — modalNeg
+Радиокнопки Слово/Продукт ASIN. ID полей: `mnegGroupId`, `mnegCampId`, `mnegMkt`.
+- `onNegTypeChange(radio)` — скрывает/показывает строку Match Type
+- `submitAddNeg()`:
+  - Слово → `entity_type: 'negative_add'`
+  - ASIN → `entity_type: 'negative_product_add'` (каждый ASIN отдельной записью)
+  - Batch отправка через `ctrlAddBatch(payloads)`
+
+### targets.html — toggleState()
+```js
+async function toggleState(e, entityType, entityId, currentState, mkt) {
+  // ставит .pend (amber) сразу на кнопку
+  // отправляет ctrlAdd с новым state (ENABLED↔PAUSED)
+  // при успехе: .pend остаётся до следующей загрузки данных
+}
+```
+
+### Особенности паттерна targets vs products
+| Аспект | products | targets |
+|---|---|---|
+| Основная таблица stats | `asin_stats_{suffix}` | `targets_stats_{suffix}` |
+| Структура | `campaigns_{suffix}` | `campaigns_{suffix}` |
+| keyword_type | есть в stats | `ANY_VALUE(keyword_type)` из stats |
+| Негативные продукты | `negative_product_targeting` | `negative_product_targeting` |
+| Toggle entity_type | `keyword` или `target` | `keyword` или `target` |
 
 ---
 
