@@ -393,9 +393,27 @@ def targets_group():
     """
 
     sql_targets = f"""
-    WITH stats AS (
+    WITH kw_raw AS (
         SELECT
-            keyword_id, keyword, targeting, keyword_type,
+            CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END AS stat_key,
+            CASE WHEN entity_type='keyword' THEN keyword_text ELSE targeting_expression END AS kw_text,
+            SAFE_CAST(CASE WHEN entity_type='keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
+            CASE WHEN entity_type='keyword' THEN keyword_state ELSE target_state END AS state,
+            entity_type, match_type, keyword_type,
+            ROW_NUMBER() OVER (
+                PARTITION BY CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END
+                ORDER BY synced_at DESC
+            ) rn
+        FROM `{camp_table}`
+        WHERE entity_type IN ('keyword','product_targeting')
+          AND ad_group_id = '{safe_gid}'
+          AND keyword_type IN {ALL_TYPES}
+          {mkt_cond}
+    ),
+    kw AS (SELECT * FROM kw_raw WHERE rn = 1),
+    stats AS (
+        SELECT
+            keyword_id,
             SUM(impressions)          AS impressions,
             SUM(clicks)               AS clicks,
             ROUND(SUM(cost), 2)       AS cost,
@@ -409,32 +427,23 @@ def targets_group():
         WHERE ad_group_id = '{safe_gid}'
           AND keyword_type IN {ALL_TYPES}
           {mkt_cond} {date_where}
-        GROUP BY keyword_id, keyword, targeting, keyword_type
-    ),
-    kw_raw AS (
-        SELECT
-            CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END AS stat_key,
-            SAFE_CAST(CASE WHEN entity_type='keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
-            CASE WHEN entity_type='keyword' THEN keyword_state ELSE target_state END AS state,
-            entity_type,
-            match_type,
-            ROW_NUMBER() OVER (
-                PARTITION BY CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END
-                ORDER BY synced_at DESC
-            ) rn
-        FROM `{camp_table}`
-        WHERE entity_type IN ('keyword','product_targeting')
-          AND ad_group_id = '{safe_gid}'
-          {mkt_cond}
-    ),
-    kw AS (SELECT * FROM kw_raw WHERE rn = 1)
+        GROUP BY keyword_id
+    )
     SELECT
-        s.keyword_id, s.keyword, s.targeting, s.keyword_type,
+        kw.stat_key AS keyword_id,
+        COALESCE(kw.kw_text, '') AS keyword,
+        '' AS targeting,
+        kw.keyword_type,
         kw.bid, kw.state AS target_state, kw.match_type, kw.entity_type,
-        s.impressions, s.clicks, s.cost, s.sales_14d, s.purchases_14d, s.ctr, s.acos
-    FROM stats s
-    LEFT JOIN kw ON kw.stat_key = s.keyword_id
-    ORDER BY s.clicks DESC
+        COALESCE(s.impressions, 0)   AS impressions,
+        COALESCE(s.clicks, 0)        AS clicks,
+        COALESCE(s.cost, 0)          AS cost,
+        COALESCE(s.sales_14d, 0)     AS sales_14d,
+        COALESCE(s.purchases_14d, 0) AS purchases_14d,
+        s.ctr, s.acos
+    FROM kw
+    LEFT JOIN stats s ON s.keyword_id = kw.stat_key
+    ORDER BY COALESCE(s.clicks, 0) DESC
     LIMIT 500
     """
 
