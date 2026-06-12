@@ -399,7 +399,7 @@ def targets_group():
             CASE WHEN entity_type='keyword' THEN keyword_text ELSE targeting_expression END AS kw_text,
             SAFE_CAST(CASE WHEN entity_type='keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
             CASE WHEN entity_type='keyword' THEN keyword_state ELSE target_state END AS state,
-            entity_type, match_type, keyword_type,
+            entity_type, match_type,
             ROW_NUMBER() OVER (
                 PARTITION BY CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END
                 ORDER BY synced_at DESC
@@ -407,13 +407,13 @@ def targets_group():
         FROM `{camp_table}`
         WHERE entity_type IN ('keyword','product_targeting')
           AND ad_group_id = '{safe_gid}'
-          AND keyword_type IN {ALL_TYPES}
           {mkt_cond}
     ),
     kw AS (SELECT * FROM kw_raw WHERE rn = 1),
     stats AS (
         SELECT
             keyword_id,
+            ANY_VALUE(keyword_type) AS keyword_type,
             SUM(impressions)          AS impressions,
             SUM(clicks)               AS clicks,
             ROUND(SUM(cost), 2)       AS cost,
@@ -425,7 +425,6 @@ def targets_group():
                  THEN ROUND(SUM(cost)/SUM(sales_14d)*100, 1) ELSE NULL END AS acos
         FROM `{stat_table}`
         WHERE ad_group_id = '{safe_gid}'
-          AND keyword_type IN {ALL_TYPES}
           {mkt_cond} {date_where}
         GROUP BY keyword_id
     )
@@ -433,7 +432,9 @@ def targets_group():
         kw.stat_key AS keyword_id,
         COALESCE(kw.kw_text, '') AS keyword,
         '' AS targeting,
-        kw.keyword_type,
+        COALESCE(s.keyword_type,
+            CASE WHEN kw.entity_type='keyword' THEN UPPER(kw.match_type)
+                 ELSE 'TARGETING_EXPRESSION' END) AS keyword_type,
         kw.bid, kw.state AS target_state, kw.match_type, kw.entity_type,
         COALESCE(s.impressions, 0)   AS impressions,
         COALESCE(s.clicks, 0)        AS clicks,
