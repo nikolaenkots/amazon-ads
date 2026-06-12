@@ -392,80 +392,43 @@ def targets_group():
     LIMIT 1
     """
 
-    sql_targets = f"""
-    WITH kw_raw AS (
-        SELECT
-            CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END AS stat_key,
-            CASE WHEN entity_type='keyword' THEN keyword_text ELSE targeting_expression END AS kw_text,
-            SAFE_CAST(CASE WHEN entity_type='keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
-            CASE WHEN entity_type='keyword' THEN keyword_state ELSE target_state END AS state,
-            entity_type, match_type,
-            ROW_NUMBER() OVER (
-                PARTITION BY CASE WHEN entity_type='keyword' THEN keyword_id ELSE target_id END
-                ORDER BY synced_at DESC
-            ) rn
-        FROM `{camp_table}`
-        WHERE entity_type IN ('keyword','product_targeting')
-          AND ad_group_id = '{safe_gid}'
-          {mkt_cond}
-    ),
-    kw AS (SELECT * FROM kw_raw WHERE rn = 1),
-    stats AS (
-        SELECT
-            keyword_id,
-            ANY_VALUE(keyword_type) AS keyword_type,
-            SUM(impressions)          AS impressions,
-            SUM(clicks)               AS clicks,
-            ROUND(SUM(cost), 2)       AS cost,
-            ROUND(SUM(sales_14d), 2)  AS sales_14d,
-            SUM(purchases_14d)        AS purchases_14d,
-            CASE WHEN SUM(impressions)>0
-                 THEN ROUND(SUM(clicks)/SUM(impressions)*100, 3) ELSE NULL END AS ctr,
-            CASE WHEN SUM(sales_14d)>0
-                 THEN ROUND(SUM(cost)/SUM(sales_14d)*100, 1) ELSE NULL END AS acos
-        FROM `{stat_table}`
-        WHERE ad_group_id = '{safe_gid}'
-          {mkt_cond} {date_where}
-        GROUP BY keyword_id
-    )
-    SELECT
-        kw.stat_key AS keyword_id,
-        COALESCE(kw.kw_text, '') AS keyword,
-        '' AS targeting,
-        COALESCE(s.keyword_type,
-            CASE WHEN kw.entity_type='keyword' THEN UPPER(kw.match_type)
-                 ELSE 'TARGETING_EXPRESSION' END) AS keyword_type,
-        kw.bid, kw.state AS target_state, kw.match_type, kw.entity_type,
-        COALESCE(s.impressions, 0)   AS impressions,
-        COALESCE(s.clicks, 0)        AS clicks,
-        COALESCE(s.cost, 0)          AS cost,
-        COALESCE(s.sales_14d, 0)     AS sales_14d,
-        COALESCE(s.purchases_14d, 0) AS purchases_14d,
-        s.ctr, s.acos
-    FROM kw
-    LEFT JOIN stats s ON s.keyword_id = kw.stat_key
-    ORDER BY COALESCE(s.clicks, 0) DESC
-    LIMIT 500
-    """
-
-    sql_negatives = f"""
-    SELECT entity_type, keyword_id, target_id,
-           keyword_text, targeting_expression, match_type, keyword_state, target_state
+    # Structure: all target/kw/neg entities for this group — most recent snapshot per id
+    sql_struct = f"""
+    SELECT entity_type,
+           keyword_id, keyword_text, match_type, keyword_bid, keyword_state,
+           target_id,  targeting_expression, target_bid, target_state
     FROM (
-        SELECT entity_type, keyword_id, target_id,
-               keyword_text, targeting_expression, match_type, keyword_state, target_state,
+        SELECT entity_type,
+               keyword_id, keyword_text, match_type, keyword_bid, keyword_state,
+               target_id,  targeting_expression, target_bid, target_state,
                ROW_NUMBER() OVER (
-                   PARTITION BY COALESCE(keyword_id, target_id), marketplace
+                   PARTITION BY
+                       CASE WHEN entity_type IN ('keyword','negative_keyword')
+                            THEN keyword_id ELSE target_id END
                    ORDER BY synced_at DESC
                ) rn
         FROM `{camp_table}`
-        WHERE entity_type IN ('negative_keyword', 'negative_product_targeting')
+        WHERE entity_type IN ('keyword','product_targeting','negative_keyword','negative_product_targeting')
           AND ad_group_id = '{safe_gid}'
           {mkt_cond}
     )
     WHERE rn = 1
-    ORDER BY keyword_text, targeting_expression
-    LIMIT 500
+    """
+
+    # Stats: aggregated by keyword_id for this group in the date range
+    sql_stats = f"""
+    SELECT
+        keyword_id,
+        ANY_VALUE(keyword_type) AS keyword_type,
+        SUM(impressions)          AS impressions,
+        SUM(clicks)               AS clicks,
+        ROUND(SUM(cost), 2)       AS cost,
+        ROUND(SUM(sales_14d), 2)  AS sales_14d,
+        SUM(purchases_14d)        AS purchases_14d
+    FROM `{stat_table}`
+    WHERE ad_group_id = '{safe_gid}'
+      {mkt_cond} {date_where}
+    GROUP BY keyword_id
     """
 
     st_table = f"{PROJECT_ID}.{DATASET}.search_terms_{suffix}"
@@ -491,11 +454,12 @@ def targets_group():
 
     try:
         client = get_client()
-        job_info   = client.query(sql_group_info)
-        job_tgts   = client.query(sql_targets)
-        job_negs   = client.query(sql_negatives)
-        job_st     = client.query(sql_search_terms)
+        job_info  = client.query(sql_group_info)
+        job_struct = client.query(sql_struct)
+        job_stats = client.query(sql_stats)
+        job_st    = client.query(sql_search_terms)
 
+        # Group info
         group_rows = list(job_info.result())
         group_info = {}
         if group_rows:
@@ -504,9 +468,60 @@ def targets_group():
                 'ad_group_default_bid': _cvt(r.get('ad_group_default_bid')),
                 'campaign_id': r.get('campaign_id', ''),
             }
-        targets      = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_tgts.result()]
-        negatives    = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_negs.result()]
+
+        # Stats index: keyword_id → stats dict
+        stats_by_id = {}
+        for r in job_stats.result():
+            d = {k: _cvt(v) for k, v in dict(r).items()}
+            kid = d.get('keyword_id') or ''
+            impr  = d.get('impressions') or 0
+            clks  = d.get('clicks') or 0
+            cost  = d.get('cost') or 0
+            sales = d.get('sales_14d') or 0
+            d['ctr']  = round(clks/impr*100, 3) if impr > 0 else None
+            d['acos'] = round(cost/sales*100, 1) if sales > 0 else None
+            stats_by_id[kid] = d
+
+        # Build targets and negatives from structure
+        targets   = []
+        negatives = []
+        for r in job_struct.result():
+            d = {k: _cvt(v) for k, v in dict(r).items()}
+            et = d.get('entity_type', '')
+            if et in ('negative_keyword', 'negative_product_targeting'):
+                negatives.append(d)
+            else:
+                # keyword or product_targeting
+                kid  = d.get('keyword_id') or d.get('target_id') or ''
+                bid  = _cvt(d.get('keyword_bid') if et == 'keyword' else d.get('target_bid'))
+                state = d.get('keyword_state') if et == 'keyword' else d.get('target_state')
+                text  = d.get('keyword_text') if et == 'keyword' else d.get('targeting_expression')
+                match = d.get('match_type') or ''
+                st    = stats_by_id.get(kid, {})
+                keyword_type = st.get('keyword_type') or (
+                    (match.upper() if match else None) or
+                    ('TARGETING_EXPRESSION' if et == 'product_targeting' else None)
+                )
+                targets.append({
+                    'keyword_id':   kid,
+                    'keyword':      text or '',
+                    'keyword_type': keyword_type,
+                    'match_type':   match,
+                    'bid':          _cvt(bid),
+                    'target_state': state,
+                    'entity_type':  et,
+                    'impressions':  st.get('impressions') or 0,
+                    'clicks':       st.get('clicks') or 0,
+                    'cost':         st.get('cost') or 0,
+                    'sales_14d':    st.get('sales_14d') or 0,
+                    'purchases_14d':st.get('purchases_14d') or 0,
+                    'ctr':          st.get('ctr'),
+                    'acos':         st.get('acos'),
+                })
+        targets.sort(key=lambda x: x.get('clicks', 0) or 0, reverse=True)
+
         search_terms = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_st.result()]
+
         return jsonify({'group_info': group_info, 'targets': targets,
                         'negatives': negatives, 'search_terms': search_terms})
     except Exception as e:

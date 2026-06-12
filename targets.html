@@ -673,12 +673,12 @@ function renderTargets(rows){
   const thead=document.getElementById('thead');
   const tbody=document.getElementById('tbody');
   thead.innerHTML=`<tr>
+    <th class="ns" style="width:32px"></th>
     ${thSort('kw_text','Таргет','left')}
     ${thSort('keyword_type','Тип','left')}
     ${thSort('ad_group_name','Группа','left')}
     ${thSort('campaign_name','Кампания','left')}
     ${thNum('bid','Ставка')}
-    ${th('Статус','ns')}
     ${thNum('impressions','Показы')}
     ${thNum('clicks','Клики')}
     ${thNum('ctr','CTR')}
@@ -687,7 +687,7 @@ function renderTargets(rows){
     ${thNum('purchases_14d','Заказы')}
     ${thNum('acos','ACoS')}
   </tr>`;
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="13" class="te">Нет данных</td></tr>';return;}
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}
   tbody.innerHTML=rows.map((r,ri)=>{
     const ownBid=r.bid!=null?Number(r.bid).toFixed(2):null;
     const grpBid=r.ad_group_default_bid!=null?Number(r.ad_group_default_bid).toFixed(2):null;
@@ -695,21 +695,26 @@ function renderTargets(rows){
     const isGrpBid=!ownBid&&grpBid!=null;
     const eid=esc(String(r.keyword_id||ri));
     const itType=r.match_type?'keyword':'target';
+    const mkt=esc(r.marketplace||'');
+    const curState=(r.target_state||'ENABLED').toUpperCase();
+    const isEn=curState==='ENABLED';
     const bidId='tbid_fl_'+ri;
     const bidCell=displayBid
       ?`<span id="${bidId}">
           <button class="bid-btn${isGrpBid?' grp':''}" title="${isGrpBid?'Ставка группы':''}"
             onclick="event.stopPropagation();openBidEdit('${bidId}')">$${displayBid}${isGrpBid?' (г)':''}</button>
-          <span class="bid-edit">
+          <span class="bid-edit" style="display:none">
             <input class="bid-inp" type="number" value="${displayBid}" min="0.02" step="0.01"
-              onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(r.marketplace||'')}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
+              onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${mkt}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
               onclick="event.stopPropagation()">
-            <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(r.marketplace||'')}')">✓</button>
+            <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','${itType}','${eid}','${displayBid}','${mkt}')">✓</button>
             <button class="bid-cx" onclick="event.stopPropagation();closeBidEdit('${bidId}')">✕</button>
           </span>
         </span>`
       :'<span class="dv">—</span>';
     return `<tr class="dr" style="cursor:default">
+      <td><button class="stog ${isEn?'en':'pa'}"
+        onclick="event.stopPropagation();toggleState(event,'${itType}','${eid}','${curState}','${mkt}')"></button></td>
       <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
       <td>${kwTypeBadge(r.keyword_type)}</td>
       <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span>
@@ -719,7 +724,6 @@ function renderTargets(rows){
         <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
       </div></td>
       <td class="r">${bidCell}</td>
-      <td>${stateBadge(r.target_state)}</td>
       <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
       <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
       <td class="r"><span class="n">${r.ctr!=null?r.ctr.toFixed(3)+'%':'<span class="dv">—</span>'}</span></td>
