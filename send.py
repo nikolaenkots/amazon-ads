@@ -386,55 +386,77 @@ def send_update_ad_groups(endpoint, headers, changes, dry_run=False):
 
 
 def send_update_targets(endpoint, headers, changes, dry_run=False):
-    """Обновить bid/state ключевых слов"""
-    payloads = []
+    """Обновить bid/state ключевых слов. Мёрджит несколько изменений одного targetId в один payload."""
+    MKT_CURRENCY = {
+        "US":"USD","CA":"CAD","UK":"GBP","GB":"GBP",
+        "DE":"EUR","FR":"EUR","IT":"EUR","ES":"EUR","NL":"EUR",
+        "AU":"AUD","JP":"JPY","IN":"INR","MX":"MXN","BR":"BRL",
+        "SE":"SEK","PL":"PLN","BE":"EUR","TR":"TRY","SG":"SGD",
+    }
+
     ad_payloads = []
-    for c in changes:
+    ad_indices  = []
+
+    merged  = {}   # targetId → {"item": {...}, "indices": [...]}
+    order   = []   # сохраняем порядок первого появления targetId
+
+    for i, c in enumerate(changes):
         fn  = c["field_name"]
         eid = c["entity_id"]
         val = c["new_value"]
         et  = c["entity_type"]
+
         if et == "product_ad":
             ad_payloads.append({"adId": eid, "state": val})
-        else:
-            item = {"targetId": eid}
-            if fn == "bid":
-                # SP API v1 bid format: marketplaceSettings with bid+currencyCode+marketplace
-                mkt_code = c.get("marketplace", "US").upper()
-                # Currency per marketplace
-                MKT_CURRENCY = {
-                    "US":"USD","CA":"CAD","UK":"GBP","GB":"GBP",
-                    "DE":"EUR","FR":"EUR","IT":"EUR","ES":"EUR","NL":"EUR",
-                    "AU":"AUD","JP":"JPY","IN":"INR","MX":"MXN","BR":"BRL",
-                    "SE":"SEK","PL":"PLN","BE":"EUR","TR":"TRY","SG":"SGD",
-                }
-                currency = MKT_CURRENCY.get(mkt_code, "USD")
-                # SP API v1 bid format mirrors the query response format
-                # query returns: "bid": {"bid": 0.42, "currencyCode": "USD"}
-                item["bid"] = {"bid": float(val), "currencyCode": currency}
-            elif fn == "state":
-                item["state"] = val
-            payloads.append(item)
+            ad_indices.append(i)
+            continue
+
+        if eid not in merged:
+            merged[eid] = {"item": {"targetId": eid}, "indices": []}
+            order.append(eid)
+        merged[eid]["indices"].append(i)
+
+        item = merged[eid]["item"]
+        if fn == "bid":
+            mkt_code = c.get("marketplace", "US").upper()
+            currency = MKT_CURRENCY.get(mkt_code, "USD")
+            item["bid"] = {"bid": float(val), "currencyCode": currency}
+        elif fn == "state":
+            item["state"] = val
+
+    payloads = [merged[eid]["item"] for eid in order]
+    idx_map  = {i: merged[eid]["indices"] for i, eid in enumerate(order)}
+
+    results = {}
 
     # Отправить объявления отдельно
     if ad_payloads and not dry_run:
         resp_ads = amz_post(endpoint, "/adsApi/v1/update/ads", headers, {"ads": ad_payloads})
-        ad_results = parse_multi_response(resp_ads, "ads", len(ad_payloads))
-        # Добавим результаты обратно в общий results по индексу
-        # Сначала отправим только target payloads ниже
+        ad_res = parse_multi_response(resp_ads, "ads", len(ad_payloads))
+        for j, orig_i in enumerate(ad_indices):
+            results[orig_i] = ad_res.get(j, "SUCCESS")
 
     if dry_run:
-        print(f"  [DRY RUN] update/targets: {json.dumps(payloads, ensure_ascii=False)[:200]}")
+        print(f"  [DRY RUN] update/targets ({len(payloads)} merged): "
+              f"{json.dumps(payloads, ensure_ascii=False)[:300]}")
         return {i: "SUCCESS" for i in range(len(changes))}
 
-    resp = amz_post(endpoint, "/adsApi/v1/update/targets", headers, {"targets": payloads})
-    print(f"  [DEBUG] update/targets status={resp.status_code}")
-    try:
-        rj = resp.json()
-        print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:600]}")
-    except Exception:
-        print(f"  [DEBUG] raw: {resp.text[:400]}")
-    return parse_multi_response(resp, "targets", len(changes))
+    if payloads:
+        resp = amz_post(endpoint, "/adsApi/v1/update/targets", headers, {"targets": payloads})
+        print(f"  [DEBUG] update/targets status={resp.status_code}")
+        try:
+            rj = resp.json()
+            print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:600]}")
+        except Exception:
+            print(f"  [DEBUG] raw: {resp.text[:400]}")
+
+        merged_results = parse_multi_response(resp, "targets", len(payloads))
+        for batch_idx, orig_indices in idx_map.items():
+            result = merged_results.get(batch_idx, "SUCCESS")
+            for orig_i in orig_indices:
+                results[orig_i] = result
+
+    return results
 
 
 def send_create_targets(endpoint, headers, changes, dry_run=False):
