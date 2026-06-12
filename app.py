@@ -60,6 +60,7 @@ from control_routes import control_bp
 from products_routes  import products_bp
 from kdp_earnings_routes import kdp_earnings_bp
 from campaign_builder_routes import campaign_builder_bp
+from targets_routes import targets_bp
 
 
 app.register_blueprint(catalog_bp)
@@ -72,6 +73,7 @@ app.register_blueprint(control_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(kdp_earnings_bp)
 app.register_blueprint(campaign_builder_bp)
+app.register_blueprint(targets_bp)
 
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
