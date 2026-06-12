@@ -533,8 +533,8 @@ function renderGroups(rows){
       <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
       <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
       <td class="r"><span class="n">${r.ctr!=null ? r.ctr.toFixed(3)+'%' : '<span class="dv">—</span>'}</span></td>
-      <td class="r"><span class="n ${r.cost>0?'an':''}">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span></td>
-      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span></td>
+      <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span></span></td>
+      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span></span></td>
       <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
       <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null ? r.acos.toFixed(1)+'%' : '<span class="dv">—</span>'}</span></td>
       <td class="r"><svg class="rchev" id="chev_${r.ad_group_id}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></td>
@@ -592,8 +592,8 @@ function renderTargets(rows){
       <td class="r"><span class="n">${fmtNum(r.impressions)}</span></td>
       <td class="r"><span class="n">${fmtNum(r.clicks)}</span></td>
       <td class="r"><span class="n">${r.ctr!=null ? r.ctr.toFixed(3)+'%' : '<span class="dv">—</span>'}</span></td>
-      <td class="r"><span class="n ${r.cost>0?'an':''}">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span></td>
-      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span></td>
+      <td class="r"><span class="n ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span></span></td>
+      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span></span></td>
       <td class="r"><span class="n">${fmtNum(r.purchases_14d)}</span></td>
       <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null ? r.acos.toFixed(1)+'%' : '<span class="dv">—</span>'}</span></td>
     </tr>`).join('');
@@ -688,8 +688,8 @@ function renderGroupTargets(rows){
       <span class="ir2">${fmtNum(r.impressions)}</span>
       <span class="ir2">${fmtNum(r.clicks)}</span>
       <span class="ir2">${r.ctr!=null ? r.ctr.toFixed(3)+'%' : '—'}</span>
-      <span class="ir2 ${r.cost>0?'an':''}">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span>
-      <span class="ir2 ${r.sales_14d>0?'gn':''}">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span>
+      <span class="ir2 ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null ? '$'+r.cost.toFixed(2) : '—'}</span></span>
+      <span class="ir2 ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null ? '$'+r.sales_14d.toFixed(2) : '—'}</span></span>
       <span class="ir2 ${acosClass(r.acos)}">${r.acos!=null ? r.acos.toFixed(1)+'%' : '—'}</span>
     </div>`).join('');
   return hdr + items;
