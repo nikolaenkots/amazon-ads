@@ -93,28 +93,36 @@ tr.er td{padding:0}
 .gg{margin:10px;border:1px solid var(--border);border-radius:6px;overflow:visible}
 .gg-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
 .gg-title{font-size:12px;color:var(--muted)}
+/* group body */
 .gg-acts{display:flex;gap:4px;align-items:center}
 .act-btn{height:26px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif}
 .act-btn:hover{background:var(--surface2)}
-/* tabs */
-.itabs{display:flex;border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px}
-.itab{padding:5px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
-.itab:hover{color:var(--text)}
-.itab.on{color:var(--accent);border-bottom-color:var(--accent)}
-.itb{display:inline-block;min-width:15px;padding:0 3px;margin-left:3px;border-radius:99px;font-size:9px;background:var(--surface2);color:var(--dim);text-align:center}
-.itab.on .itb{background:var(--accent-bg);color:var(--accent)}
-.itp{display:none}.itp.on{display:block}
-/* inner table header/rows */
-.ih2{display:grid;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
-.ih2 span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
-.ih2 span:first-child,.ih2 span:nth-child(2){text-align:left}
-.ii2{display:grid;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
-.ii2:last-child{border-bottom:none}
-.ii2:hover{background:var(--surface2)}
-.grid-tgts{grid-template-columns:20px 1fr 80px 100px 70px 65px 88px 85px 72px}
-.grid-negs{grid-template-columns:20px 1fr 90px 100px}
-.it2{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ir2{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted);white-space:nowrap}
+.act-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.act-btn.pri:hover{background:#a83d10}
+/* tabs — same as products */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px;justify-content:space-between}
+.tab{padding:5px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tbb{display:inline-block;min-width:15px;padding:0 3px;margin-left:3px;border-radius:99px;font-size:9px;background:var(--surface2);color:var(--dim);text-align:center}
+.tab.on .tbb{background:var(--accent-bg);color:var(--accent)}
+.tp{display:none}.tp.on{display:block}
+/* inner grid — same as products */
+.ih{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;padding:4px 11px;background:#f5f5f9;border-bottom:1px solid var(--border)}
+.ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
+.ih span:first-child,.ih span:nth-child(2){text-align:left}
+.ih.st{grid-template-columns:20px 1fr 150px 80px 70px 65px 88px 85px 72px}
+.ii{display:grid;grid-template-columns:24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px;align-items:center;padding:5px 11px;border-bottom:1px solid var(--border);gap:3px}
+.ii:last-child{border-bottom:none}
+.ii:hover{background:var(--surface2)}
+.ii.st{grid-template-columns:20px 1fr 150px 80px 70px 65px 88px 85px 72px}
+.it{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted);white-space:nowrap}
+/* negatives */
+.in2{display:flex;align-items:center;gap:6px;padding:5px 11px;border-bottom:1px solid var(--border);font-size:12px}
+.in2:last-child{border-bottom:none}
+.nt{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.nb{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
 .ge{padding:12px;text-align:center;color:var(--dim);font-size:11px}
 .name-cell{display:flex;flex-direction:column;gap:2px}
 .name-main{font-size:13px;font-weight:500}
@@ -359,26 +367,37 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
 </div>
 
 <!-- modal: add negative -->
-<div class="modal-bg" id="modalNeg">
+<div class="modal-bg" id="modalNeg" onclick="if(event.target===this)closeModal('modalNeg')">
   <div class="modal">
-    <div class="modal-title">+ Минус слово</div>
-    <input type="hidden" id="mnGid">
-    <input type="hidden" id="mnCid">
-    <input type="hidden" id="mnMkt">
+    <div class="modal-title">Добавить минусы</div>
     <div class="modal-row">
-      <div class="modal-label" id="mnTextLabel">Слова (по одному на строку)</div>
-      <textarea class="modal-inp" id="mnText" placeholder="free&#10;cheap"></textarea>
+      <div class="modal-label">Тип</div>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="keyword" checked onchange="onNegTypeChange(this)"> Слово
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="product" onchange="onNegTypeChange(this)"> Продукт (ASIN)
+        </label>
+      </div>
     </div>
-    <div class="modal-row" id="mnMatchRow">
-      <div class="modal-label">Match type</div>
-      <select class="modal-inp" id="mnMatch">
+    <div class="modal-row">
+      <div class="modal-label" id="mnegTextLabel">Слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mnegText" placeholder="free&#10;cheap"></textarea>
+    </div>
+    <div class="modal-row" id="mnegMatchRow">
+      <div class="modal-label">Match Type</div>
+      <select class="modal-inp" id="mnegMatch">
         <option value="NEGATIVE_EXACT">NEGATIVE_EXACT</option>
         <option value="NEGATIVE_PHRASE">NEGATIVE_PHRASE</option>
       </select>
     </div>
+    <input type="hidden" id="mnegGroupId">
+    <input type="hidden" id="mnegCampId">
+    <input type="hidden" id="mnegMkt">
     <div class="modal-acts">
       <button class="btn btn-s" onclick="closeModal('modalNeg')">Отмена</button>
-      <button class="btn btn-p" onclick="submitAddNeg()">Добавить</button>
+      <button class="btn btn-p" onclick="submitAddNeg()">Добавить в очередь</button>
     </div>
   </div>
 </div>
@@ -763,46 +782,40 @@ function renderGroupDetail(el,d,gid,mkt){
   const emkt=esc(mkt);
 
   el.innerHTML=`
-    <div class="gg-head">
-      <span class="gg-title">Группа · ${tgts.length} таргетов · ${negs.length} минус слов · ${sts.length} запросов${groupBid?' · ставка $'+groupBid.toFixed(2):''}</span>
-      <div class="gg-acts">
+    <div class="tabs" style="justify-content:space-between">
+      <div style="display:flex">
+        <span class="tab on" onclick="switchTab(this,0)">Таргеты<span class="tbb">${tgts.length}</span></span>
+        <span class="tab" onclick="switchTab(this,1)">Поисковые запросы<span class="tbb">${sts.length}</span></span>
+        <span class="tab" onclick="switchTab(this,2)">Минус слова<span class="tbb">${negs.length}</span></span>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
         <button class="act-btn st-neg-btn" id="stnb_${egid}" style="display:none;background:var(--accent);color:#fff;border-color:var(--accent)"
           onclick="openNegFromSt('${egid}','${cid}','${emkt}')">→ Минус (<span class="st-neg-cnt" id="stnc_${egid}">0</span>)</button>
         <button class="act-btn" onclick="openAddKw('${egid}','${cid}','${emkt}')">+ Ключевое слово</button>
-        <button class="act-btn" onclick="openAddNeg('${egid}','${cid}','${emkt}')">+ Минус слово</button>
+        <button class="act-btn" onclick="openAddNeg('${egid}','${cid}','${emkt}')">+ Минус</button>
       </div>
     </div>
-    <div class="itabs" id="itabs_${egid}">
-      <div class="itab on" onclick="switchITab(this,'itp_tgts_${egid}')">Таргеты <span class="itb">${tgts.length}</span></div>
-      <div class="itab" onclick="switchITab(this,'itp_st_${egid}')">Поисковые запросы <span class="itb">${sts.length}</span></div>
-      <div class="itab" onclick="switchITab(this,'itp_negs_${egid}')">Минус слова <span class="itb">${negs.length}</span></div>
-    </div>
-    <div class="itp on" id="itp_tgts_${egid}">${renderGroupTargets(tgts,gid,mkt,groupBid)}</div>
-    <div class="itp" id="itp_st_${egid}">${renderGroupSearchTerms(sts,gid)}</div>
-    <div class="itp" id="itp_negs_${egid}">${renderGroupNegatives(negs)}</div>
+    <div class="tp on">${renderGroupTargets(tgts,gid,mkt,groupBid)}</div>
+    <div class="tp">${renderGroupSearchTerms(sts,gid)}</div>
+    <div class="tp">${renderGroupNegatives(negs)}</div>
   `;
 }
 
-function switchITab(btn,panelId){
+function switchTab(btn,idx){
   const ei=btn.closest('.ei');
-  ei.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
-  ei.querySelectorAll('.itp').forEach(t=>t.classList.remove('on'));
+  ei.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  ei.querySelectorAll('.tp').forEach((t,i)=>t.classList.toggle('on',i===idx));
   btn.classList.add('on');
-  ei.querySelector('#'+panelId).classList.add('on');
 }
 
 function renderGroupTargets(rows,gid,mkt,groupBid){
   if(!rows.length)return'<div class="ge">Нет таргетов</div>';
-  const cols='28px 1fr 80px 90px 65px 65px 88px 85px 72px';
-  const hdr=`<div class="ih2" style="grid-template-columns:${cols}">
-    <span></span>
-    <span style="text-align:left">Таргет</span>
-    <span style="text-align:left">Тип</span>
-    <span>Ставка</span>
-    <span>Показы</span><span>Клики</span>
-    <span>Расход</span><span>Продажи</span><span>ACoS</span>
+  let h=`<div class="ih">
+    <span></span><span>Таргет / Тип</span><span>Match</span><span>Ставка</span>
+    <span>Показы</span><span>Клики</span><span>Заказы</span>
+    <span>Расходы</span><span>Продажи</span><span>ACOS</span>
   </div>`;
-  return hdr+rows.map((r,i)=>{
+  rows.forEach((r,i)=>{
     const eid=esc(String(r.keyword_id||i));
     const bidId='tbid_'+gid.replace(/[^a-z0-9]/gi,'_')+'_'+i;
     const ownBid=r.bid!=null?Number(r.bid).toFixed(2):null;
@@ -811,88 +824,83 @@ function renderGroupTargets(rows,gid,mkt,groupBid){
     const itType=r.match_type?'keyword':'target';
     const curState=(r.target_state||'ENABLED').toUpperCase();
     const isEn=curState==='ENABLED';
-    const bidCell=displayBid
-      ? `<span id="${bidId}">
-           <button class="bid-btn${isGroupBid?' grp':''}"
-             title="${isGroupBid?'Ставка группы (своя не задана)':''}"
-             onclick="openBidEdit('${bidId}')">$${displayBid}${isGroupBid?' (г)':''}</button>
-           <span class="bid-edit">
-             <input class="bid-inp" type="number" value="${displayBid}" min="0.02" step="0.01"
-               onkeydown="if(event.key==='Enter')saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}'); if(event.key==='Escape')closeBidEdit('${bidId}')">
-             <button class="bid-ok" onclick="saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}')">✓</button>
-             <button class="bid-cx" onclick="closeBidEdit('${bidId}')">✕</button>
-           </span>
-         </span>`
-      : '<span class="ir2">—</span>';
-    return `<div class="ii2" style="grid-template-columns:${cols}">
-      <span><button class="stog ${isEn?'en':'pa'}"
-        onclick="toggleState(event,'${itType}','${eid}','${curState}','${esc(mkt)}')"></button></span>
-      <span class="it2" title="${esc(r.keyword||r.targeting||'')}">${esc(r.keyword||r.targeting||'—')}</span>
-      <span>${kwTypeBadge(r.keyword_type)}</span>
-      <span class="ir2" style="text-align:right">${bidCell}</span>
-      <span class="ir2">${fmtNum(r.impressions)}</span>
-      <span class="ir2">${fmtNum(r.clicks)}</span>
-      <span class="ir2 ${r.cost>0?'an':''}"><span class="dv">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span></span>
-      <span class="ir2 ${r.sales_14d>0?'gn':''}"><span class="dv">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span></span>
-      <span class="ir2 ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
+    const ac=r.acos==null?'dv':r.acos<25?'ok':r.acos<50?'hi':'cr';
+    const bidHtml=displayBid
+      ?`<span id="${bidId}">
+          <button class="bid-btn" style="${isGroupBid?'color:var(--dim);font-style:italic':''}"
+            title="${isGroupBid?'Ставка группы (нет своей ставки)':''}"
+            onclick="openBidEdit('${bidId}')">$${displayBid}${isGroupBid?' (г)':''}</button>
+          <span class="bid-edit" style="display:none">
+            <input class="bid-inp" type="number" value="${displayBid}" min="0.02" step="0.01"
+              onkeydown="if(event.key==='Enter')saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}'); if(event.key==='Escape')closeBidEdit('${bidId}')">
+            <button class="bid-ok" onclick="saveBid('${bidId}','${itType}','${eid}','${displayBid}','${esc(mkt)}')">✓</button>
+            <button class="bid-cx" onclick="closeBidEdit('${bidId}')">✕</button>
+          </span>
+        </span>`
+      :'—';
+    h+=`<div class="ii">
+      <button class="stog ${isEn?'en':'pa'}"
+        onclick="toggleState(event,'${itType}','${eid}','${curState}','${esc(mkt)}')"></button>
+      <span class="it" title="${esc(r.keyword||r.targeting||'')}">${esc(r.keyword||r.targeting||'—')}</span>
+      <span class="ir">${kwTypeBadge(r.keyword_type)}</span>
+      <span class="ir" style="text-align:right">${bidHtml}</span>
+      <span class="ir">${fmtNum(r.impressions)}</span>
+      <span class="ir">${fmtNum(r.clicks)}</span>
+      <span class="ir">${fmtNum(r.purchases_14d)}</span>
+      <span class="ir an">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span>
+      <span class="ir gn">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span>
+      <span class="ir ${ac}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
     </div>`;
-  }).join('');
+  });
+  return h;
 }
 
 function renderGroupNegatives(rows){
   if(!rows.length)return'<div class="ge">Нет минус слов</div>';
-  const cols='16px 1fr 110px 80px 80px';
-  const hdr=`<div class="ih2" style="grid-template-columns:${cols}">
-    <span></span>
-    <span style="text-align:left">Слово / Таргет</span>
-    <span style="text-align:left">Match</span>
-    <span style="text-align:left">Тип</span>
-    <span style="text-align:left">Статус</span>
-  </div>`;
-  return hdr+rows.map(r=>{
+  let h='';
+  rows.forEach(r=>{
     const isPt=r.entity_type==='negative_product_targeting';
     const text=isPt?(r.targeting_expression||'—'):(r.keyword_text||'—');
     const matchType=r.match_type||'';
-    const state=isPt?r.target_state:r.keyword_state;
-    return `<div class="ii2" style="grid-template-columns:${cols}">
-      <span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
-      <span class="it2" style="font-family:'DM Mono',monospace;font-size:11px" title="${esc(text)}">${esc(text)}</span>
-      <span>${matchType?`<span class="b bm">${esc(matchType)}</span>`:''}</span>
-      <span>${isPt?'<span class="b bpt">PRODUCT</span>':'<span class="b bkw">KW</span>'}</span>
-      <span>${stateBadge(state)}</span>
+    h+=`<div class="in2">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span class="nt">${esc(text)}</span>
+      ${matchType?`<span class="nb">${esc(matchType)}</span>`:''}
+      <span class="nb">${isPt?'PRODUCT':'KW'}</span>
     </div>`;
-  }).join('');
+  });
+  return h;
 }
 
 function renderGroupSearchTerms(rows,gid){
   if(!rows.length)return'<div class="ge">Нет поисковых запросов</div>';
-  const hdr=`<div class="ih2" style="grid-template-columns:20px 1fr 90px 70px 65px 65px 88px 85px 72px">
-    <span style="text-align:left"></span>
-    <span style="text-align:left">Запрос</span>
-    <span style="text-align:left">Таргет/Тип</span>
-    <span>Показы</span><span>Клики</span>
-    <span>Расход</span><span>Продажи</span><span>Заказы</span><span>ACoS</span>
-  </div>`;
   const egid=esc(gid);
-  return hdr+rows.map((r,i)=>{
+  let h=`<div class="ih st">
+    <span></span><span>Поисковый запрос</span><span>Таргет / тип</span>
+    <span>Показы</span><span>Клики</span><span>Заказы</span>
+    <span>Расходы</span><span>Продажи</span><span>ACOS</span>
+  </div>`;
+  rows.forEach(r=>{
+    const ac=r.acos==null?'dv':r.acos<25?'ok':r.acos<50?'hi':'cr';
     const isAuto=r.keyword_type&&r.keyword_type.includes('EXPRESSION');
     const mt=isAuto?'AUTO':(r.match_type||'');
     const kw=isAuto?(r.keyword||r.targeting||'—'):(r.keyword||'—');
-    const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,14):'')):kw.slice(0,18);
-    return `<div class="ii2" style="grid-template-columns:20px 1fr 90px 70px 65px 65px 88px 85px 72px">
-      <span><input type="checkbox" class="st-cb" data-term="${esc(r.search_term||'')}" data-gid="${egid}"
-        style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer"
-        onchange="stCbChange('${egid}')" onclick="event.stopPropagation()"></span>
-      <span class="it2" title="${esc(r.search_term||'')}">${esc(r.search_term||'—')}</span>
-      <span class="ir2" style="font-size:10px" title="${esc(mt+' '+kw)}">${esc(combined)}</span>
-      <span class="ir2">${fmtNum(r.impressions)}</span>
-      <span class="ir2">${fmtNum(r.clicks)}</span>
-      <span class="ir2 ${(r.cost||0)>0?'an':''}">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span>
-      <span class="ir2 ${(r.sales_14d||0)>0?'gn':''}">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span>
-      <span class="ir2">${fmtNum(r.purchases_14d)}</span>
-      <span class="ir2 ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
+    const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+    h+=`<div class="ii st">
+      <input type="checkbox" class="st-cb" data-term="${esc(r.search_term||'')}" data-gid="${egid}"
+        style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+        onchange="stCbChange('${egid}')" onclick="event.stopPropagation()">
+      <span class="it" title="${esc(r.search_term||'')}">${esc(r.search_term||'—')}</span>
+      <span class="ir" style="font-size:10px;text-align:right" title="${esc(mt+' '+kw)}">${esc(combined)}</span>
+      <span class="ir">${fmtNum(r.impressions)}</span>
+      <span class="ir">${fmtNum(r.clicks)}</span>
+      <span class="ir">${fmtNum(r.purchases_14d)}</span>
+      <span class="ir an">${r.cost!=null?'$'+r.cost.toFixed(2):'—'}</span>
+      <span class="ir gn">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'—'}</span>
+      <span class="ir ${ac}">${r.acos!=null?r.acos.toFixed(1)+'%':'—'}</span>
     </div>`;
-  }).join('');
+  });
+  return h;
 }
 
 function stCbChange(gid){
@@ -938,16 +946,14 @@ async function toggleState(e,entityType,entityId,currentState,mkt){
 function openBidEdit(id){
   const wrap=document.getElementById(id);if(!wrap)return;
   wrap.querySelector('.bid-btn').style.display='none';
-  const be=wrap.querySelector('.bid-edit');
-  be.style.display='inline-flex';be.classList.add('on');
+  wrap.querySelector('.bid-edit').style.display='inline-flex';
   const inp=wrap.querySelector('.bid-inp');
   if(inp){inp.focus();inp.select();}
 }
 function closeBidEdit(id){
   const wrap=document.getElementById(id);if(!wrap)return;
   wrap.querySelector('.bid-btn').style.display='';
-  const be=wrap.querySelector('.bid-edit');
-  be.style.display='none';be.classList.remove('on');
+  wrap.querySelector('.bid-edit').style.display='none';
 }
 async function saveBid(id,entityType,entityId,oldBid,mkt){
   const wrap=document.getElementById(id);if(!wrap)return;
@@ -995,25 +1001,70 @@ async function submitAddKw(){
 
 // ── Add negative ──────────────────────────────────────────
 function openAddNeg(gid,cid,mkt){
-  document.getElementById('mnGid').value=gid;
-  document.getElementById('mnCid').value=cid;
-  document.getElementById('mnMkt').value=mkt;
-  document.getElementById('mnText').value='';
+  document.getElementById('mnegGroupId').value=gid;
+  document.getElementById('mnegCampId').value=cid;
+  document.getElementById('mnegMkt').value=mkt;
+  document.getElementById('mnegText').value='';
+  document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
+  onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+  openModal('modalNeg');
+}
+function onNegTypeChange(radio){
+  const isProduct=radio.value==='product';
+  document.getElementById('mnegTextLabel').textContent=isProduct?'ASIN (по одному на строку)':'Слова (по одному на строку)';
+  document.getElementById('mnegText').placeholder=isProduct?'B0FT63YVTW\nB0FX36C3YS':'free\ncheap';
+  document.getElementById('mnegMatchRow').style.display=isProduct?'none':'';
+}
+function isAsin(str){
+  str=str.trim();
+  return /^[Bb][0-9A-Za-z]{9}$/.test(str);
+}
+function openNegFromSt(gid,cid,mkt){
+  const cbs=document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`);
+  if(!cbs.length){toast('Выберите поисковые запросы',false);return;}
+  const terms=Array.from(cbs).map(cb=>cb.dataset.term.trim()).filter(Boolean);
+  const asins=terms.filter(t=>isAsin(t));
+  const words=terms.filter(t=>!isAsin(t));
+  document.getElementById('mnegGroupId').value=gid;
+  document.getElementById('mnegCampId').value=cid;
+  document.getElementById('mnegMkt').value=mkt;
+  if(asins.length>0&&words.length===0){
+    document.querySelector('input[name="mnegType"][value="product"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="product"]'));
+    document.getElementById('mnegText').value=asins.join('\n');
+  }else if(words.length>0&&asins.length===0){
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value=words.join('\n');
+  }else{
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value=words.join('\n');
+    if(asins.length)toast(`Обнаружено ${asins.length} ASIN — добавьте отдельно как Продукт`,true);
+  }
   openModal('modalNeg');
 }
 async function submitAddNeg(){
-  const text=document.getElementById('mnText').value.trim();
-  const match=document.getElementById('mnMatch').value;
-  const gid=document.getElementById('mnGid').value;
-  const cid=document.getElementById('mnCid').value;
-  const mkt=document.getElementById('mnMkt').value;
-  if(!text){toast('Введите слова',false);return;}
+  const text=document.getElementById('mnegText').value.trim();
+  const match=document.getElementById('mnegMatch').value;
+  const gid=document.getElementById('mnegGroupId').value;
+  const cid=document.getElementById('mnegCampId').value;
+  const mkt=document.getElementById('mnegMkt').value;
+  const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';
+  if(!text){toast('Введите значения',false);return;}
   const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const payloads=items.map(w=>negType==='product'
+    ?{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_product_add',entity_id:gid,field_name:'—',old_value:'',
+        new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:gid,campaign_id:cid})}
+    :{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_add',entity_id:gid,field_name:'—',old_value:'',
+        new_value:JSON.stringify({text:w,match_type:match,ad_group_id:gid,campaign_id:cid})});
   try{
-    const res=await ctrlAddBatch(items.map(w=>({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-      entity_type:'negative_add',entity_id:gid,field_name:'—',old_value:'',
-      new_value:JSON.stringify({text:w,match_type:match,ad_group_id:gid,campaign_id:cid})})));
+    const res=await ctrlAddBatch(payloads);
     closeModal('modalNeg');
+    document.querySelectorAll(`.st-cb[data-gid="${gid}"]`).forEach(cb=>{cb.checked=false;});
+    stCbChange(gid);
     toast(`Добавлено: ${res.inserted}${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
   }catch(err){toast(err.message,false);}
 }
