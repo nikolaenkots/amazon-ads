@@ -95,6 +95,8 @@ def targets_data():
     if date_to:   date_conds.append(f"s.date <= '{date_to}'")
     stat_date = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
 
+    group_tgt_type = request.args.get('group_targeting_type', '')
+
     camp_conds = []
     if marketplace:
         safe_mkt = marketplace.replace("'", "''")
@@ -106,6 +108,9 @@ def targets_data():
     if camp_state:
         safe_cs = camp_state.replace("'", "''")
         camp_conds.append(f"campaign_state = '{safe_cs}'")
+    if group_tgt_type and mode == 'groups':
+        safe_gtt = group_tgt_type.replace("'", "''")
+        camp_conds.append(f"targeting_type = '{safe_gtt}'")
     camp_extra = ('AND ' + ' AND '.join(camp_conds)) if camp_conds else ''
 
     having_parts = _build_having(request.args)
@@ -258,7 +263,9 @@ def targets_data():
         ),
         c  AS (SELECT * FROM c_raw WHERE rn = 1 {camp_extra}),
         g  AS (
-            SELECT ad_group_id, ad_group_name, marketplace
+            SELECT ad_group_id, ad_group_name, marketplace,
+                   SAFE_CAST(ad_group_default_bid AS FLOAT64) AS ad_group_default_bid,
+                   ad_group_state
             FROM g_raw WHERE rn = 1
         ),
         kw AS (
@@ -275,6 +282,8 @@ def targets_data():
                 c.campaign_name, c.targeting_type, c.campaign_state,
                 COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
                 g.ad_group_name,
+                g.ad_group_default_bid,
+                g.ad_group_state AS group_state,
                 kw.bid, kw.state AS target_state, kw.match_type,
                 CASE WHEN agg.impressions > 0
                      THEN ROUND(agg.clicks / agg.impressions * 100, 3)
@@ -441,9 +450,35 @@ def targets_group():
     LIMIT 500
     """
 
+    st_table = f"{PROJECT_ID}.{DATASET}.search_terms_{suffix}"
+    sql_search_terms = f"""
+    SELECT
+        keyword_id, keyword_type, keyword, targeting, match_type, search_term,
+        SUM(impressions)        AS impressions,
+        SUM(clicks)             AS clicks,
+        ROUND(SUM(cost), 2)     AS cost,
+        SUM(purchases_14d)      AS purchases_14d,
+        ROUND(SUM(sales_14d),2) AS sales_14d,
+        CASE WHEN SUM(impressions)>0
+             THEN ROUND(SUM(clicks)/SUM(impressions)*100,3) ELSE NULL END AS ctr,
+        CASE WHEN SUM(sales_14d)>0
+             THEN ROUND(SUM(cost)/SUM(sales_14d)*100,1) ELSE NULL END AS acos
+    FROM `{st_table}`
+    WHERE ad_group_id = '{safe_gid}'
+      {mkt_cond} {date_where}
+    GROUP BY keyword_id, keyword_type, keyword, targeting, match_type, search_term
+    ORDER BY clicks DESC
+    LIMIT 500
+    """
+
     try:
         client = get_client()
-        group_rows = list(client.query(sql_group_info).result())
+        job_info   = client.query(sql_group_info)
+        job_tgts   = client.query(sql_targets)
+        job_negs   = client.query(sql_negatives)
+        job_st     = client.query(sql_search_terms)
+
+        group_rows = list(job_info.result())
         group_info = {}
         if group_rows:
             r = dict(group_rows[0])
@@ -451,10 +486,10 @@ def targets_group():
                 'ad_group_default_bid': _cvt(r.get('ad_group_default_bid')),
                 'campaign_id': r.get('campaign_id', ''),
             }
-        targets   = [{k: _cvt(v) for k, v in dict(r).items()}
-                     for r in client.query(sql_targets).result()]
-        negatives = [{k: _cvt(v) for k, v in dict(r).items()}
-                     for r in client.query(sql_negatives).result()]
-        return jsonify({'group_info': group_info, 'targets': targets, 'negatives': negatives})
+        targets      = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_tgts.result()]
+        negatives    = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_negs.result()]
+        search_terms = [{k: _cvt(v) for k, v in dict(r).items()} for r in job_st.result()]
+        return jsonify({'group_info': group_info, 'targets': targets,
+                        'negatives': negatives, 'search_terms': search_terms})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
