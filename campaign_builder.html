@@ -967,11 +967,23 @@ function validate(camps){
     return {errs:errs, errCells:errCells};
   }
 
+  function isValidDate(v){
+    if(!v) return true; // пустая — ок
+    var s = v.replace(/-/g,'');
+    if(!/^\d{8}$/.test(s)) return false;
+    var y=+s.slice(0,4), m=+s.slice(4,6), d=+s.slice(6,8);
+    if(m<1||m>12||d<1||d>31) return false;
+    var dt=new Date(y,m-1,d);
+    return dt.getFullYear()===y && dt.getMonth()===m-1 && dt.getDate()===d;
+  }
+
   camps.forEach(function(c,ci){
     var firstRi = c.groups.length ? c.groups[0].ri : null;
     if(!c.baseName && firstRi!=null) mark(firstRi,'campName','Кампания '+(ci+1)+': пустое название');
     if((!c.budget||c.budget<=0) && firstRi!=null) mark(firstRi,'budget','Кампания "'+(c.baseName||'#'+(ci+1))+'": бюджет обязателен');
     if(!c.groups.length) errs.push('Кампания "'+(c.baseName||'#'+(ci+1))+'": нет групп');
+    if(firstRi!=null && !isValidDate(c.start)) mark(firstRi,'start','Кампания "'+(c.baseName||'#'+(ci+1))+'": неверная дата начала (YYYYMMDD)');
+    if(firstRi!=null && !isValidDate(c.end))   mark(firstRi,'end',  'Кампания "'+(c.baseName||'#'+(ci+1))+'": неверная дата окончания (YYYYMMDD)');
 
     c.groups.forEach(function(g,gi){
       var label = 'Кампания "'+(c.baseName||'#'+(ci+1))+'", группа '+(gi+1)+(g.theme?' ("'+g.theme+'")':'');

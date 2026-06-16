@@ -106,12 +106,18 @@ def campaign_builder_queue():
 
     def _norm_date(v):
         """'20260520' or '2026-05-20' -> '2026-05-20'; '' -> ''"""
+        from datetime import date as _date
         v = (v or '').strip()
         if not v:
             return ''
-        if len(v) == 8 and v.isdigit():
-            return f"{v[0:4]}-{v[4:6]}-{v[6:8]}"
-        return v
+        s = v.replace('-', '')
+        if not (len(s) == 8 and s.isdigit()):
+            raise ValueError(f"Неверный формат даты: «{v}» — ожидается YYYYMMDD или YYYY-MM-DD")
+        try:
+            _date(int(s[0:4]), int(s[4:6]), int(s[6:8]))
+        except ValueError:
+            raise ValueError(f"Невалидная дата: «{v}»")
+        return f"{s[0:4]}-{s[4:6]}-{s[6:8]}"
 
     for camp in campaigns:
         camp_name = (camp.get('name') or '').strip()
@@ -142,6 +148,12 @@ def campaign_builder_queue():
         if not clean_groups:
             continue
 
+        try:
+            start_date = _norm_date(camp.get('start'))
+            end_date   = _norm_date(camp.get('end'))
+        except ValueError as e:
+            return jsonify({"error": f"Кампания «{camp_name}»: {e}"}), 400
+
         camp_obj = {
             "type":     "auto" if (camp.get('type') or '').lower() == "auto" else "manual",
             "name":     camp_name,
@@ -149,8 +161,8 @@ def campaign_builder_queue():
             "budget":   float(camp.get('budget') or 0),
             "bidadj":   int(camp.get('bidadj') or 0),
             "portfolio": camp.get('portfolio') or '',
-            "start":    _norm_date(camp.get('start')),
-            "end":      _norm_date(camp.get('end')),
+            "start":    start_date,
+            "end":      end_date,
             "compneg":  [n.strip() for n in (camp.get('compneg') or []) if n.strip()],
             "groups":   clean_groups,
         }
