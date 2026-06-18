@@ -221,8 +221,15 @@ body.bulk-active .toast-wrap{bottom:70px}
       </div>
     </div>
     <div class="fg"><div class="fl">Поиск</div><input type="text" id="srch" placeholder="Запрос…" style="width:180px" onkeydown="if(event.key==='Enter')load(1)"></div>
-    <div class="fg"><div class="fl">Статус</div>
-      <select id="stateF" style="width:110px">
+    <div class="fg"><div class="fl">Статус группы</div>
+      <select id="stateF" style="width:120px">
+        <option value="">Все</option>
+        <option value="ENABLED" selected>Активные</option>
+        <option value="PAUSED">На паузе</option>
+      </select>
+    </div>
+    <div class="fg"><div class="fl">Кампания</div>
+      <select id="campStateF" style="width:120px">
         <option value="">Все</option>
         <option value="ENABLED" selected>Активные</option>
         <option value="PAUSED">На паузе</option>
@@ -479,11 +486,12 @@ function load(pg){
   S.mkt=document.getElementById('mkt').value;
   S.name=document.getElementById('srch').value.trim();
   S.stateF=document.getElementById('stateF').value;
+  S.campStateF=document.getElementById('campStateF').value;
 
   const params=new URLSearchParams({
     account_type:S.acct,date_from:S.df,date_to:S.dt,
     marketplace:S.mkt,portfolio_ids:S.pfs.join(','),
-    name:S.name,state_filter:S.stateF,
+    name:S.name,state_filter:S.stateF,camp_state_filter:S.campStateF,
     initiator_type:S.initiator,match_type_filter:S.matchType,query_type:S.queryType,
     sort_by:S.sort,sort_dir:S.dir,page:S.page,per_page:S.perPage
   });

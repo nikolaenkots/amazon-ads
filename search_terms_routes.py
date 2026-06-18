@@ -75,9 +75,11 @@ def search_terms_data():
     if sort_by not in ALLOWED_SORT:
         sort_by = 'clicks'
 
+    camp_state_filter = args.get('camp_state_filter', '')   # ENABLED / PAUSED / ''
+
     st_table   = f"{PROJECT_ID}.{DATASET}.search_terms_{suffix}"
     camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
-    pf_table   = f"{PROJECT_ID}.{DATASET}.portfolios_{suffix}"
+    pf_table   = f"{PROJECT_ID}.{DATASET}.portfolio_labels"
 
     # Date filter
     date_parts = []
@@ -131,11 +133,17 @@ def search_terms_data():
         sn = name_filter.replace("'", "''")
         name_cond = f"AND LOWER(st.search_term) LIKE LOWER('%{sn}%')"
 
-    # Campaign state
+    # Campaign state (ad_group state filter)
     state_cond = ''
     if state_filter:
         sf = state_filter.replace("'", "''")
-        state_cond = f"AND c.campaign_state = '{sf}'"
+        state_cond = f"AND g.ad_group_state = '{sf}'"
+
+    # Campaign activity filter
+    camp_state_cond = ''
+    if camp_state_filter:
+        csf = camp_state_filter.replace("'", "''")
+        camp_state_cond = f"AND c.campaign_state = '{csf}'"
 
     num_where = _build_num_where(args)
 
@@ -187,7 +195,7 @@ def search_terms_data():
             ON pl.portfolio_id  = c.portfolio_id
             AND pl.marketplace  = c.marketplace
             AND pl.account_type = '{account_type}'
-        WHERE c.campaign_id IS NOT NULL {qt_cond} {name_cond} {state_cond} {portfolio_cond}
+        WHERE c.campaign_id IS NOT NULL {qt_cond} {name_cond} {state_cond} {camp_state_cond} {portfolio_cond}
     ),
     filtered AS (SELECT * FROM base {num_where})
     SELECT *,
