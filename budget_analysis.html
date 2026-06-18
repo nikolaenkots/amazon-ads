@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Бюджет кампаний · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.08);--amber-bd:rgba(176,120,0,.2);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+main{padding:18px 32px;max-width:1640px;margin:0 auto}
+/* filters */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+/* portfolio dropdown */
+.pdw{position:relative}
+.pdt{height:34px;min-width:160px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:border-color .15s;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{color:var(--muted);font-size:11px;flex-shrink:0;pointer-events:none}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:220px;max-height:260px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:28px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+/* stats */
+.sr{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
+/* table */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th.ns{cursor:default}
+thead th.sorted{color:var(--accent)}
+.sa{opacity:.4;margin-left:3px}.sorted .sa{opacity:1;color:var(--accent)}
+tr.dr{border-bottom:1px solid var(--border);transition:background .1s}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+td{padding:8px 11px;vertical-align:middle}
+td.r{text-align:right}
+/* badges */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.ba{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+/* numbers */
+.n{font-family:'DM Mono',monospace;font-size:12px}
+.gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
+.ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
+/* state toggle */
+.stog{width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s;outline:none}
+.stog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .2s}
+.stog.en{background:var(--green)}.stog.pa{background:var(--dim)}
+.stog.en::after{transform:translateX(12px)}
+.stog.ld{opacity:.5;cursor:not-allowed}.stog.pend{background:var(--amber)}.stog.pend::after{transform:translateX(6px)}
+/* bid/budget edit */
+.bid-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);padding:1px 4px;border-radius:3px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.bid-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd)}
+.bid-edit{display:none;align-items:center;gap:4px}
+.bid-edit.on{display:inline-flex}
+.bid-inp{width:72px;height:28px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:12px;padding:0 6px;outline:none;background:var(--surface);color:var(--text)}
+.bid-ok{height:28px;min-width:32px;padding:0 8px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.bid-ok:hover{background:#a83d10}
+.bid-cx{height:28px;min-width:28px;padding:0 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer}
+.bid-cx:hover{background:var(--surface2)}
+/* end date edit */
+.date-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);padding:1px 4px;border-radius:3px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.date-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.date-edit{display:none;align-items:center;gap:4px}
+.date-edit.on{display:inline-flex}
+.date-inp{height:28px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;padding:0 6px;outline:none;background:var(--surface);color:var(--text)}
+/* utilization bar */
+.util-bar{display:flex;align-items:center;gap:7px;min-width:110px}
+.util-track{flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;min-width:50px}
+.util-fill{height:100%;border-radius:3px;transition:width .3s}
+.util-fill.ok{background:var(--green)}.util-fill.hi{background:var(--amber)}.util-fill.cr{background:var(--red)}.util-fill.na{background:var(--dim)}
+.util-pct{font-family:'DM Mono',monospace;font-size:11px;min-width:38px;text-align:right}
+/* bulk action bar */
+.bulk-bar{position:fixed;bottom:0;left:0;right:0;z-index:7000;background:var(--surface);border-top:1px solid var(--accent);padding:10px 24px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+.bulk-bar.vis{display:flex}
+.bulk-cnt{font-size:13px;font-weight:600;color:var(--accent);min-width:90px}
+.bulk-sep{width:1px;height:24px;background:var(--border)}
+.bulk-btn{height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;white-space:nowrap}
+.bulk-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bulk-btn.green{border-color:var(--green-bd);color:var(--green)}.bulk-btn.green:hover{background:var(--green-bg)}
+.bulk-btn.red{border-color:var(--red-bd);color:var(--red)}.bulk-btn.red:hover{background:var(--red-bg)}
+.bulk-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}.bulk-btn.pri:hover{opacity:.88}
+.row-cb{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+/* pagination */
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);gap:12px}
+.pg-right{display:flex;align-items:center;gap:10px}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+.pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pbb:hover{background:var(--surface2)}.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbb:disabled{opacity:.4;cursor:not-allowed}
+.per-page-sel{height:26px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;padding:0 6px;cursor:pointer;outline:none}
+.per-page-sel:focus{border-color:var(--accent)}
+/* toast */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px;transition:bottom .2s}
+body.bulk-active .toast-wrap{bottom:70px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:440px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* misc */
+.eb{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px;display:none}
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.name-cell{display:flex;flex-direction:column;gap:1px}
+.name-main{font-size:13px;font-weight:500}
+.name-sub{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/analytics/campaigns">Кампании</a>
+    <a href="/budget-analysis" class="active">Бюджет</a>
+    <a href="/targets">Таргеты</a>
+    <a href="/portfolios">Портфолио</a>
+    <a href="/control">Изменения</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- Filters -->
+<div class="fp">
+  <div class="fr">
+    <div class="fg">
+      <div class="fl">Аккаунт</div>
+      <div class="at">
+        <button class="atb on" id="btnMerch" onclick="setAcct('MERCH')">MERCH</button>
+        <button class="atb" id="btnKdp" onclick="setAcct('KDP')">KDP</button>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl">Дата от</div>
+      <input type="date" id="dateFrom">
+    </div>
+    <div class="fg">
+      <div class="fl">Дата до</div>
+      <input type="date" id="dateTo">
+    </div>
+    <div class="fg">
+      <div class="fl">Маркетплейс</div>
+      <select id="filterMkt" style="min-width:90px">
+        <option value="">Все</option>
+        <option>US</option><option>UK</option><option>DE</option><option>FR</option>
+        <option>IT</option><option>ES</option><option>CA</option><option>JP</option>
+        <option>AU</option><option>MX</option><option>IN</option>
+      </select>
+    </div>
+    <div class="fg">
+      <div class="fl">Портфолио</div>
+      <div class="pdw" id="pfDropWrap">
+        <div class="pdt" id="pfDropBtn" onclick="togglePfDrop()">
+          <span id="pfDropLabel">Все</span><span class="pda">▾</span>
+        </div>
+        <div class="pdd" id="pfDropList">
+          <input class="pds" placeholder="Поиск..." oninput="filterPfList(this.value)">
+          <div id="pfItems"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl">Статус</div>
+      <select id="filterState" style="min-width:110px">
+        <option value="">Все</option>
+        <option value="ENABLED">Активные</option>
+        <option value="PAUSED">На паузе</option>
+      </select>
+    </div>
+    <div class="fg">
+      <div class="fl">Название</div>
+      <input type="text" id="filterName" placeholder="Название..." style="min-width:160px"
+        onkeydown="if(event.key==='Enter')applyFilters()">
+    </div>
+    <button class="btn btn-p" onclick="applyFilters()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Применить
+    </button>
+    <button class="btn btn-s" onclick="resetFilters()">Сброс</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="sr">
+  <div class="sc"><div class="sl">Кампаний</div><div class="sv" id="sTotalCamp">—</div></div>
+  <div class="sc"><div class="sl">Бюджет / день</div><div class="sv a" id="sTotalBudget">—</div></div>
+  <div class="sc"><div class="sl">Расход</div><div class="sv a" id="sTotalCost">—</div></div>
+  <div class="sc"><div class="sl">Утилизация</div><div class="sv" id="sAvgUtil">—</div></div>
+  <div class="sc"><div class="sl">Продажи 14д</div><div class="sv g" id="sTotalSales">—</div></div>
+  <div class="sc"><div class="sl">ACoS</div><div class="sv" id="sAvgAcos">—</div></div>
+</div>
+
+<div class="eb" id="errBox"></div>
+
+<!-- Table -->
+<div class="tw">
+  <div class="thr">
+    <span class="tt">Кампании</span>
+    <span class="tc" id="tblCount"></span>
+  </div>
+  <div class="tsx">
+    <table>
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="pg" id="pgWrap" style="display:none">
+    <span class="pi" id="pgInfo"></span>
+    <div class="pg-right">
+      <div class="pb" id="pgBtns"></div>
+      <select class="per-page-sel" id="perPageSel" onchange="onPerPageChange(this.value)" title="Строк на странице">
+        <option value="25">25 / стр</option>
+        <option value="50" selected>50 / стр</option>
+        <option value="100">100 / стр</option>
+        <option value="200">200 / стр</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- Bulk action bar -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-cnt" id="bulkCnt">0 выбрано</span>
+  <div class="bulk-sep"></div>
+  <button class="bulk-btn green" onclick="bulkSetState('ENABLED')">▶ Включить</button>
+  <button class="bulk-btn" onclick="bulkSetState('PAUSED')">⏸ Пауза</button>
+  <div class="bulk-sep"></div>
+  <button class="bulk-btn pri" onclick="openBulkBudget()">$ Изменить бюджет</button>
+  <button class="bulk-btn" onclick="openBulkEndDate()">📅 Дата окончания</button>
+  <div style="flex:1"></div>
+  <button class="bulk-btn" onclick="bulkClear()" style="color:var(--muted)">Снять выбор</button>
+</div>
+
+<!-- Modal: bulk budget -->
+<div class="modal-bg" id="modalBulkBudget" onclick="if(event.target===this)closeModal('modalBulkBudget')">
+  <div class="modal">
+    <div class="modal-title">Изменить бюджет — <span id="bbCnt">0</span> кампаний</div>
+    <div class="modal-row">
+      <div class="modal-label">Режим</div>
+      <select class="modal-inp" id="bbMode" onchange="onBbModeChange()">
+        <option value="exact">Точное значение ($)</option>
+        <option value="inc">Увеличить на %</option>
+        <option value="dec">Уменьшить на %</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label" id="bbValLabel">Новый бюджет ($)</div>
+      <input class="modal-inp" id="bbVal" type="number" min="1" step="1" placeholder="30"
+        onkeydown="if(event.key==='Enter')submitBulkBudget()">
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalBulkBudget')">Отмена</button>
+      <button class="btn btn-p" onclick="submitBulkBudget()">Применить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: bulk end date -->
+<div class="modal-bg" id="modalBulkEndDate" onclick="if(event.target===this)closeModal('modalBulkEndDate')">
+  <div class="modal">
+    <div class="modal-title">Дата окончания — <span id="bedCnt">0</span> кампаний</div>
+    <div class="modal-row">
+      <div class="modal-label">Новая дата окончания</div>
+      <input class="modal-inp" id="bedVal" type="date"
+        onkeydown="if(event.key==='Enter')submitBulkEndDate()">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Оставьте пустым чтобы убрать дату окончания</div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalBulkEndDate')">Отмена</button>
+      <button class="btn btn-p" onclick="submitBulkEndDate()">Применить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+const S = {
+  acct: 'MERCH', page: 1, perPage: 50, total: 0,
+  sortBy: 'cost', sortDir: 'desc',
+  portfolios: [], selectedPortfolios: [],
+  _periodDays: 1,
+};
+
+// ── Init ──────────────────────────────────────────────────
+(function(){
+  const now = new Date();
+  const d30 = new Date(now); d30.setDate(d30.getDate()-30);
+  document.getElementById('dateFrom').value = d30.toISOString().slice(0,10);
+  document.getElementById('dateTo').value   = now.toISOString().slice(0,10);
+  loadPortfolios();
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('#pfDropWrap')) closePfDrop();
+  });
+})();
+
+// ── Portfolio dropdown ────────────────────────────────────
+async function loadPortfolios(){
+  try{
+    const r = await fetch('/analytics/portfolios');
+    const d = await r.json();
+    S.portfolios = d.portfolios || [];
+    renderPfItems('');
+  }catch(e){}
+  applyFilters();
+}
+function renderPfItems(q){
+  const pfs = S.portfolios.filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
+  const sel = new Set(S.selectedPortfolios);
+  document.getElementById('pfItems').innerHTML =
+    pfs.map(p=>`<label class="pdi"><input type="checkbox" value="${p.id}" ${sel.has(p.id)?'checked':''}
+      onchange="onPfChange(this)"><span>${esc(p.name)}</span></label>`).join('');
+}
+function onPfChange(cb){
+  if(cb.checked) S.selectedPortfolios.push(cb.value);
+  else S.selectedPortfolios = S.selectedPortfolios.filter(x=>x!==cb.value);
+  updatePfLabel();
+}
+function updatePfLabel(){
+  const n = S.selectedPortfolios.length;
+  document.getElementById('pfDropLabel').textContent = n ? `${n} портфолио` : 'Все';
+}
+function filterPfList(q){ renderPfItems(q); }
+function togglePfDrop(){
+  const d=document.getElementById('pfDropList'), b=document.getElementById('pfDropBtn');
+  const on=d.classList.toggle('on'); b.classList.toggle('on',on);
+}
+function closePfDrop(){
+  document.getElementById('pfDropList').classList.remove('on');
+  document.getElementById('pfDropBtn').classList.remove('on');
+}
+
+// ── Account toggle ────────────────────────────────────────
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('btnMerch').classList.toggle('on',a==='MERCH');
+  document.getElementById('btnKdp').classList.toggle('on',a==='KDP');
+  applyFilters();
+}
+
+// ── Filters ───────────────────────────────────────────────
+function applyFilters(){ load(1); }
+function resetFilters(){
+  document.getElementById('filterMkt').value='';
+  document.getElementById('filterState').value='';
+  document.getElementById('filterName').value='';
+  S.selectedPortfolios=[];
+  updatePfLabel();
+  renderPfItems('');
+  applyFilters();
+}
+
+// ── Main load ─────────────────────────────────────────────
+function load(pg){
+  S.page = pg||1;
+  const df = document.getElementById('dateFrom').value;
+  const dt = document.getElementById('dateTo').value;
+  if(df && dt){
+    const d1=new Date(df), d2=new Date(dt);
+    S._periodDays = Math.max(1, Math.round((d2-d1)/(1000*60*60*24))+1);
+  }
+  const params = new URLSearchParams({
+    account_type: S.acct,
+    page: S.page,
+    per_page: S.perPage,
+    sort_by: S.sortBy,
+    sort_dir: S.sortDir,
+    date_from: df,
+    date_to: dt,
+    marketplace: document.getElementById('filterMkt').value,
+    portfolio_ids: S.selectedPortfolios.join(','),
+    campaign_state: document.getElementById('filterState').value,
+    name: document.getElementById('filterName').value.trim(),
+  });
+  document.getElementById('tbody').innerHTML='<tr><td colspan="14" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('pgWrap').style.display='none';
+  document.getElementById('errBox').style.display='none';
+  fetch('/analytics/campaigns/data?'+params)
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.error){showErr(d.error);return;}
+      S.total=d.total;
+      renderStats(d.summary||{}, d.rows||[]);
+      renderTable(d.rows||[]);
+      renderPagination(d.total, d.page, d.per_page);
+      document.getElementById('tblCount').textContent=`${(d.total||0).toLocaleString()} записей`;
+      bulkClear();
+    })
+    .catch(e=>showErr(e.message));
+}
+
+function showErr(msg){
+  const b=document.getElementById('errBox');
+  b.textContent=msg; b.style.display='';
+}
+
+// ── Stats ─────────────────────────────────────────────────
+function renderStats(sum, rows){
+  document.getElementById('sTotalCamp').textContent = (sum.total_campaigns||0).toLocaleString();
+  const totalBudget = rows.reduce((a,r)=>a+(r.daily_budget||0),0);
+  document.getElementById('sTotalBudget').textContent = totalBudget>0?'$'+totalBudget.toFixed(2):'—';
+  document.getElementById('sTotalCost').textContent = sum.total_cost!=null?'$'+Number(sum.total_cost).toFixed(2):'—';
+  document.getElementById('sTotalSales').textContent = sum.total_sales!=null?'$'+Number(sum.total_sales).toFixed(2):'—';
+  // average utilization
+  const withBudget = rows.filter(r=>r.daily_budget>0);
+  if(withBudget.length){
+    const avgUtil = withBudget.reduce((a,r)=>a+calcUtil(r),0)/withBudget.length;
+    const el=document.getElementById('sAvgUtil');
+    el.textContent = avgUtil.toFixed(0)+'%';
+    el.className='sv '+(avgUtil>=80?'g':avgUtil>=50?'':'cr');
+  } else {
+    document.getElementById('sAvgUtil').textContent='—';
+  }
+  if(sum.total_cost>0&&sum.total_sales>0){
+    const acos=sum.total_cost/sum.total_sales*100;
+    const el=document.getElementById('sAvgAcos');
+    el.textContent=acos.toFixed(1)+'%';
+    el.className='sv '+(acos<=20?'ok':acos<=40?'hi':'cr');
+  } else {
+    document.getElementById('sAvgAcos').textContent='—';
+  }
+}
+
+function calcUtil(r){
+  if(!r.daily_budget||r.daily_budget<=0) return 0;
+  return Math.min(200, (r.cost||0) / (r.daily_budget * S._periodDays) * 100);
+}
+
+// ── Table render ──────────────────────────────────────────
+const SORT_COLS = [
+  {key:'campaign_name',label:'Кампания',align:'left',ns:false},
+  {key:'marketplace',label:'Маркет',align:'left',ns:true},
+  {key:'_state',label:'Статус',align:'left',ns:true},
+  {key:'daily_budget',label:'Бюджет/день',align:'right',ns:false},
+  {key:'_util',label:'Утилизация',align:'left',ns:true},
+  {key:'cost',label:'Расход',align:'right',ns:false},
+  {key:'sales_14d',label:'Продажи',align:'right',ns:false},
+  {key:'acos',label:'ACoS',align:'right',ns:false},
+  {key:'impressions',label:'Показы',align:'right',ns:false},
+  {key:'clicks',label:'Клики',align:'right',ns:false},
+  {key:'end_date',label:'Дата окончания',align:'left',ns:true},
+];
+
+function renderTable(rows){
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+  thead.innerHTML=`<tr>
+    <th class="ns" style="width:32px"><input type="checkbox" class="row-cb" id="cbAll" onclick="bulkSelectAll(this)" title="Выбрать все"></th>
+    <th class="ns" style="width:36px"></th>
+    ${SORT_COLS.map(c=>c.ns
+      ?`<th class="ns">${c.label}</th>`
+      :`<th class="${S.sortBy===c.key?'sorted':''}" onclick="sortBy('${c.key}',${c.align==='right'})">
+          ${c.label}<span class="sa">${S.sortBy===c.key?(S.sortDir==='asc'?'↑':'↓'):'↕'}</span>
+        </th>`
+    ).join('')}
+  </tr>`;
+
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}
+
+  tbody.innerHTML = rows.map((r,ri)=>{
+    const cid = esc(String(r.campaign_id||ri));
+    const mkt = esc(r.marketplace||'');
+    const curState = (r.campaign_state||'ENABLED').toUpperCase();
+    const isEn = curState==='ENABLED';
+    const budget = r.daily_budget!=null ? Number(r.daily_budget).toFixed(2) : null;
+    const util = r.daily_budget>0 ? calcUtil(r) : null;
+    const endDate = r.end_date ? r.end_date.slice?.(0,10)||r.end_date : null;
+
+    // Budget cell
+    const budgId = 'bud_'+cid;
+    const budgCell = budget
+      ? `<span id="${budgId}">
+           <button class="bid-btn" onclick="event.stopPropagation();openBudgetEdit('${budgId}')">$${budget}</button>
+           <span class="bid-edit" id="${budgId}_edit">
+             <input class="bid-inp" type="number" value="${budget}" min="1" step="1"
+               onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBudget('${budgId}','${cid}','${budget}','${mkt}');}if(event.key==='Escape')closeBudgetEdit('${budgId}')"
+               onclick="event.stopPropagation()">
+             <button class="bid-ok" onclick="event.stopPropagation();saveBudget('${budgId}','${cid}','${budget}','${mkt}')">✓</button>
+             <button class="bid-cx" onclick="event.stopPropagation();closeBudgetEdit('${budgId}')">✕</button>
+           </span>
+         </span>`
+      : '<span class="dv">—</span>';
+
+    // Utilization cell
+    const utilCell = util!=null
+      ? `<div class="util-bar">
+           <div class="util-track"><div class="util-fill ${util>=80?'ok':util>=50?'hi':'cr'}" style="width:${Math.min(100,util).toFixed(0)}%"></div></div>
+           <span class="util-pct ${util>=80?'ok':util>=50?'hi':'cr'}">${util.toFixed(0)}%</span>
+         </div>`
+      : '<span class="dv">—</span>';
+
+    // End date cell
+    const dateId = 'edt_'+cid;
+    const dateCell = `<span id="${dateId}">
+      <button class="date-btn" onclick="event.stopPropagation();openDateEdit('${dateId}')">${endDate||'—'}</button>
+      <span class="date-edit" id="${dateId}_edit">
+        <input class="date-inp" type="date" value="${endDate||''}"
+          onkeydown="if(event.key==='Enter'){event.stopPropagation();saveEndDate('${dateId}','${cid}','${endDate||''}','${mkt}');}if(event.key==='Escape')closeDateEdit('${dateId}')"
+          onclick="event.stopPropagation()">
+        <button class="bid-ok" onclick="event.stopPropagation();saveEndDate('${dateId}','${cid}','${endDate||''}','${mkt}')">✓</button>
+        <button class="bid-cx" onclick="event.stopPropagation();closeDateEdit('${dateId}')">✕</button>
+      </span>
+    </span>`;
+
+    return `<tr class="dr">
+      <td><input type="checkbox" class="row-cb camp-cb"
+        data-id="${cid}" data-mkt="${mkt}" data-state="${curState}"
+        data-budget="${budget||'0'}" data-enddate="${endDate||''}"
+        onclick="event.stopPropagation()" onchange="updateBulkBar()"></td>
+      <td><button class="stog ${isEn?'en':'pa'}" onclick="event.stopPropagation();toggleState(event,'${cid}','${curState}','${mkt}')"></button></td>
+      <td><div class="name-cell">
+        <span class="name-main">${esc(r.campaign_name||'—')}</span>
+        <span class="name-sub" style="display:flex;gap:3px;margin-top:2px">${stateBadge(curState)}${typeBadge(r.targeting_type)}${r.portfolio_name?`<span style="font-size:10px;color:var(--muted)">${esc(r.portfolio_name)}</span>`:''}</span>
+      </div></td>
+      <td><span class="b bm">${mkt||'—'}</span></td>
+      <td></td>
+      <td class="r">${budgCell}</td>
+      <td>${utilCell}</td>
+      <td class="r"><span class="n ${r.cost>0?'an':''}">${r.cost!=null?'$'+r.cost.toFixed(2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n ${r.sales_14d>0?'gn':''}">${r.sales_14d!=null?'$'+r.sales_14d.toFixed(2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n ${acosClass(r.acos)}">${r.acos!=null?r.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span class="n">${(r.impressions||0).toLocaleString()}</span></td>
+      <td class="r"><span class="n">${(r.clicks||0).toLocaleString()}</span></td>
+      <td>${dateCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function sortBy(col, defaultDesc){
+  if(S.sortBy===col) S.sortDir=S.sortDir==='asc'?'desc':'asc';
+  else{S.sortBy=col; S.sortDir=defaultDesc?'desc':'asc';}
+  load(1);
+}
+
+// ── Budget inline edit ────────────────────────────────────
+function openBudgetEdit(id){
+  document.getElementById(id).querySelector('.bid-btn').style.display='none';
+  document.getElementById(id+'_edit').classList.add('on');
+  document.getElementById(id+'_edit').querySelector('input').select();
+}
+function closeBudgetEdit(id){
+  document.getElementById(id).querySelector('.bid-btn').style.display='';
+  document.getElementById(id+'_edit').classList.remove('on');
+}
+async function saveBudget(id,campId,oldVal,mkt){
+  const inp=document.getElementById(id+'_edit').querySelector('input');
+  const val=parseFloat(inp.value);
+  if(isNaN(val)||val<1){toast('Минимальный бюджет $1',false);return;}
+  closeBudgetEdit(id);
+  try{
+    await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'campaign',entity_id:campId,field_name:'daily_budget',
+      old_value:String(oldVal),new_value:String(val)});
+    const btn=document.querySelector(`#${id} .bid-btn`);
+    if(btn)btn.textContent='$'+val.toFixed(2)+' ✓';
+    toast('Бюджет в очереди',true);
+  }catch(err){toast(err.message,false);}
+}
+
+// ── End date inline edit ──────────────────────────────────
+function openDateEdit(id){
+  document.getElementById(id).querySelector('.date-btn').style.display='none';
+  document.getElementById(id+'_edit').classList.add('on');
+  document.getElementById(id+'_edit').querySelector('input').focus();
+}
+function closeDateEdit(id){
+  document.getElementById(id).querySelector('.date-btn').style.display='';
+  document.getElementById(id+'_edit').classList.remove('on');
+}
+async function saveEndDate(id,campId,oldVal,mkt){
+  const inp=document.getElementById(id+'_edit').querySelector('input');
+  const val=inp.value; // YYYY-MM-DD or ''
+  closeDateEdit(id);
+  try{
+    await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'campaign',entity_id:campId,field_name:'end_date',
+      old_value:oldVal,new_value:val});
+    const btn=document.querySelector(`#${id} .date-btn`);
+    if(btn)btn.textContent=(val||'—')+' ✓';
+    toast('Дата окончания в очереди',true);
+  }catch(err){toast(err.message,false);}
+}
+
+// ── State toggle ──────────────────────────────────────────
+async function toggleState(e,campId,curState,mkt){
+  e.stopPropagation();
+  const btn=e.currentTarget;
+  if(btn.classList.contains('ld')||btn.classList.contains('pend'))return;
+  const newState=curState==='ENABLED'?'PAUSED':'ENABLED';
+  btn.classList.add('ld');
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'campaign',entity_id:campId,field_name:'state',
+      old_value:curState,new_value:newState});
+    if(d){btn.classList.remove('ld','en','pa');btn.classList.add('pend');toast('Изменение в очереди',true);}
+    else btn.classList.remove('ld');
+  }catch(err){btn.classList.remove('ld');toast(err.message,false);}
+}
+
+// ── Bulk actions ──────────────────────────────────────────
+function getSelected(){return Array.from(document.querySelectorAll('.camp-cb:checked'));}
+function updateBulkBar(){
+  const sel=getSelected();
+  const bar=document.getElementById('bulkBar');
+  const cnt=document.getElementById('bulkCnt');
+  if(sel.length>0){bar.classList.add('vis');cnt.textContent=`${sel.length} выбрано`;document.body.classList.add('bulk-active');}
+  else{bar.classList.remove('vis');document.body.classList.remove('bulk-active');}
+  const allCb=document.getElementById('cbAll');
+  const all=document.querySelectorAll('.camp-cb');
+  if(allCb){allCb.indeterminate=sel.length>0&&sel.length<all.length;allCb.checked=all.length>0&&sel.length===all.length;}
+}
+function bulkSelectAll(cb){document.querySelectorAll('.camp-cb').forEach(c=>c.checked=cb.checked);updateBulkBar();}
+function bulkClear(){document.querySelectorAll('.camp-cb').forEach(c=>c.checked=false);updateBulkBar();}
+
+async function bulkSetState(newState){
+  const sel=getSelected();
+  if(!sel.length)return;
+  const payloads=sel.map(cb=>({account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
+    entity_type:'campaign',entity_id:cb.dataset.id,field_name:'state',
+    old_value:cb.dataset.state,new_value:newState}));
+  try{
+    const res=await ctrlUpdateBatch(payloads);
+    const label=newState==='ENABLED'?'включение':'пауза';
+    const skip=res.skipped?`, пропущено: ${res.skipped}`:'';
+    toast(`В очередь: ${label} ${res.inserted} кампаний${skip}`,res.errors.length===0);
+    bulkClear();
+  }catch(err){toast(err.message,false);}
+}
+
+function openBulkBudget(){
+  const sel=getSelected();if(!sel.length)return;
+  document.getElementById('bbCnt').textContent=sel.length;
+  document.getElementById('bbMode').value='exact';
+  document.getElementById('bbVal').value='';
+  document.getElementById('bbValLabel').textContent='Новый бюджет ($)';
+  document.getElementById('bbVal').min='1';document.getElementById('bbVal').step='1';document.getElementById('bbVal').placeholder='30';
+  openModal('modalBulkBudget');
+  setTimeout(()=>document.getElementById('bbVal').focus(),50);
+}
+function onBbModeChange(){
+  const mode=document.getElementById('bbMode').value;
+  const inp=document.getElementById('bbVal');
+  const lbl=document.getElementById('bbValLabel');
+  inp.value='';
+  if(mode==='exact'){lbl.textContent='Новый бюджет ($)';inp.min='1';inp.step='1';inp.placeholder='30';}
+  else if(mode==='inc'){lbl.textContent='Увеличить на (%)';inp.min='1';inp.step='1';inp.placeholder='20';}
+  else{lbl.textContent='Уменьшить на (%)';inp.min='1';inp.step='1';inp.placeholder='20';}
+  setTimeout(()=>inp.focus(),50);
+}
+async function submitBulkBudget(){
+  const sel=getSelected();if(!sel.length){closeModal('modalBulkBudget');return;}
+  const mode=document.getElementById('bbMode').value;
+  const raw=parseFloat(document.getElementById('bbVal').value);
+  if(isNaN(raw)||raw<=0){toast('Введите корректное значение',false);return;}
+  if(mode==='exact'&&raw<1){toast('Минимальный бюджет $1',false);return;}
+  const payloads=sel.map(cb=>{
+    const cur=parseFloat(cb.dataset.budget)||0;
+    let nv;
+    if(mode==='exact')nv=raw;
+    else if(mode==='inc')nv=Math.round(cur*(1+raw/100)*100)/100;
+    else nv=Math.round(cur*(1-raw/100)*100)/100;
+    nv=Math.max(1,nv);
+    return{account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
+      entity_type:'campaign',entity_id:cb.dataset.id,field_name:'daily_budget',
+      old_value:String(cb.dataset.budget),new_value:String(nv)};
+  });
+  try{
+    const res=await ctrlUpdateBatch(payloads);
+    const skip=res.skipped?`, пропущено: ${res.skipped}`:'';
+    toast(`В очередь: бюджет ${res.inserted} кампаний${skip}`,res.errors.length===0);
+    closeModal('modalBulkBudget');bulkClear();
+  }catch(err){toast(err.message,false);}
+}
+
+function openBulkEndDate(){
+  const sel=getSelected();if(!sel.length)return;
+  document.getElementById('bedCnt').textContent=sel.length;
+  document.getElementById('bedVal').value='';
+  openModal('modalBulkEndDate');
+  setTimeout(()=>document.getElementById('bedVal').focus(),50);
+}
+async function submitBulkEndDate(){
+  const sel=getSelected();if(!sel.length){closeModal('modalBulkEndDate');return;}
+  const val=document.getElementById('bedVal').value; // YYYY-MM-DD or ''
+  const payloads=sel.map(cb=>({account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
+    entity_type:'campaign',entity_id:cb.dataset.id,field_name:'end_date',
+    old_value:cb.dataset.enddate,new_value:val}));
+  try{
+    const res=await ctrlUpdateBatch(payloads);
+    const skip=res.skipped?`, пропущено: ${res.skipped}`:'';
+    toast(`В очередь: дата окончания ${res.inserted} кампаний${skip}`,res.errors.length===0);
+    closeModal('modalBulkEndDate');bulkClear();
+  }catch(err){toast(err.message,false);}
+}
+
+// ── Pagination ────────────────────────────────────────────
+function onPerPageChange(v){S.perPage=parseInt(v)||50;load(1);}
+function renderPagination(total,page,perPage){
+  const pages=Math.ceil(total/perPage)||1;
+  const wrap=document.getElementById('pgWrap');
+  const sel=document.getElementById('perPageSel');
+  wrap.style.display='';
+  if(sel)sel.value=String(perPage);
+  const from=(page-1)*perPage+1, to=Math.min(page*perPage,total);
+  document.getElementById('pgInfo').textContent=`${from}–${to} из ${total.toLocaleString()}`;
+  let html=`<button class="pbb" ${page<=1?'disabled':''} onclick="load(${page-1})">‹</button>`;
+  const range=pageRange(page,pages);
+  for(const p of range){
+    if(p==='…')html+=`<button class="pbb" disabled>…</button>`;
+    else html+=`<button class="pbb ${p===page?'on':''}" onclick="load(${p})">${p}</button>`;
+  }
+  html+=`<button class="pbb" ${page>=pages?'disabled':''} onclick="load(${page+1})">›</button>`;
+  document.getElementById('pgBtns').innerHTML=html;
+}
+function pageRange(p,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);if(p<=4)return[1,2,3,4,5,'…',t];if(p>=t-3)return[1,'…',t-4,t-3,t-2,t-1,t];return[1,'…',p-1,p,p+1,'…',t];}
+
+// ── API helpers ───────────────────────────────────────────
+let _pm={};
+async function loadProfiles(){
+  try{const r=await fetch('/control/profiles');const d=await r.json();_pm=d.profiles||{};}catch(e){}
+}
+loadProfiles();
+function getProfileId(mkt){return _pm[S.acct+'_'+mkt]||'';}
+
+async function ctrlAdd(payload){
+  const r=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json();
+  if(r.status===409){toast('Уже есть ожидающее изменение',false);return null;}
+  if(d.error)throw new Error(d.error);
+  return d;
+}
+async function ctrlUpdateBatch(payloads){
+  const r=await fetch('/control/add_batch_update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Batch error');
+  return d;
+}
+
+function openModal(id){document.getElementById(id).classList.add('op');}
+function closeModal(id){document.getElementById(id).classList.remove('op');}
+
+function toast(msg,ok=true){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast-item '+(ok?'ok':'err');
+  d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;
+  w.appendChild(d);
+  setTimeout(()=>d.remove(),4000);
+}
+
+// ── Badge helpers ─────────────────────────────────────────
+function stateBadge(s){if(!s)return'';if(s==='ENABLED')return'<span class="b be">ACTIVE</span>';if(s==='PAUSED')return'<span class="b bp">PAUSED</span>';return`<span class="b bm">${esc(s)}</span>`;}
+function typeBadge(t){if(!t)return'';if(t==='AUTO')return'<span class="b ba">AUTO</span>';if(t==='MANUAL')return'<span class="b bman">MANUAL</span>';return'';}
+function acosClass(v){if(v==null)return'dv';if(v<=20)return'ok';if(v<=40)return'hi';return'cr';}
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>

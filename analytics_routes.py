@@ -46,6 +46,11 @@ def analytics_campaigns_page():
     return send_from_directory(BASE_DIR, 'campaigns_analytics.html')
 
 
+@analytics_bp.route('/budget-analysis')
+def budget_analysis_page():
+    return send_from_directory(BASE_DIR, 'budget_analysis.html')
+
+
 @analytics_bp.route('/campaigns-deleting')
 def campaigns_deleting_page():
     return send_from_directory(BASE_DIR, 'campaigns_deleting.html')
