@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Поисковые запросы · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaaB8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
+  --amber:#b07800;
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-anchor:none}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+main{padding:18px 32px;max-width:1820px;margin:0 auto}
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.mode-row{display:flex;align-items:center;gap:8px;padding-top:10px;margin-top:10px;border-top:1px solid var(--border);flex-wrap:wrap}
+.mode-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mbt{height:28px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+/* portfolio dropdown */
+.pdw{position:relative}
+.pdt{height:34px;min-width:160px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:300px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+/* stats */
+.sr{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
+/* table */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.s{color:var(--accent)}
+thead th.ns{cursor:default}
+thead th.ns:hover{color:var(--muted)}
+tr.dr{border-bottom:1px solid var(--border);transition:background .1s}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+td{padding:8px 11px;vertical-align:middle}
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.ba{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.bauto{background:rgba(108,63,201,.07);color:var(--purple);border:1px solid rgba(108,63,201,.15)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+.bbroad{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bphrase{background:rgba(26,111,212,.12);color:#1555b0;border:1px solid var(--blue-bd)}
+.bexact{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bprod{background:rgba(26,143,92,.06);color:var(--green);border:1px solid var(--green-bd)}
+.n{font-family:'DM Mono',monospace;font-size:12px}
+td.r{text-align:right}
+.gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
+.ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
+.eb{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);gap:12px}
+.pg-right{display:flex;align-items:center;gap:12px}
+.per-page-sel{height:26px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;padding:0 6px;cursor:pointer;outline:none}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+.pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pbb:hover{background:var(--surface2)}.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbb:disabled{opacity:.4;cursor:not-allowed}
+.sa{opacity:.3;margin-left:2px}
+thead th.s .sa{opacity:1;color:var(--accent)}
+.th-wrap{display:flex;align-items:center;gap:3px;justify-content:flex-end;position:relative}
+.th-wrap.left{justify-content:flex-start}
+.th-sort{cursor:pointer;display:flex;align-items:center;gap:2px;flex:1;min-width:0}
+.th-sort.left{justify-content:flex-start}
+.th-fi{width:14px;height:14px;display:flex;align-items:center;justify-content:center;border-radius:3px;cursor:pointer;color:var(--dim);flex-shrink:0;transition:color .1s}
+.th-fi:hover{color:var(--accent);background:var(--accent-bg)}
+.th-fi.on{color:var(--accent)}
+.npop{position:absolute;top:calc(100% + 4px);right:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none}
+.npop.op{display:block}
+.npop-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.npop-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.npop-op{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 6px;outline:none;flex-shrink:0}
+.npop-v{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 7px;outline:none;flex:1;min-width:0}
+.npop-acts{display:flex;gap:6px;margin-top:8px}
+.npop-apply{height:26px;padding:0 10px;border-radius:5px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:500;cursor:pointer}
+.npop-apply:hover{background:#a83d10}
+.npop-clear{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.npop-clear:hover{background:var(--surface2)}
+/* modals */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal.wide{width:660px}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.rad-row{display:flex;gap:12px}
+.rad-row label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer}
+.rad-row input[type=radio]{accent-color:var(--accent)}
+.terms-preview{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:4px}
+.term-tag{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text)}
+.groups-list{max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:6px}
+.group-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer}
+.group-item:last-child{border-bottom:none}
+.group-item:hover{background:var(--surface2)}
+.group-item input{accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;cursor:pointer}
+.group-item-name{font-weight:500;flex:1}
+.group-item-camp{color:var(--muted);font-size:11px;font-family:'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+/* toast */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px;transition:bottom .2s}
+body.bulk-active .toast-wrap{bottom:70px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}
+.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+/* bulk bar */
+.bulk-bar{position:fixed;bottom:0;left:0;right:0;z-index:7000;background:var(--surface);border-top:1px solid var(--accent);padding:10px 24px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+.bulk-bar.vis{display:flex}
+.bulk-cnt{font-size:13px;font-weight:600;color:var(--accent);min-width:90px}
+.bulk-sep{width:1px;height:24px;background:var(--border)}
+.bulk-btn{height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;white-space:nowrap}
+.bulk-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bulk-btn.green{border-color:var(--green-bd);color:var(--green)}
+.bulk-btn.green:hover{background:var(--green-bg)}
+.row-cb{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+/* inline edit */
+.term-btn{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);padding:2px 4px;border-radius:3px;border:1px solid transparent;text-align:left;transition:all .15s;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.term-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.term-edit{display:none;align-items:center;gap:4px}
+.term-edit.on{display:inline-flex}
+.term-inp{height:26px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;padding:0 6px;outline:none;background:var(--surface);color:var(--text);width:200px}
+.term-ok{height:26px;padding:0 8px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.term-cx{height:26px;padding:0 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.name-cell{display:flex;flex-direction:column;gap:2px}
+.name-main{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.name-sub{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/analytics/campaigns">Кампании</a>
+    <a href="/targets">Таргеты</a>
+    <a href="/search-terms" class="active">Запросы</a>
+    <a href="/portfolios">Портфолио</a>
+    <a href="/control">Изменения</a>
+  </nav>
+</header>
+
+<main>
+<div class="fp">
+  <div class="fr">
+    <div class="fg"><div class="fl">Аккаунт</div>
+      <div class="at">
+        <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+        <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+      </div>
+    </div>
+    <div class="fg"><div class="fl">Дата от</div><input type="date" id="df" style="width:148px"></div>
+    <div class="fg"><div class="fl">Дата до</div><input type="date" id="dt" style="width:148px"></div>
+    <div class="fg"><div class="fl">Маркетплейс</div><select id="mkt" style="width:100px" onchange="loadPortfolios()"></select></div>
+    <div class="fg"><div class="fl">Портфолио</div>
+      <div class="pdw" id="pdw">
+        <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
+        <svg class="pda" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <div class="pdd" id="pdd">
+          <input class="pds" id="pds" placeholder="Поиск…" oninput="pfSearch(this.value)">
+          <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fg"><div class="fl">Поиск</div><input type="text" id="srch" placeholder="Запрос…" style="width:180px" onkeydown="if(event.key==='Enter')load(1)"></div>
+    <div class="fg"><div class="fl">Статус</div>
+      <select id="stateF" style="width:110px">
+        <option value="">Все</option>
+        <option value="ENABLED" selected>Активные</option>
+        <option value="PAUSED">На паузе</option>
+      </select>
+    </div>
+    <button class="btn btn-p" onclick="load(1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Применить</button>
+  </div>
+
+  <div class="mode-row">
+    <span class="mode-lbl">Инициатор</span>
+    <button class="mbt on" id="itAll"     onclick="setInitiator('')">Все</button>
+    <button class="mbt"    id="itKw"      onclick="setInitiator('keyword')">Ключевые слова</button>
+    <button class="mbt"    id="itAuto"    onclick="setInitiator('auto')">Авто</button>
+    <button class="mbt"    id="itProduct" onclick="setInitiator('product')">Продуктовые</button>
+
+    <div class="sep"></div>
+    <span class="mode-lbl">Совпадение</span>
+    <button class="mbt on" id="mtAll"    onclick="setMatchType('')">Все</button>
+    <button class="mbt"    id="mtBroad"  onclick="setMatchType('BROAD')">BROAD</button>
+    <button class="mbt"    id="mtPhrase" onclick="setMatchType('PHRASE')">PHRASE</button>
+    <button class="mbt"    id="mtExact"  onclick="setMatchType('EXACT')">EXACT</button>
+
+    <div class="sep"></div>
+    <span class="mode-lbl">Тип запроса</span>
+    <button class="mbt on" id="qtAll"     onclick="setQueryType('')">Все</button>
+    <button class="mbt"    id="qtText"    onclick="setQueryType('text')">Текстовые</button>
+    <button class="mbt"    id="qtProduct" onclick="setQueryType('product')">Продукты (ASIN)</button>
+  </div>
+</div>
+
+<div id="err" class="eb" style="display:none"></div>
+
+<div class="sr">
+  <div class="sc"><div class="sl">Запросов</div><div class="sv" id="sumTotal">—</div></div>
+  <div class="sc"><div class="sl">Показы</div><div class="sv b" id="sumImp">—</div></div>
+  <div class="sc"><div class="sl">Клики</div><div class="sv" id="sumClicks">—</div></div>
+  <div class="sc"><div class="sl">CTR</div><div class="sv" id="sumCtr">—</div></div>
+  <div class="sc"><div class="sl">Расход</div><div class="sv a" id="sumCost">—</div></div>
+  <div class="sc"><div class="sl">Продажи 14d</div><div class="sv g" id="sumSales">—</div></div>
+  <div class="sc"><div class="sl">Заказы 14d</div><div class="sv" id="sumOrders">—</div></div>
+  <div class="sc"><div class="sl">ACoS</div><div class="sv" id="sumAcos">—</div></div>
+</div>
+
+<div class="tw">
+  <div class="thr">
+    <span class="tt">Поисковые запросы</span>
+    <span class="tc" id="tblCount">—</span>
+  </div>
+  <div class="tsx">
+    <table>
+      <thead id="thead"></thead>
+      <tbody id="tbody"><tr><td colspan="15" class="te">Выберите параметры и нажмите Применить</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pg" id="pgWrap" style="display:none">
+    <span class="pi" id="pgInfo"></span>
+    <div class="pg-right">
+      <select class="per-page-sel" id="perPageSel" onchange="onPerPageChange(this.value)">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+      <div class="pb" id="pgBtns"></div>
+    </div>
+  </div>
+</div>
+</main>
+
+<!-- Bulk bar -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-cnt" id="bulkCnt">0 выбрано</span>
+  <div class="bulk-sep"></div>
+  <button class="bulk-btn red" onclick="openBulkNeg()">✕ В минус слова</button>
+  <button class="bulk-btn green" onclick="openBulkKw()">+ Добавить ключ</button>
+  <button class="bulk-btn" onclick="bulkClear()">Снять выбор</button>
+</div>
+
+<!-- Modal: Add negatives -->
+<div class="modal-bg" id="modalNeg">
+  <div class="modal">
+    <div class="modal-title">Добавить минус слова</div>
+    <div class="modal-row">
+      <div class="modal-label">Форма</div>
+      <div class="rad-row">
+        <label><input type="radio" name="negMt" value="EXACT" checked> EXACT</label>
+        <label><input type="radio" name="negMt" value="PHRASE"> PHRASE</label>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Запросы (<span id="negTermCount">0</span>)</div>
+      <div class="terms-preview" id="negTermsPreview"></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Группы (<span id="negGroupCount">0</span>)</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Минус слова будут добавлены в группы выбранных строк</div>
+      <div class="groups-list" id="negGroupsList"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalNeg')">Отмена</button>
+      <button class="btn btn-p" onclick="submitNeg()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add as keyword -->
+<div class="modal-bg" id="modalAddKw">
+  <div class="modal wide">
+    <div class="modal-title">Добавить как ключевое слово</div>
+    <div class="modal-row">
+      <div class="modal-label">Запросы (<span id="kwTermCount">0</span>)</div>
+      <div class="terms-preview" id="kwTermsPreview"></div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Тип совпадения</div>
+      <div class="rad-row">
+        <label><input type="radio" name="kwMt" value="BROAD" checked> BROAD</label>
+        <label><input type="radio" name="kwMt" value="PHRASE"> PHRASE</label>
+        <label><input type="radio" name="kwMt" value="EXACT"> EXACT</label>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Ставка ($)</div>
+      <input type="number" class="modal-inp" id="kwBid" min="0.02" step="0.01" placeholder="0.50" style="width:120px">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Группы (выберите куда добавить)</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button class="btn btn-s" style="height:26px;font-size:11px;padding:0 10px" onclick="kwSelectAllGroups(true)">Все</button>
+        <button class="btn btn-s" style="height:26px;font-size:11px;padding:0 10px" onclick="kwSelectAllGroups(false)">Снять</button>
+      </div>
+      <div class="groups-list" id="kwGroupsList"><div style="padding:12px;text-align:center;color:var(--muted);font-size:12px"><span class="sp"></span></div></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalAddKw')">Отмена</button>
+      <button class="btn btn-p" onclick="submitAddKw()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const MKTS=['US','CA','UK','DE','FR','IT','ES','NL','AU','JP','IN','MX','BR','SE','PL','BE','TR','SG'];
+
+let S={
+  acct:'MERCH', df:'', dt:'', mkt:'US', portfolios:[], pfs:[],
+  name:'', stateF:'ENABLED', initiator:'', matchType:'', queryType:'',
+  sort:'clicks', dir:'desc', page:1, perPage:50, total:0,
+  numFilters:{},
+};
+
+// edited term texts: rowKey → edited string
+const editedTerms = {};
+// bulk state cache: array of {search_term, keyword, keyword_type, match_type, ad_group_id, campaign_id, marketplace}
+let bulkRows = [];
+
+// ── Init ──────────────────────────────────────────────────
+(function(){
+  const mktSel=document.getElementById('mkt');
+  MKTS.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m==='US')o.selected=true;mktSel.appendChild(o);});
+
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const d30=new Date(now);d30.setDate(d30.getDate()-30);
+  document.getElementById('df').value=fmt(d30);
+  document.getElementById('dt').value=fmt(now);
+  S.df=fmt(d30);S.dt=fmt(now);
+
+  fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+  loadPortfolios();
+  renderThead();
+})();
+
+function getProfileId(mkt){
+  if(!window._pm)return'';
+  return(window._pm[S.acct+'_'+mkt]||{}).profile_id||'';
+}
+
+// ── Account / filters ────────────────────────────────────
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('tbM').classList.toggle('on',a==='MERCH');
+  document.getElementById('tbK').classList.toggle('on',a==='KDP');
+  loadPortfolios();
+}
+
+function setInitiator(v){
+  S.initiator=v;
+  ['itAll','itKw','itAuto','itProduct'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById({'':`itAll`,'keyword':'itKw','auto':'itAuto','product':'itProduct'}[v]).classList.add('on');
+  load(1);
+}
+
+function setMatchType(v){
+  S.matchType=v;
+  ['mtAll','mtBroad','mtPhrase','mtExact'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById({'':`mtAll`,'BROAD':'mtBroad','PHRASE':'mtPhrase','EXACT':'mtExact'}[v]).classList.add('on');
+  load(1);
+}
+
+function setQueryType(v){
+  S.queryType=v;
+  ['qtAll','qtText','qtProduct'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById({'':`qtAll`,'text':'qtText','product':'qtProduct'}[v]).classList.add('on');
+  load(1);
+}
+
+// ── Portfolio ─────────────────────────────────────────────
+async function loadPortfolios(){
+  S.mkt=document.getElementById('mkt').value;
+  try{
+    const d=await fetch('/portfolios/list').then(r=>r.json());
+    S.portfolios=(d.portfolios||[]).filter(p=>p.account_type===S.acct);
+    renderPortfolioList();
+  }catch(e){}
+}
+function renderPortfolioList(){
+  const list=document.getElementById('pdlist');
+  if(!S.portfolios.length){list.innerHTML='<div class="pd-empty">Нет портфолио</div>';return;}
+  list.innerHTML=`<div class="pdi"><input type="checkbox" id="pf_all" onchange="pfAll(this.checked)"><span>Все</span></div>`+
+    S.portfolios.map(p=>`<div class="pdi"><input type="checkbox" class="pf-cb" value="${esc(p.portfolio_id)}" onchange="pfChange()"><span>${esc(p.portfolio_name)}</span></div>`).join('');
+}
+function pfSearch(q){
+  document.querySelectorAll('.pf-cb').forEach(cb=>{
+    const label=cb.closest('.pdi')?.querySelector('span')?.textContent||'';
+    cb.closest('.pdi').style.display=label.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+function pfAll(checked){document.querySelectorAll('.pf-cb').forEach(cb=>cb.checked=checked);pfChange();}
+function pfChange(){
+  const checked=[...document.querySelectorAll('.pf-cb:checked')].map(c=>c.value);
+  S.pfs=checked;
+  document.getElementById('pdl').textContent=checked.length?`${checked.length} выбрано`:'Все';
+  const allCb=document.getElementById('pf_all');
+  if(allCb){const all=document.querySelectorAll('.pf-cb').length;allCb.checked=checked.length===all&&all>0;allCb.indeterminate=checked.length>0&&checked.length<all;}
+}
+function pfToggle(e){
+  e.stopPropagation();
+  const dd=document.getElementById('pdd');const dt=document.getElementById('pdt');
+  const on=dd.classList.toggle('on');dt.classList.toggle('on',on);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#pdw')){document.getElementById('pdd').classList.remove('on');document.getElementById('pdt').classList.remove('on');}
+  if(!e.target.closest('.th-wrap'))document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));
+});
+
+// ── Load data ─────────────────────────────────────────────
+function load(pg){
+  S.page=pg||1;
+  S.df=document.getElementById('df').value;
+  S.dt=document.getElementById('dt').value;
+  S.mkt=document.getElementById('mkt').value;
+  S.name=document.getElementById('srch').value.trim();
+  S.stateF=document.getElementById('stateF').value;
+
+  const params=new URLSearchParams({
+    account_type:S.acct,date_from:S.df,date_to:S.dt,
+    marketplace:S.mkt,portfolio_ids:S.pfs.join(','),
+    name:S.name,state_filter:S.stateF,
+    initiator_type:S.initiator,match_type_filter:S.matchType,query_type:S.queryType,
+    sort_by:S.sort,sort_dir:S.dir,page:S.page,per_page:S.perPage
+  });
+  for(const[k,v]of Object.entries(S.numFilters)){
+    if(v.op&&v.val!==''){params.set(k+'_op',v.op);params.set(k+'_val',v.val);}
+    if(v.min!=='')params.set(k+'_min',v.min);
+    if(v.max!=='')params.set(k+'_max',v.max);
+  }
+  document.getElementById('tbody').innerHTML='<tr><td colspan="15" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('err').style.display='none';
+  document.getElementById('pgWrap').style.display='none';
+
+  fetch(`/search-terms/data?${params}`).then(r=>r.json()).then(d=>{
+    if(d.error){showErr(d.error);return;}
+    S.total=d.total;
+    renderSummary(d.summary);
+    renderRows(d.rows);
+    updateBulkBar();
+    renderPagination(d.total,d.page,d.per_page);
+    document.getElementById('tblCount').textContent=`${d.total.toLocaleString()} записей`;
+  }).catch(e=>showErr(e.message));
+}
+
+function showErr(msg){const el=document.getElementById('err');el.textContent='Ошибка: '+msg;el.style.display='';}
+
+// ── Summary ───────────────────────────────────────────────
+function renderSummary(s){
+  if(!s)return;
+  const imp=s.sum_impressions||0,cl=s.sum_clicks||0;
+  document.getElementById('sumTotal').textContent=(s.total_count||0).toLocaleString();
+  document.getElementById('sumImp').textContent=imp.toLocaleString();
+  document.getElementById('sumClicks').textContent=cl.toLocaleString();
+  document.getElementById('sumCtr').textContent=imp>0?(cl/imp*100).toFixed(3)+'%':'—';
+  document.getElementById('sumCost').textContent='$'+(s.sum_cost||0).toFixed(2);
+  document.getElementById('sumSales').textContent='$'+(s.sum_sales||0).toFixed(2);
+  document.getElementById('sumOrders').textContent=(s.sum_purchases||0).toLocaleString();
+  const acos=s.sum_sales>0?s.sum_cost/s.sum_sales*100:null;
+  document.getElementById('sumAcos').textContent=acos!=null?acos.toFixed(1)+'%':'—';
+}
+
+// ── Render thead ──────────────────────────────────────────
+function renderThead(){
+  document.getElementById('thead').innerHTML=`<tr>
+    <th class="ns" style="width:30px"><input type="checkbox" class="row-cb" id="cbSelectAll" onchange="bulkSelectAll(this)"></th>
+    ${thSortLeft('search_term','Запрос')}
+    ${thSortLeft('keyword','Инициатор')}
+    <th class="ns">Тип</th>
+    <th class="ns">Совп.</th>
+    ${thSortLeft('ad_group_name','Группа')}
+    ${thSortLeft('campaign_name','Кампания')}
+    ${thNum('impressions','Показы')}
+    ${thNum('clicks','Клики')}
+    ${thNum('ctr','CTR')}
+    ${thNum('cost','Расход')}
+    ${thNum('sales_14d','Продажи')}
+    ${thNum('purchases_14d','Заказы')}
+    ${thNum('acos','ACoS')}
+  </tr>`;
+}
+
+// ── Render rows ───────────────────────────────────────────
+function renderRows(rows){
+  const tbody=document.getElementById('tbody');
+  if(!rows||!rows.length){tbody.innerHTML='<tr><td colspan="15" class="te">Нет данных</td></tr>';return;}
+  tbody.innerHTML=rows.map((r,i)=>{
+    const rowKey=`${r.keyword_id||i}_${r.search_term||i}`;
+    const displayTerm=editedTerms[rowKey]!=null?editedTerms[rowKey]:(r.search_term||'');
+    const termId=`trm_${i}`;
+    const isAsin=/^[Bb][0-9A-Za-z]{9}$/.test(r.search_term||'');
+    const termCell=`<span id="${termId}">
+      <button class="term-btn" title="${esc(displayTerm)}" onclick="openTermEdit('${termId}','${rowKey}','${esc(displayTerm)}')">${esc(displayTerm)}</button>
+      <span class="term-edit" style="display:none">
+        <input class="term-inp" type="text" value="${esc(displayTerm)}"
+          onkeydown="if(event.key==='Enter')saveTermEdit('${termId}','${rowKey}');if(event.key==='Escape')closeTermEdit('${termId}','${esc(displayTerm)}')">
+        <button class="term-ok" onclick="saveTermEdit('${termId}','${rowKey}')">✓</button>
+        <button class="term-cx" onclick="closeTermEdit('${termId}','${esc(displayTerm)}')">✕</button>
+      </span>
+    </span>`;
+
+    const initiator=r.keyword||r.targeting||'';
+    const isAuto=r.keyword_type==='TARGETING_EXPRESSION_PREDEFINED';
+    const isProduct=r.keyword_type==='TARGETING_EXPRESSION';
+    const initiatorCell=isAuto?'<span class="b bauto">AUTO</span>':(isProduct?`<span class="b bprod" title="${esc(initiator)}">${esc((initiator||'').substring(0,20))}</span>`:`<span class="n" style="font-size:11px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`);
+    const kwBadge=kwTypeBadge(r.keyword_type);
+    const mtBadge=matchTypeBadge(r.match_type);
+
+    const grp=r.ad_group_name||'';
+    const grpState=r.ad_group_state||'';
+    const grpCell=`<div class="name-cell"><div class="name-main" title="${esc(grp)}">${esc(grp.substring(0,30))}</div>${grpState&&grpState!=='ENABLED'?`<div>${stateBadge(grpState)}</div>`:''}</div>`;
+    const camp=r.campaign_name||'';
+    const campCell=`<div class="name-main" style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(camp)}">${esc(camp.substring(0,28))}</div>`;
+
+    const acos=r.acos;
+    const acl=acos==null?'dv':acos<=20?'ok':acos<=40?'hi':'cr';
+
+    return `<tr class="dr">
+      <td><input type="checkbox" class="row-cb st-cb" data-key="${esc(rowKey)}" data-term="${esc(displayTerm)}"
+        data-initiator="${esc(r.keyword||r.targeting||'')}" data-kwtype="${esc(r.keyword_type||'')}"
+        data-mt="${esc(r.match_type||'')}" data-agid="${esc(r.ad_group_id||'')}"
+        data-campid="${esc(r.campaign_id||'')}" data-mkt="${esc(r.marketplace||S.mkt)}"
+        data-agname="${esc(r.ad_group_name||'')}" data-campname="${esc(r.campaign_name||'')}"
+        data-rowkey="${esc(rowKey)}"
+        onchange="updateBulkBar()"></td>
+      <td>${termCell}</td>
+      <td>${initiatorCell}</td>
+      <td>${kwBadge}</td>
+      <td>${mtBadge}</td>
+      <td>${grpCell}</td>
+      <td>${campCell}</td>
+      <td class="r n">${fmtNum(r.impressions)}</td>
+      <td class="r n">${fmtNum(r.clicks)}</td>
+      <td class="r n ${r.ctr!=null?'':'dv'}">${r.ctr!=null?r.ctr.toFixed(3)+'%':'—'}</td>
+      <td class="r n an">$${(r.cost||0).toFixed(2)}</td>
+      <td class="r n gn">$${(r.sales_14d||0).toFixed(2)}</td>
+      <td class="r n">${fmtNum(r.purchases_14d)}</td>
+      <td class="r n ${acl}">${acos!=null?acos.toFixed(1)+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Inline term edit ──────────────────────────────────────
+function openTermEdit(id,rowKey,current){
+  const span=document.getElementById(id);
+  if(!span)return;
+  span.querySelector('.term-btn').style.display='none';
+  const editSpan=span.querySelector('.term-edit');
+  editSpan.style.display='inline-flex';
+  const inp=editSpan.querySelector('input');
+  inp.value=current;inp.focus();inp.select();
+}
+function saveTermEdit(id,rowKey){
+  const span=document.getElementById(id);
+  if(!span)return;
+  const val=span.querySelector('.term-inp').value.trim();
+  editedTerms[rowKey]=val;
+  // update checkbox data-term
+  const cb=document.querySelector(`.st-cb[data-rowkey="${rowKey}"]`);
+  if(cb)cb.dataset.term=val;
+  span.querySelector('.term-btn').textContent=val;
+  span.querySelector('.term-btn').title=val;
+  span.querySelector('.term-btn').style.display='';
+  span.querySelector('.term-edit').style.display='none';
+}
+function closeTermEdit(id,original){
+  const span=document.getElementById(id);
+  if(!span)return;
+  span.querySelector('.term-btn').style.display='';
+  span.querySelector('.term-edit').style.display='none';
+}
+
+// ── Bulk ──────────────────────────────────────────────────
+function getSelectedCbs(){return Array.from(document.querySelectorAll('.st-cb:checked'));}
+function updateBulkBar(){
+  const sel=getSelectedCbs();
+  const bar=document.getElementById('bulkBar');
+  const cnt=document.getElementById('bulkCnt');
+  if(sel.length>0){bar.classList.add('vis');cnt.textContent=`${sel.length} выбрано`;document.body.classList.add('bulk-active');}
+  else{bar.classList.remove('vis');document.body.classList.remove('bulk-active');}
+  const all=document.querySelectorAll('.st-cb');
+  const allCb=document.getElementById('cbSelectAll');
+  if(allCb){allCb.indeterminate=sel.length>0&&sel.length<all.length;allCb.checked=all.length>0&&sel.length===all.length;}
+}
+function bulkSelectAll(cb){document.querySelectorAll('.st-cb').forEach(c=>c.checked=cb.checked);updateBulkBar();}
+function bulkClear(){document.querySelectorAll('.st-cb').forEach(c=>c.checked=false);updateBulkBar();}
+
+function getSelectedData(){
+  return getSelectedCbs().map(cb=>({
+    term: cb.dataset.term||'',
+    initiator: cb.dataset.initiator||'',
+    kwtype: cb.dataset.kwtype||'',
+    mt: cb.dataset.mt||'',
+    ad_group_id: cb.dataset.agid||'',
+    campaign_id: cb.dataset.campid||'',
+    marketplace: cb.dataset.mkt||S.mkt,
+    ad_group_name: cb.dataset.agname||'',
+    campaign_name: cb.dataset.campname||'',
+  }));
+}
+
+// ── Modal: Add negatives ──────────────────────────────────
+function openBulkNeg(){
+  const data=getSelectedData();
+  if(!data.length){toast('Ничего не выбрано',false);return;}
+
+  // Unique terms
+  const terms=[...new Set(data.map(d=>d.term).filter(Boolean))];
+  document.getElementById('negTermCount').textContent=terms.length;
+  document.getElementById('negTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag">${esc(t)}</span>`).join('');
+
+  // Unique groups
+  const groupMap={};
+  data.forEach(d=>{
+    if(d.ad_group_id&&!groupMap[d.ad_group_id]){
+      groupMap[d.ad_group_id]={ad_group_id:d.ad_group_id,campaign_id:d.campaign_id,
+        ad_group_name:d.ad_group_name,campaign_name:d.campaign_name,marketplace:d.marketplace};
+    }
+  });
+  const groups=Object.values(groupMap);
+  document.getElementById('negGroupCount').textContent=groups.length;
+  document.getElementById('negGroupsList').innerHTML=groups.map(g=>`
+    <div class="group-item">
+      <input type="checkbox" class="neg-grp-cb" checked value="${esc(g.ad_group_id)}"
+        data-campid="${esc(g.campaign_id)}" data-mkt="${esc(g.marketplace)}">
+      <div class="group-item-name">${esc(g.ad_group_name)}</div>
+      <div class="group-item-camp">${esc(g.campaign_name)}</div>
+    </div>`).join('');
+
+  openModal('modalNeg');
+}
+
+async function submitNeg(){
+  const mt=document.querySelector('input[name="negMt"]:checked')?.value||'EXACT';
+  const terms=[...document.getElementById('negTermsPreview').querySelectorAll('.term-tag')].map(t=>t.textContent);
+  const groupCbs=[...document.querySelectorAll('.neg-grp-cb:checked')];
+  if(!terms.length||!groupCbs.length){toast('Нет данных для отправки',false);return;}
+
+  const payloads=[];
+  const profileCache={};
+
+  for(const cb of groupCbs){
+    const agId=cb.value;
+    const campId=cb.dataset.campid;
+    const mkt=cb.dataset.mkt||S.mkt;
+    if(!profileCache[mkt])profileCache[mkt]=getProfileId(mkt);
+    const profileId=profileCache[mkt];
+    for(const term of terms){
+      payloads.push({
+        entity_type:'negative_add',
+        entity_id:agId,
+        profile_id:profileId,
+        marketplace:mkt,
+        field_name:'—',
+        new_value:JSON.stringify({text:term,match_type:mt,ad_group_id:agId,campaign_id:campId}),
+      });
+    }
+  }
+
+  try{
+    const res=await ctrlAddBatch(payloads);
+    closeModal('modalNeg');
+    bulkClear();
+    toast(`Добавлено ${res.inserted||payloads.length} минус слов`);
+  }catch(e){toast('Ошибка: '+e.message,false);}
+}
+
+// ── Modal: Add as keyword ─────────────────────────────────
+function openBulkKw(){
+  const data=getSelectedData();
+  if(!data.length){toast('Ничего не выбрано',false);return;}
+
+  const terms=[...new Set(data.map(d=>d.term).filter(Boolean))];
+  document.getElementById('kwTermCount').textContent=terms.length;
+  document.getElementById('kwTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag">${esc(t)}</span>`).join('');
+
+  // Groups from selected rows
+  const groupMap={};
+  data.forEach(d=>{
+    if(d.ad_group_id&&!groupMap[d.ad_group_id]){
+      groupMap[d.ad_group_id]={ad_group_id:d.ad_group_id,campaign_id:d.campaign_id,
+        ad_group_name:d.ad_group_name,campaign_name:d.campaign_name,marketplace:d.marketplace};
+    }
+  });
+  renderKwGroups(Object.values(groupMap));
+  openModal('modalAddKw');
+}
+
+function renderKwGroups(groups){
+  const list=document.getElementById('kwGroupsList');
+  if(!groups.length){list.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Нет групп</div>';return;}
+  list.innerHTML=groups.map(g=>`
+    <div class="group-item">
+      <input type="checkbox" class="kw-grp-cb" checked value="${esc(g.ad_group_id)}"
+        data-campid="${esc(g.campaign_id)}" data-mkt="${esc(g.marketplace)}">
+      <div class="group-item-name">${esc(g.ad_group_name)}</div>
+      <div class="group-item-camp">${esc(g.campaign_name)}</div>
+    </div>`).join('');
+}
+
+function kwSelectAllGroups(v){document.querySelectorAll('.kw-grp-cb').forEach(cb=>cb.checked=v);}
+
+async function submitAddKw(){
+  const mt=document.querySelector('input[name="kwMt"]:checked')?.value||'BROAD';
+  const bid=parseFloat(document.getElementById('kwBid').value)||0;
+  if(bid<0.02){toast('Укажите ставку (мин. $0.02)',false);return;}
+
+  const terms=[...document.getElementById('kwTermsPreview').querySelectorAll('.term-tag')].map(t=>t.textContent);
+  const groupCbs=[...document.querySelectorAll('.kw-grp-cb:checked')];
+  if(!terms.length||!groupCbs.length){toast('Нет данных для отправки',false);return;}
+
+  const payloads=[];
+  const profileCache={};
+  for(const cb of groupCbs){
+    const agId=cb.value;
+    const campId=cb.dataset.campid;
+    const mkt=cb.dataset.mkt||S.mkt;
+    if(!profileCache[mkt])profileCache[mkt]=getProfileId(mkt);
+    const profileId=profileCache[mkt];
+    for(const term of terms){
+      payloads.push({
+        entity_type:'keyword_add',
+        entity_id:agId,
+        profile_id:profileId,
+        marketplace:mkt,
+        field_name:'—',
+        new_value:JSON.stringify({text:term,match_type:mt,bid,ad_group_id:agId,campaign_id:campId}),
+      });
+    }
+  }
+
+  try{
+    const res=await ctrlAddBatch(payloads);
+    closeModal('modalAddKw');
+    bulkClear();
+    toast(`Добавлено ${res.inserted||payloads.length} ключевых слов`);
+  }catch(e){toast('Ошибка: '+e.message,false);}
+}
+
+// ── API helpers ───────────────────────────────────────────
+async function ctrlAddBatch(payloads){
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Batch error');
+  return d;
+}
+
+function openModal(id){document.getElementById(id).classList.add('op');}
+function closeModal(id){document.getElementById(id).classList.remove('op');}
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('op');});
+});
+
+function toast(msg,ok=true){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast-item '+(ok?'ok':'err');
+  d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;
+  w.appendChild(d);
+  setTimeout(()=>d.remove(),3500);
+}
+
+// ── Pagination ────────────────────────────────────────────
+function onPerPageChange(val){S.perPage=parseInt(val)||50;load(1);}
+function renderPagination(total,page,perPage){
+  const pages=Math.ceil(total/perPage)||1;
+  const wrap=document.getElementById('pgWrap');
+  const info=document.getElementById('pgInfo');
+  const btns=document.getElementById('pgBtns');
+  const sel=document.getElementById('perPageSel');
+  wrap.style.display='';
+  if(sel)sel.value=String(perPage);
+  const from=(page-1)*perPage+1,to=Math.min(page*perPage,total);
+  info.textContent=`${from}–${to} из ${total.toLocaleString()}`;
+  let html=`<button class="pbb" ${page<=1?'disabled':''} onclick="load(${page-1})">‹</button>`;
+  const range=pageRange(page,pages);
+  for(const p of range){
+    if(p==='…')html+=`<button class="pbb" disabled>…</button>`;
+    else html+=`<button class="pbb ${p===page?'on':''}" onclick="load(${p})">${p}</button>`;
+  }
+  html+=`<button class="pbb" ${page>=pages?'disabled':''} onclick="load(${page+1})">›</button>`;
+  btns.innerHTML=html;
+}
+function pageRange(p,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);if(p<=4)return[1,2,3,4,5,'…',t];if(p>=t-3)return[1,'…',t-4,t-3,t-2,t-1,t];return[1,'…',p-1,p,p+1,'…',t];}
+
+// ── Sort / filters ────────────────────────────────────────
+function sortBy(col){if(S.sort===col)S.dir=S.dir==='asc'?'desc':'asc';else{S.sort=col;S.dir='desc';}renderThead();load(S.page);}
+function openNumPop(col,el){document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));const p=document.getElementById('np_'+col);if(p){p.classList.add('op');}}
+function applyNumFilter(col){
+  const op=document.getElementById('nop_'+col)?.value||'';
+  const val=document.getElementById('nval_'+col)?.value||'';
+  const mn=document.getElementById('nmin_'+col)?.value||'';
+  const mx=document.getElementById('nmax_'+col)?.value||'';
+  S.numFilters[col]={op,val,min:mn,max:mx};
+  document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));
+  const fi=document.querySelector(`[data-fi="${col}"]`);
+  if(fi)fi.classList.toggle('on',!!(op&&val)||mn||mx);
+  renderThead();load(1);
+}
+function clearNumFilter(col){
+  S.numFilters[col]={op:'',val:'',min:'',max:''};
+  ['nop_','nval_','nmin_','nmax_'].forEach(pfx=>{const el=document.getElementById(pfx+col);if(el)el.value='';});
+  const fi=document.querySelector(`[data-fi="${col}"]`);
+  if(fi)fi.classList.remove('on');
+  document.querySelectorAll('.npop').forEach(p=>p.classList.remove('op'));
+  renderThead();load(1);
+}
+
+// ── TH helpers ────────────────────────────────────────────
+function thSortLeft(col,label){
+  const isAct=S.sort===col;const arr=isAct?(S.dir==='asc'?'↑':'↓'):'';
+  return`<th class="${isAct?'s':''}" onclick="sortBy('${col}')"><div class="th-wrap left"><div class="th-sort left">${label} <span class="sa">${arr}</span></div></div></th>`;
+}
+function thNum(col,label){
+  const isAct=S.sort===col;const nf=S.numFilters[col]||{};const hasFilter=(nf.op&&nf.val!=='')||nf.min||nf.max;const arr=isAct?(S.dir==='asc'?'↑':'↓'):'';
+  return`<th class="${isAct?'s':''}"><div class="th-wrap"><div class="th-sort" onclick="sortBy('${col}')">${label} <span class="sa">${arr}</span></div><div class="th-fi ${hasFilter?'on':''}" data-fi="${col}" onclick="openNumPop('${col}',this)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div><div class="npop" id="np_${col}"><div class="npop-title">${label}</div><div class="npop-row"><select class="npop-op" id="nop_${col}"><option value="">—</option><option value="gt">&gt;</option><option value="gte">&ge;</option><option value="lt">&lt;</option><option value="lte">&le;</option><option value="eq">=</option></select><input class="npop-v" id="nval_${col}" type="number" placeholder="Значение"></div><div class="npop-row"><input class="npop-v" id="nmin_${col}" type="number" placeholder="Мин"><input class="npop-v" id="nmax_${col}" type="number" placeholder="Макс"></div><div class="npop-acts"><button class="npop-apply" onclick="applyNumFilter('${col}')">Применить</button><button class="npop-clear" onclick="clearNumFilter('${col}')">Сбросить</button></div></div></div></th>`;
+}
+
+// ── Badge helpers ─────────────────────────────────────────
+function kwTypeBadge(t){
+  if(!t)return'<span class="dv">—</span>';
+  if(t==='BROAD')return'<span class="b bbroad">BROAD</span>';
+  if(t==='PHRASE')return'<span class="b bphrase">PHRASE</span>';
+  if(t==='EXACT')return'<span class="b bexact">EXACT</span>';
+  if(t==='TARGETING_EXPRESSION_PREDEFINED')return'<span class="b bauto">AUTO</span>';
+  if(t==='TARGETING_EXPRESSION')return'<span class="b bprod">PRODUCT</span>';
+  return`<span class="b bm">${esc(t)}</span>`;
+}
+function matchTypeBadge(t){
+  if(!t)return'<span class="dv">—</span>';
+  if(t==='BROAD')return'<span class="b bbroad">BROAD</span>';
+  if(t==='PHRASE')return'<span class="b bphrase">PHRASE</span>';
+  if(t==='EXACT')return'<span class="b bexact">EXACT</span>';
+  return`<span class="b bm">${esc(t)}</span>`;
+}
+function stateBadge(s){
+  if(!s)return'';
+  if(s==='ENABLED')return'<span class="b be">ACTIVE</span>';
+  if(s==='PAUSED')return'<span class="b bp">PAUSED</span>';
+  if(s==='ARCHIVED')return'<span class="b bm">ARCH</span>';
+  return`<span class="b bm">${esc(s)}</span>`;
+}
+function fmtNum(n){return(n||0).toLocaleString();}
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
