@@ -671,24 +671,30 @@ function getSelectedData(){
   }));
 }
 
-// ── Modal: Add negatives ──────────────────────────────────
+/// ── Modal: Add negatives ──────────────────────────────────
+// _negPairs: [{term, ad_group_id, campaign_id, marketplace, ad_group_name, campaign_name}]
+let _negPairs = [];
+
 function openBulkNeg(){
   const data=getSelectedData();
   if(!data.length){toast('Ничего не выбрано',false);return;}
 
-  // Unique terms
-  const terms=[...new Set(data.map(d=>d.term).filter(Boolean))];
+  // Deduplicate (term + ad_group_id) pairs
+  const seen=new Set();
+  _negPairs=[];
+  data.forEach(d=>{
+    if(!d.term||!d.ad_group_id)return;
+    const key=d.term+'|'+d.ad_group_id;
+    if(!seen.has(key)){seen.add(key);_negPairs.push(d);}
+  });
+
+  const terms=[...new Set(_negPairs.map(p=>p.term))];
   document.getElementById('negTermCount').textContent=terms.length;
   document.getElementById('negTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag">${esc(t)}</span>`).join('');
 
-  // Unique groups
+  // Show unique groups (for info, not for selection — pairing is fixed)
   const groupMap={};
-  data.forEach(d=>{
-    if(d.ad_group_id&&!groupMap[d.ad_group_id]){
-      groupMap[d.ad_group_id]={ad_group_id:d.ad_group_id,campaign_id:d.campaign_id,
-        ad_group_name:d.ad_group_name,campaign_name:d.campaign_name,marketplace:d.marketplace};
-    }
-  });
+  _negPairs.forEach(p=>{if(!groupMap[p.ad_group_id])groupMap[p.ad_group_id]=p;});
   const groups=Object.values(groupMap);
   document.getElementById('negGroupCount').textContent=groups.length;
   document.getElementById('negGroupsList').innerHTML=groups.map(g=>`
@@ -704,32 +710,31 @@ function openBulkNeg(){
 
 async function submitNeg(){
   const mt=document.querySelector('input[name="negMt"]:checked')?.value||'EXACT';
-  const terms=[...document.getElementById('negTermsPreview').querySelectorAll('.term-tag')].map(t=>t.textContent);
-  const groupCbs=[...document.querySelectorAll('.neg-grp-cb:checked')];
-  if(!terms.length||!groupCbs.length){toast('Нет данных для отправки',false);return;}
+  const unchecked=new Set([...document.querySelectorAll('.neg-grp-cb:not(:checked)')].map(c=>c.value));
 
-  const payloads=[];
+  // Build payloads: each term goes only to its own group
   const profileCache={};
-
-  for(const cb of groupCbs){
-    const agId=cb.value;
-    const campId=cb.dataset.campid;
-    const mkt=cb.dataset.mkt||S.mkt;
+  const payloads=[];
+  const seen=new Set();
+  for(const p of _negPairs){
+    if(unchecked.has(p.ad_group_id))continue; // user unchecked this group
+    const key=p.term+'|'+p.ad_group_id+'|'+mt;
+    if(seen.has(key))continue;
+    seen.add(key);
+    const mkt=p.marketplace||S.mkt;
     if(!profileCache[mkt])profileCache[mkt]=getProfileId(mkt);
-    const profileId=profileCache[mkt];
-    for(const term of terms){
-      payloads.push({
-        account_type: S.acct,
-        entity_type:'negative_add',
-        entity_id:agId,
-        profile_id:profileId,
-        marketplace:mkt,
-        field_name:'—',
-        new_value:JSON.stringify({text:term,match_type:mt,ad_group_id:agId,campaign_id:campId}),
-      });
-    }
+    payloads.push({
+      account_type:S.acct,
+      entity_type:'negative_add',
+      entity_id:p.ad_group_id,
+      profile_id:profileCache[mkt],
+      marketplace:mkt,
+      field_name:'—',
+      new_value:JSON.stringify({text:p.term,match_type:mt,ad_group_id:p.ad_group_id,campaign_id:p.campaign_id}),
+    });
   }
 
+  if(!payloads.length){toast('Нет данных для отправки',false);return;}
   try{
     const res=await ctrlAddBatch(payloads);
     closeModal('modalNeg');
