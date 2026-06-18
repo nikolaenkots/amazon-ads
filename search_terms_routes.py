@@ -251,49 +251,70 @@ def search_terms_data():
 
 @search_terms_bp.route('/search-terms/groups-for-asin')
 def groups_for_asin():
-    """Returns ad groups that advertise a given ASIN — for adding keywords."""
+    """Find ad groups that share the same ASIN as the given ad_group_id."""
     args         = request.args
     account_type = args.get('account_type', 'MERCH').upper()
     suffix       = account_type.lower()
     marketplace  = args.get('marketplace', 'US').upper()
-    asin         = args.get('asin', '').strip().upper()
+    ad_group_id  = args.get('ad_group_id', '').strip()
 
-    if not asin:
-        return jsonify({'groups': []})
+    if not ad_group_id:
+        return jsonify({'groups': [], 'asin': ''})
 
     camp_table  = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
     asin_table  = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
     safe_mkt    = marketplace.replace("'", "''")
-    safe_asin   = asin.replace("'", "''")
+    safe_agid   = ad_group_id.replace("'", "''")
 
     sql = f"""
-    WITH ag_ids AS (
-        SELECT DISTINCT ad_group_id
+    WITH source_asins AS (
+        -- Find ASINs advertised in the source group
+        SELECT DISTINCT advertised_asin
         FROM `{asin_table}`
-        WHERE advertised_asin = '{safe_asin}' AND marketplace = '{safe_mkt}'
+        WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}'
+        LIMIT 5
+    ),
+    ag_ids AS (
+        -- Find all groups advertising those ASINs
+        SELECT DISTINCT s.ad_group_id
+        FROM `{asin_table}` s
+        JOIN source_asins sa ON sa.advertised_asin = s.advertised_asin
+        WHERE s.marketplace = '{safe_mkt}'
     ),
     g_raw AS (
-        SELECT ad_group_id, ad_group_name, campaign_id, marketplace,
+        SELECT ad_group_id, ad_group_name, campaign_id, ad_group_state, marketplace,
                ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn
         FROM `{camp_table}` WHERE entity_type = 'ad_group'
     ),
     c_raw AS (
-        SELECT campaign_id, campaign_name, marketplace,
+        SELECT campaign_id, campaign_name, campaign_state, targeting_type, marketplace,
                ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
         FROM `{camp_table}` WHERE entity_type = 'campaign'
     ),
     g AS (SELECT * FROM g_raw WHERE rn = 1),
     c AS (SELECT * FROM c_raw WHERE rn = 1)
-    SELECT g.ad_group_id, g.ad_group_name, c.campaign_name, g.marketplace
+    SELECT g.ad_group_id, g.ad_group_name, g.ad_group_state,
+           c.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
+           g.marketplace,
+           (SELECT STRING_AGG(DISTINCT advertised_asin ORDER BY advertised_asin LIMIT 3)
+            FROM `{asin_table}` WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}') AS source_asins
     FROM ag_ids
     JOIN g ON g.ad_group_id = ag_ids.ad_group_id AND g.marketplace = '{safe_mkt}'
     LEFT JOIN c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
-    ORDER BY c.campaign_name, g.ad_group_name
-    LIMIT 200
+    WHERE c.campaign_id IS NOT NULL
+    ORDER BY
+        CASE WHEN c.campaign_state = 'ENABLED' AND g.ad_group_state = 'ENABLED' THEN 0 ELSE 1 END,
+        c.campaign_name, g.ad_group_name
+    LIMIT 300
     """
     try:
         client = get_client()
         rows = list(client.query(sql).result())
-        return jsonify({'groups': [dict(r) for r in rows]})
+        groups = [dict(r) for r in rows]
+        asin = groups[0]['source_asins'] if groups else ''
+        # remove source_asins field from each row
+        for g in groups:
+            g.pop('source_asins', None)
+        return jsonify({'groups': groups, 'asin': asin})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -144,6 +144,7 @@ thead th.s .sa{opacity:1;color:var(--accent)}
 .rad-row input[type=radio]{accent-color:var(--accent)}
 .terms-preview{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:4px}
 .term-tag{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text)}
+.term-tag.asin{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
 .groups-list{max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:6px}
 .group-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer}
 .group-item:last-child{border-bottom:none}
@@ -175,6 +176,9 @@ body.bulk-active .toast-wrap{bottom:70px}
 .term-inp{height:26px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;padding:0 6px;outline:none;background:var(--surface);color:var(--text);width:200px}
 .term-ok{height:26px;padding:0 8px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
 .term-cx{height:26px;padding:0 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.add-kw-btn{opacity:0;height:20px;padding:0 7px;border:1px solid var(--green-bd);border-radius:4px;background:var(--green-bg);color:var(--green);font-size:10px;font-family:'DM Mono',monospace;cursor:pointer;white-space:nowrap;transition:opacity .15s;flex-shrink:0}
+tr.dr:hover .add-kw-btn{opacity:1}
+.term-cell{display:flex;align-items:center;gap:6px;min-width:0}
 .name-cell{display:flex;flex-direction:column;gap:2px}
 .name-main{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
 .name-sub{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
@@ -304,7 +308,6 @@ body.bulk-active .toast-wrap{bottom:70px}
   <span class="bulk-cnt" id="bulkCnt">0 выбрано</span>
   <div class="bulk-sep"></div>
   <button class="bulk-btn red" onclick="openBulkNeg()">✕ В минус слова</button>
-  <button class="bulk-btn green" onclick="openBulkKw()">+ Добавить ключ</button>
   <button class="bulk-btn" onclick="bulkClear()">Снять выбор</button>
 </div>
 
@@ -312,7 +315,7 @@ body.bulk-active .toast-wrap{bottom:70px}
 <div class="modal-bg" id="modalNeg">
   <div class="modal">
     <div class="modal-title">Добавить минус слова</div>
-    <div class="modal-row">
+    <div class="modal-row" id="negMtRow">
       <div class="modal-label">Форма</div>
       <div class="rad-row">
         <label><input type="radio" name="negMt" value="EXACT" checked> EXACT</label>
@@ -321,6 +324,7 @@ body.bulk-active .toast-wrap{bottom:70px}
     </div>
     <div class="modal-row">
       <div class="modal-label">Запросы (<span id="negTermCount">0</span>)</div>
+      <div id="negTypeNote" style="display:none;font-size:11px;color:var(--amber);margin-bottom:6px"></div>
       <div class="terms-preview" id="negTermsPreview"></div>
     </div>
     <div class="modal-row">
@@ -561,7 +565,10 @@ function renderRows(rows){
     const displayTerm=editedTerms[rowKey]!=null?editedTerms[rowKey]:(r.search_term||'');
     const termId=`trm_${i}`;
     const isAsin=/^[Bb][0-9A-Za-z]{9}$/.test(r.search_term||'');
-    const termCell=`<span id="${termId}">
+    const agId=r.ad_group_id||'';
+    const campId=r.campaign_id||'';
+    const rowMkt=r.marketplace||S.mkt;
+    const termCell=`<div class="term-cell"><span id="${termId}">
       <button class="term-btn" title="${esc(displayTerm)}" onclick="openTermEdit('${termId}','${rowKey}','${esc(displayTerm)}')">${esc(displayTerm)}</button>
       <span class="term-edit" style="display:none">
         <input class="term-inp" type="text" value="${esc(displayTerm)}"
@@ -569,7 +576,9 @@ function renderRows(rows){
         <button class="term-ok" onclick="saveTermEdit('${termId}','${rowKey}')">✓</button>
         <button class="term-cx" onclick="closeTermEdit('${termId}','${esc(displayTerm)}')">✕</button>
       </span>
-    </span>`;
+    </span>
+    <button class="add-kw-btn" onclick="event.stopPropagation();openRowKw('${esc(displayTerm)}','${esc(agId)}','${esc(campId)}','${esc(rowMkt)}')">+Ключ</button>
+    </div>`;
 
     const initiator=r.keyword||r.targeting||'';
     const isAuto=r.keyword_type==='TARGETING_EXPRESSION_PREDEFINED';
@@ -675,6 +684,8 @@ function getSelectedData(){
 // _negPairs: [{term, ad_group_id, campaign_id, marketplace, ad_group_name, campaign_name}]
 let _negPairs = [];
 
+const isAsin=t=>/^[Bb][0-9A-Za-z]{9}$/.test(t||'');
+
 function openBulkNeg(){
   const data=getSelectedData();
   if(!data.length){toast('Ничего не выбрано',false);return;}
@@ -689,10 +700,28 @@ function openBulkNeg(){
   });
 
   const terms=[...new Set(_negPairs.map(p=>p.term))];
-  document.getElementById('negTermCount').textContent=terms.length;
-  document.getElementById('negTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag">${esc(t)}</span>`).join('');
+  const hasAsins=terms.some(isAsin);
+  const hasText=terms.some(t=>!isAsin(t));
 
-  // Show unique groups (for info, not for selection — pairing is fixed)
+  document.getElementById('negTermCount').textContent=terms.length;
+  document.getElementById('negTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag${isAsin(t)?' asin':''}">${esc(t)}</span>`).join('');
+
+  // Show/hide match type row — not needed if all are ASINs
+  document.getElementById('negMtRow').style.display=hasText?'':'none';
+
+  // Info about mixed types
+  const typeNote=document.getElementById('negTypeNote');
+  if(hasAsins&&hasText){
+    typeNote.textContent='⚠ Выбраны и ASINы и текстовые запросы — будут добавлены как минус-продукты и минус-слова соответственно';
+    typeNote.style.display='';
+  } else if(hasAsins){
+    typeNote.textContent='Выбраны ASINы — будут добавлены как минус-продукты';
+    typeNote.style.display='';
+  } else {
+    typeNote.style.display='none';
+  }
+
+  // Unique groups
   const groupMap={};
   _negPairs.forEach(p=>{if(!groupMap[p.ad_group_id])groupMap[p.ad_group_id]=p;});
   const groups=Object.values(groupMap);
@@ -712,26 +741,42 @@ async function submitNeg(){
   const mt=document.querySelector('input[name="negMt"]:checked')?.value||'EXACT';
   const unchecked=new Set([...document.querySelectorAll('.neg-grp-cb:not(:checked)')].map(c=>c.value));
 
-  // Build payloads: each term goes only to its own group
   const profileCache={};
   const payloads=[];
   const seen=new Set();
   for(const p of _negPairs){
-    if(unchecked.has(p.ad_group_id))continue; // user unchecked this group
-    const key=p.term+'|'+p.ad_group_id+'|'+mt;
-    if(seen.has(key))continue;
-    seen.add(key);
+    if(unchecked.has(p.ad_group_id))continue;
     const mkt=p.marketplace||S.mkt;
     if(!profileCache[mkt])profileCache[mkt]=getProfileId(mkt);
-    payloads.push({
-      account_type:S.acct,
-      entity_type:'negative_add',
-      entity_id:p.ad_group_id,
-      profile_id:profileCache[mkt],
-      marketplace:mkt,
-      field_name:'—',
-      new_value:JSON.stringify({text:p.term,match_type:mt,ad_group_id:p.ad_group_id,campaign_id:p.campaign_id}),
-    });
+    if(isAsin(p.term)){
+      // Product negative
+      const key='prod|'+p.term+'|'+p.ad_group_id;
+      if(seen.has(key))continue;
+      seen.add(key);
+      payloads.push({
+        account_type:S.acct,
+        entity_type:'negative_product_add',
+        entity_id:p.ad_group_id,
+        profile_id:profileCache[mkt],
+        marketplace:mkt,
+        field_name:'—',
+        new_value:JSON.stringify({asin:p.term.toUpperCase(),ad_group_id:p.ad_group_id,campaign_id:p.campaign_id}),
+      });
+    } else {
+      // Text negative
+      const key='kw|'+p.term+'|'+p.ad_group_id+'|'+mt;
+      if(seen.has(key))continue;
+      seen.add(key);
+      payloads.push({
+        account_type:S.acct,
+        entity_type:'negative_add',
+        entity_id:p.ad_group_id,
+        profile_id:profileCache[mkt],
+        marketplace:mkt,
+        field_name:'—',
+        new_value:JSON.stringify({text:p.term,match_type:mt,ad_group_id:p.ad_group_id,campaign_id:p.campaign_id}),
+      });
+    }
   }
 
   if(!payloads.length){toast('Нет данных для отправки',false);return;}
@@ -744,36 +789,47 @@ async function submitNeg(){
 }
 
 // ── Modal: Add as keyword ─────────────────────────────────
-function openBulkKw(){
-  const data=getSelectedData();
-  if(!data.length){toast('Ничего не выбрано',false);return;}
+// _kwTerms: array of term strings to add
+let _kwTerms = [];
 
-  const terms=[...new Set(data.map(d=>d.term).filter(Boolean))];
-  document.getElementById('kwTermCount').textContent=terms.length;
-  document.getElementById('kwTermsPreview').innerHTML=terms.map(t=>`<span class="term-tag">${esc(t)}</span>`).join('');
-
-  // Groups from selected rows
-  const groupMap={};
-  data.forEach(d=>{
-    if(d.ad_group_id&&!groupMap[d.ad_group_id]){
-      groupMap[d.ad_group_id]={ad_group_id:d.ad_group_id,campaign_id:d.campaign_id,
-        ad_group_name:d.ad_group_name,campaign_name:d.campaign_name,marketplace:d.marketplace};
-    }
-  });
-  renderKwGroups(Object.values(groupMap));
+function openRowKw(term, agId, campId, mkt){
+  _kwTerms=[term];
+  document.getElementById('kwTermCount').textContent=1;
+  document.getElementById('kwTermsPreview').innerHTML=`<span class="term-tag">${esc(term)}</span>`;
+  document.getElementById('kwGroupsList').innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px"><span class="sp"></span> Загрузка групп...</div>';
   openModal('modalAddKw');
+
+  const params=new URLSearchParams({account_type:S.acct,marketplace:mkt||S.mkt,ad_group_id:agId});
+  fetch(`/search-terms/groups-for-asin?${params}`).then(r=>r.json()).then(d=>{
+    if(d.error){document.getElementById('kwGroupsList').innerHTML=`<div style="padding:12px;color:var(--red);font-size:12px">${esc(d.error)}</div>`;return;}
+    const asinLabel=d.asin?` · ASIN: ${esc(d.asin)}`:'';
+    document.getElementById('kwTermCount').textContent=`1${asinLabel}`;
+    renderKwGroups(d.groups||[], agId);
+  }).catch(e=>{document.getElementById('kwGroupsList').innerHTML=`<div style="padding:12px;color:var(--red);font-size:12px">Ошибка: ${esc(e.message)}</div>`;});
 }
 
-function renderKwGroups(groups){
+function renderKwGroups(groups, sourceAgId){
   const list=document.getElementById('kwGroupsList');
-  if(!groups.length){list.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Нет групп</div>';return;}
-  list.innerHTML=groups.map(g=>`
-    <div class="group-item">
-      <input type="checkbox" class="kw-grp-cb" checked value="${esc(g.ad_group_id)}"
-        data-campid="${esc(g.campaign_id)}" data-mkt="${esc(g.marketplace)}">
-      <div class="group-item-name">${esc(g.ad_group_name)}</div>
-      <div class="group-item-camp">${esc(g.campaign_name)}</div>
-    </div>`).join('');
+  if(!groups.length){list.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">Нет групп с этим ASIN</div>';return;}
+  list.innerHTML=groups.map(g=>{
+    const agActive=g.ad_group_state==='ENABLED';
+    const cActive=g.campaign_state==='ENABLED';
+    const isActive=agActive&&cActive;
+    const isSelf=g.ad_group_id===sourceAgId;
+    const agBadge=agActive?'<span class="b be" style="font-size:8px">А</span>':'<span class="b bp" style="font-size:8px">П</span>';
+    const cBadge=cActive?'':'<span class="b bp" style="font-size:8px">CAMP П</span>';
+    return`<div class="group-item" style="${!isActive?'opacity:.55':''}">
+      <input type="checkbox" class="kw-grp-cb" ${isActive?'checked':''} value="${esc(g.ad_group_id)}"
+        data-campid="${esc(g.campaign_id||'')}" data-mkt="${esc(g.marketplace||S.mkt)}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:4px;font-weight:500;font-size:12px">
+          ${agBadge}${cBadge}
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.ad_group_name)}${isSelf?' ★':''}</span>
+        </div>
+        <div class="group-item-camp">${esc(g.campaign_name)}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function kwSelectAllGroups(v){document.querySelectorAll('.kw-grp-cb').forEach(cb=>cb.checked=v);}
@@ -783,7 +839,7 @@ async function submitAddKw(){
   const bid=parseFloat(document.getElementById('kwBid').value)||0;
   if(bid<0.02){toast('Укажите ставку (мин. $0.02)',false);return;}
 
-  const terms=[...document.getElementById('kwTermsPreview').querySelectorAll('.term-tag')].map(t=>t.textContent);
+  const terms=_kwTerms.filter(Boolean);
   const groupCbs=[...document.querySelectorAll('.kw-grp-cb:checked')];
   if(!terms.length||!groupCbs.length){toast('Нет данных для отправки',false);return;}
 
