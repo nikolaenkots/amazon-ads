@@ -58,7 +58,8 @@ def get_token():
             "refresh_token": _AMZ["refresh_token"],
             "client_id":     _AMZ["client_id"],
             "client_secret": _AMZ["client_secret"],
-        }
+        },
+        timeout=30,
     )
     r.raise_for_status()
     return r.json()["access_token"]
@@ -74,16 +75,32 @@ def amz_headers(token, profile_id):
 
 
 def amz_post(endpoint, path, headers, body, retries=3):
-    """POST с retry при 429"""
+    """POST с retry при 429/5xx и таймаутом"""
     for attempt in range(retries):
-        resp = requests.post(f"{endpoint}{path}", headers=headers, json=body)
+        try:
+            resp = requests.post(f"{endpoint}{path}", headers=headers, json=body, timeout=60)
+        except requests.Timeout:
+            wait = 10 * (attempt + 1)
+            print(f"  Timeout на {path}, ждём {wait}s (попытка {attempt+1}/{retries})...")
+            time.sleep(wait)
+            continue
+        except requests.ConnectionError as e:
+            wait = 10 * (attempt + 1)
+            print(f"  ConnectionError на {path}: {e}, ждём {wait}s...")
+            time.sleep(wait)
+            continue
         if resp.status_code == 429:
             wait = 5 * (attempt + 1)
             print(f"  Rate limit, ждём {wait}s...")
             time.sleep(wait)
             continue
+        if resp.status_code >= 500:
+            wait = 10 * (attempt + 1)
+            print(f"  Server error {resp.status_code}, ждём {wait}s...")
+            time.sleep(wait)
+            continue
         return resp
-    raise RuntimeError(f"Rate limit после {retries} попыток")
+    raise RuntimeError(f"Не удалось выполнить запрос {path} после {retries} попыток")
 
 
 # ── BigQuery helpers ──────────────────────────────────────
