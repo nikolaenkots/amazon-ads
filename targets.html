@@ -1112,6 +1112,12 @@ async function ctrlAddBatch(payloads){
   if(!r.ok)throw new Error(d.error||'Batch error');
   return d;
 }
+async function ctrlUpdateBatch(payloads){
+  const r=await fetch('/control/add_batch_update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Batch update error');
+  return d;
+}
 
 function openModal(id){document.getElementById(id).classList.add('op');}
 function closeModal(id){document.getElementById(id).classList.remove('op');}
@@ -1196,17 +1202,18 @@ function bulkClear(){
 async function bulkSetState(newState){
   const sel=getSelectedRows();
   if(!sel.length)return;
-  const label=newState==='ENABLED'?'Включение':'newState'==='PAUSED'?'Пауза':'Архивация';
+  const label=newState==='ENABLED'?'Включение':newState==='PAUSED'?'Пауза':'Архивация';
   const payloads=sel.map(cb=>({
     account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
     entity_type:cb.dataset.type,entity_id:cb.dataset.id,
     field_name:'state',old_value:cb.dataset.state,new_value:newState
   }));
   try{
-    const res=await ctrlAddBatch(payloads);
+    const res=await ctrlUpdateBatch(payloads);
     bulkClear();
     const stateLabel=newState==='ENABLED'?'включение':newState==='PAUSED'?'пауза':'архивация';
-    toast(`В очередь: ${stateLabel} ${res.inserted} таргет(ов)${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+    const skip=res.skipped?`, пропущено: ${res.skipped}`:'';
+    toast(`В очередь: ${stateLabel} ${res.inserted} таргет(ов)${skip}${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
   }catch(err){toast(err.message,false);}
 }
 
@@ -1254,10 +1261,11 @@ async function submitBulkBid(){
       field_name:'bid',old_value:String(curBid),new_value:String(newBid)};
   });
   try{
-    const res=await ctrlAddBatch(payloads);
+    const res=await ctrlUpdateBatch(payloads);
     closeModal('modalBulkBid');
     bulkClear();
-    toast(`В очередь: ставки обновлены ${res.inserted} таргет(ов)${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+    const skip=res.skipped?`, пропущено: ${res.skipped}`:'';
+    toast(`В очередь: ставки обновлены ${res.inserted} таргет(ов)${skip}${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
   }catch(err){toast(err.message,false);}
 }
 </script>

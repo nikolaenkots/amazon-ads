@@ -273,6 +273,115 @@ def add_change_batch():
     })
 
 
+# ── POST /control/add_batch_update ───────────────────────
+@control_bp.route('/control/add_batch_update', methods=['POST'])
+def add_change_batch_update():
+    """
+    Batch-добавление UPDATE-операций (bid, state) для keyword/target.
+    Пропускает дубликаты (уже есть PENDING/APPROVED для того же entity+field),
+    не блокирует весь запрос.
+    Body: {"items": [...]}  — каждый элемент как в /control/add
+    """
+    data  = request.get_json()
+    items = data.get('items') or data.get('items', []) if data else []
+    if not items:
+        return jsonify({"error": "items обязателен"}), 400
+
+    UPDATE_OPS = {'keyword', 'target', 'ad_group', 'campaign'}
+
+    rows = []
+    now  = datetime.now(tz=timezone.utc).isoformat()
+    errors = []
+    skipped = 0
+    account_type = None
+
+    # Собираем dup-check одним запросом: (entity_id, field_name) пары
+    bq = bigquery.Client(project=PROJECT_ID)
+
+    # Определяем аккаунт из первого валидного элемента
+    for item in items:
+        at = (item.get('account_type') or '').upper()
+        if at in ('MERCH', 'KDP'):
+            account_type = at
+            break
+
+    if not account_type:
+        return jsonify({"error": "Нет валидных account_type"}), 400
+
+    table = PENDING_TABLES[account_type]
+
+    # Массовая проверка дублей одним SQL
+    candidate_ids = list({str(item.get('entity_id') or '') for item in items if item.get('entity_id')})
+    existing_keys = set()
+    if candidate_ids:
+        ids_str = ','.join(f"'{eid}'" for eid in candidate_ids)
+        dup_sql = f"""
+        SELECT entity_id, field_name FROM `{table}`
+        WHERE entity_id IN ({ids_str})
+          AND status IN ('PENDING', 'APPROVED')
+        """
+        try:
+            for row in bq.query(dup_sql).result():
+                existing_keys.add((row.entity_id, row.field_name))
+        except Exception:
+            pass  # если таблица пустая — игнорируем
+
+    for i, item in enumerate(items):
+        at  = (item.get('account_type') or '').upper()
+        et  = item.get('entity_type', '')
+        eid = str(item.get('entity_id') or '')
+        pid = str(item.get('profile_id') or '')
+        mkt = (item.get('marketplace') or '').upper()
+        fn  = item.get('field_name', '—')
+        ov  = str(item.get('old_value') or '')
+        nv  = str(item.get('new_value') or '')
+
+        if at not in ('MERCH', 'KDP'):
+            errors.append({"index": i, "error": "Неверный account_type"})
+            continue
+        if et not in ALLOWED_OPS:
+            errors.append({"index": i, "error": f"Неизвестный entity_type: {et}"})
+            continue
+        if not eid or not nv:
+            errors.append({"index": i, "error": "entity_id и new_value обязательны"})
+            continue
+        if (eid, fn) in existing_keys:
+            skipped += 1
+            continue
+
+        rows.append({
+            "id":          str(uuid.uuid4()),
+            "created_at":  now,
+            "entity_type": et,
+            "entity_id":   eid,
+            "profile_id":  pid,
+            "marketplace": mkt,
+            "field_name":  fn,
+            "old_value":   ov,
+            "new_value":   nv,
+            "status":      "PENDING",
+            "error_msg":   None,
+            "retry_count": 0,
+        })
+
+    if not rows and not skipped:
+        return jsonify({"error": "Нет валидных элементов", "errors": errors}), 400
+
+    if rows:
+        job = bq.load_table_from_json(
+            rows, table,
+            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_APPEND")
+        )
+        job.result()
+
+    return jsonify({
+        "success":  True,
+        "inserted": len(rows),
+        "skipped":  skipped,
+        "errors":   errors,
+    })
+
+
 # ── POST /control/approve ─────────────────────────────────
 @control_bp.route('/control/approve', methods=['POST'])
 def approve_changes():
