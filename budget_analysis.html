@@ -359,12 +359,20 @@ const S = {
 // ── Portfolio dropdown ────────────────────────────────────
 async function loadPortfolios(){
   try{
-    const r = await fetch('/analytics/portfolios');
+    const r = await fetch('/portfolios/list');
     const d = await r.json();
-    S.portfolios = d.portfolios || [];
-    renderPfItems('');
+    S._allPortfolios = (d.portfolios||[]);
+    filterPortfoliosByAcct();
   }catch(e){}
   applyFilters();
+}
+function filterPortfoliosByAcct(){
+  S.portfolios = S._allPortfolios
+    .filter(p=>!p.account_type||p.account_type===S.acct)
+    .map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+  S.selectedPortfolios = [];
+  updatePfLabel();
+  renderPfItems('');
 }
 function renderPfItems(q){
   const pfs = S.portfolios.filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
@@ -397,6 +405,7 @@ function setAcct(a){
   S.acct=a;
   document.getElementById('btnMerch').classList.toggle('on',a==='MERCH');
   document.getElementById('btnKdp').classList.toggle('on',a==='KDP');
+  if(S._allPortfolios) filterPortfoliosByAcct();
   applyFilters();
 }
 
