@@ -719,6 +719,7 @@ async function submitNeg(){
     const profileId=profileCache[mkt];
     for(const term of terms){
       payloads.push({
+        account_type: S.acct,
         entity_type:'negative_add',
         entity_id:agId,
         profile_id:profileId,
@@ -791,6 +792,7 @@ async function submitAddKw(){
     const profileId=profileCache[mkt];
     for(const term of terms){
       payloads.push({
+        account_type: S.acct,
         entity_type:'keyword_add',
         entity_id:agId,
         profile_id:profileId,
