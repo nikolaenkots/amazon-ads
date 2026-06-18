@@ -10,7 +10,8 @@ PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 OP_MAP = {'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<=', 'eq': '='}
-NUM_FIELDS = ['impressions', 'clicks', 'cost', 'ctr', 'sales_14d', 'purchases_14d', 'acos']
+NUM_FIELDS = ['impressions', 'clicks', 'cost', 'ctr', 'sales_14d', 'purchases_14d', 'acos',
+              'bid', 'ad_group_default_bid']
 
 ALLOWED_SORT_GROUPS = {
     'ad_group_name', 'campaign_name', 'portfolio_name', 'marketplace',
