@@ -2033,4 +2033,198 @@ with open(AMZ_SECRETS_PATH) as _f:
 docstring без `def`, что вызывало `NameError: name 'send_create_campaigns' is not defined`
 при обращении к dispatch-таблице `send_funcs`. После каждой правки длинных файлов
 через `str_replace` — обязательно `python3 -m py_compile` + `diff` с версией на GitHub
+
+---
+
+## Страница "Таргеты" (/targets) — массовые действия и пагинация (июнь 2026)
+
+### Чекбоксы и массовые действия для таргетов (mode=targets)
+
+В `renderTargets()` добавлена колонка с чекбоксами слева. Каждая строка содержит:
+```html
+<input type="checkbox" class="row-cb"
+  data-id="..." data-type="keyword|target" data-mkt="US"
+  data-state="ENABLED|PAUSED" data-bid="0.5">
+```
+Первая ячейка `<th>` — select-all чекбокс. При выборе хотя бы одной строки появляется
+нижняя панель `.bulk-bar` с кнопками действий.
+
+**Кнопки bulk-bar:**
+- ▶ Включить — `bulkSetState('ENABLED')`
+- ⏸ Пауза — `bulkSetState('PAUSED')`
+- ✕ Архивировать — `bulkSetState('ARCHIVED')`
+- $ Изменить ставку — `openBulkBid()` → `modalBulkBid`
+- Снять выбор — `bulkClear()`
+
+`bulkSetState()` и `submitBulkBid()` используют `ctrlUpdateBatch()` →
+`POST /control/add_batch_update` (НЕ `/control/add_batch`, который не поддерживает keyword/target).
+
+### Чекбоксы и массовые действия для групп (mode=groups)
+
+В `renderGroups()` аналогично добавлены чекбоксы с `data-type="ad_group"`.
+Те же кнопки (без "Изменить ставку" — ставка группы редактируется inline).
+
+### Modal modalBulkBid
+
+Один input `id="bbidVal"`. Режим выбирается через radio:
+- **Точное значение** — вводится число, отправляется как `field_name: 'bid'`, `new_value: число`
+- **% повышение** — вводится процент, `new_value` = `Math.round(old_bid * (1 + pct/100) * 100)/100`
+- **% понижение** — аналогично со знаком минус
+
+`onBbidModeChange()` динамически меняет label, min и placeholder у поля ввода.
+
+### /control/add_batch_update (новый endpoint)
+
+`POST /control/add_batch_update` в `control_routes.py`:
+- Принимает те же поля что и `/control/add_batch`
+- Поддерживает `entity_type`: `keyword`, `target`, `ad_group`, `campaign`
+- Дедупликация: одним SQL `SELECT entity_id, field_name FROM table WHERE entity_id IN (...) AND status IN ('PENDING','APPROVED')` — пропускает (не ошибка) дубликаты
+- Возвращает `{"success": true, "inserted": N, "skipped": M, "errors": [...]}`
+
+### Настраиваемая пагинация
+
+Селект `<select id="perPageSel">` с вариантами 25 / 50 / 100 / 200 строк.
+Хранится в `S.perPage`, передаётся в `/targets/data` как параметр `per_page`.
+`renderPagination()` синхронизирует значение селекта с `S.perPage` при каждом рендере.
+`onPerPageChange()` сбрасывает `S.page = 1` и вызывает `load()`.
+
+CSS: `.per-page-sel` — inline-блок рядом с пагинацией. `.pg-right` — правый блок пагинации.
+При активной bulk-bar: `body.bulk-active .toast-wrap { bottom: 70px }` — тосты поднимаются выше панели.
+
+---
+
+## Страница "Бюджет кампаний" (/budget-analysis) — июнь 2026
+
+### Назначение
+Анализ утилизации бюджетов кампаний: насколько фактический расход соответствует заданному бюджету.
+Массовое изменение бюджетов, дат окончания, включение/пауза.
+
+### Маршрут
+`GET /budget-analysis` → `analytics_routes.py` → `send_from_directory(BASE_DIR, 'budget_analysis.html')`.
+Карточка на главной `/` в разделе "Аналитика" (зелёная).
+
+### Источник данных
+Использует тот же endpoint что и `campaigns_analytics.html`:
+`GET /analytics/campaigns/data` — возвращает `daily_budget`, `cost`, `campaign_state`, `end_date` и т.д.
+
+### Утилизация бюджета
+```js
+const periodDays = Math.max(1, (new Date(S.dt) - new Date(S.df)) / 86400000 + 1);
+const util = Math.min(200, cost / (daily_budget * periodDays) * 100);
+```
+Отображается как progress-bar:
+- **≥ 80%** — зелёный (хорошо)
+- **≥ 50%** — янтарный (умеренно)
+- **< 50%** — красный (бюджет используется слабо)
+
+### Статистика (шапка)
+- Кампаний (count)
+- Бюджет/день (сумма `daily_budget`)
+- Расход (сумма `cost`)
+- Утилизация (средняя %)
+- Продажи, ACoS
+
+### Таблица
+Колонки: checkbox | toggle state | Название + бейджи | Маркетплейс | Бюджет (inline edit) |
+Утилизация (bar + %) | Расход | Продажи | ACoS | Показы | Клики | Дата окончания (inline edit)
+
+**Inline-редактирование бюджета:** клик на ячейку → input, Enter/blur → `ctrlAdd` с
+`entity_type:'campaign'`, `field_name:'daily_budget'`.
+
+**Inline-редактирование даты окончания:** клик → input type=date, Enter/blur → `ctrlAdd` с
+`entity_type:'campaign'`, `field_name:'end_date'`.
+
+### Массовые действия (bulk)
+- **Включить / Пауза** — `bulkSetState()` → `ctrlUpdateBatch()` → `/control/add_batch_update`
+  с `entity_type:'campaign'`, `field_name:'state'`
+- **Изменить бюджет** (`openBulkBudget` → `modalBulkBudget`) — три режима:
+  - Точное значение: `field_name:'daily_budget'`, `new_value: число`
+  - % повышение / % понижение: вычисляется на фронте из текущего `daily_budget`
+- **Изменить дату окончания** (`openBulkEndDate` → `modalBulkEndDate`) — одна дата для всех,
+  `field_name:'end_date'`
+
+### Фильтры
+MERCH/KDP, диапазон дат, маркетплейс, портфолио, статус, поиск по названию.
+
+**Портфолио:** загружается через `GET /portfolios/list` (тот же endpoint что в campaigns_analytics).
+Фильтрация на фронте: `p.account_type === S.acct`. Поля: `p.portfolio_id`, `p.portfolio_name`.
+Функция `filterPortfoliosByAcct()` вызывается при смене аккаунта MERCH/KDP.
+
+**Профили:** `GET /control/profiles` → `getProfileId(mkt)` по ключу `S.acct + '_' + mkt`.
+
+### Настраиваемая пагинация
+Те же 25/50/100/200, синхронизируется с `S.perPage`.
+
+---
+
+## send.py — таймауты и повторные попытки (июнь 2026)
+
+### Проблема
+При отправке ~700 изменений (бюджеты + даты) `requests.post()` без таймаута зависал
+на неопределённое время если Amazon не отвечал. Скрипт не падал — просто висел навсегда.
+
+### Решение
+```python
+# Токен
+resp = requests.post(..., timeout=30)
+
+# amz_post — все запросы к Amazon API
+def amz_post(endpoint, path, headers, body, retries=3):
+    for attempt in range(retries):
+        try:
+            resp = requests.post(f"{endpoint}{path}", headers=headers, json=body, timeout=60)
+        except requests.Timeout:
+            wait = 10 * (attempt + 1)
+            print(f"  Timeout на {path}, ждём {wait}s...")
+            time.sleep(wait)
+            continue
+        except requests.ConnectionError as e:
+            wait = 10 * (attempt + 1)
+            time.sleep(wait)
+            continue
+        if resp.status_code == 429:
+            wait = 5 * (attempt + 1)
+            time.sleep(wait)
+            continue
+        if resp.status_code >= 500:
+            wait = 10 * (attempt + 1)
+            time.sleep(wait)
+            continue
+        return resp
+    raise RuntimeError(f"Не удалось выполнить запрос {path} после {retries} попыток")
+```
+Максимальное время на один батч в худшем случае: 60 сек × 3 попытки = 3 минуты.
+Обычный ответ Amazon: 1–3 секунды.
+
+### Почему FAILED при реально успешной операции
+Сценарий "ложного FAILED":
+1. Первый запуск отправил изменение → Amazon выполнил
+2. Скрипт завис ожидая ответ (без таймаута) → статус остался `SENDING`
+3. Следующий запуск: `reset_stale_sending()` → `SENDING → APPROVED` → повторная отправка
+4. Amazon: "уже в этом состоянии" → ошибка → статус `FAILED`
+5. Реально всё сработало с первого раза
+
+После добавления таймаута такой сценарий невозможен.
+
+### Диагностика зависших записей (BigQuery)
+```sql
+-- Проверить застрявшие SENDING
+SELECT status, entity_type, COUNT(*) as cnt, MIN(created_at) as oldest
+FROM `amazon-ads-api-494412.amazon_ads.pending_changes_merch`
+WHERE status = 'SENDING'
+GROUP BY status, entity_type;
+
+-- Сбросить вручную
+UPDATE `amazon-ads-api-494412.amazon_ads.pending_changes_merch`
+SET status = 'APPROVED'
+WHERE status = 'SENDING';
+
+-- Посмотреть ошибки
+SELECT entity_type, error_msg, COUNT(*) as cnt
+FROM `amazon-ads-api-494412.amazon_ads.pending_changes_merch`
+WHERE status = 'FAILED' AND DATE(created_at) >= '2026-06-12'
+GROUP BY entity_type, error_msg
+ORDER BY cnt DESC;
+```
+**Важно:** колонка называется `created_at` (не `updated_at`) и `error_msg` (не `error_message`).
 перед коммитом, проверяя что не пропали соседние строки/определения функций.
