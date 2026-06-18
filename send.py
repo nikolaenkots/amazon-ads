@@ -399,6 +399,12 @@ def send_update_ad_groups(endpoint, headers, changes, dry_run=False):
         return {i: "SUCCESS" for i in range(len(changes))}
 
     resp = amz_post(endpoint, "/adsApi/v1/update/adGroups", headers, {"adGroups": payloads})
+    print(f"  [DEBUG] update/adGroups status={resp.status_code}")
+    try:
+        rj = resp.json()
+        print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:600]}")
+    except Exception:
+        print(f"  [DEBUG] raw: {resp.text[:400]}")
     return parse_multi_response(resp, "adGroups", len(changes))
 
 
