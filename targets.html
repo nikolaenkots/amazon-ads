@@ -144,7 +144,10 @@ td.r{text-align:right}
 .te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
 .sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border)}
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);gap:12px}
+.pg-right{display:flex;align-items:center;gap:12px}
+.per-page-sel{height:26px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;padding:0 6px;cursor:pointer;outline:none}
+.per-page-sel:focus{border-color:var(--accent)}
 .pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
 .pb{display:flex;gap:4px}
 .pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
@@ -345,7 +348,15 @@ body.bulk-active .toast-wrap{bottom:70px}
   <div class="tsx"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   <div class="pg" id="pgWrap" style="display:none">
     <span class="pi" id="pgInfo"></span>
-    <div class="pb" id="pgBtns"></div>
+    <div class="pg-right">
+      <div class="pb" id="pgBtns"></div>
+      <select class="per-page-sel" id="perPageSel" onchange="onPerPageChange(this.value)" title="Строк на странице">
+        <option value="25">25 / стр</option>
+        <option value="50" selected>50 / стр</option>
+        <option value="100">100 / стр</option>
+        <option value="200">200 / стр</option>
+      </select>
+    </div>
   </div>
 </div>
 </main>
@@ -458,7 +469,7 @@ function setAcct(a){
 }
 
 function setMode(m){
-  S.mode=m; S.sort='clicks'; S.dir='desc'; S.page=1;
+  S.mode=m; S.sort='clicks'; S.dir='desc'; S.page=1; bulkClear();
   document.getElementById('mbGroups').classList.toggle('on',m==='groups');
   document.getElementById('mbTargets').classList.toggle('on',m==='targets');
   const isG=m==='groups', isT=m==='targets';
@@ -602,7 +613,7 @@ function load(pg){
     if(d.error){showErr(d.error);return;}
     S.total=d.total;
     renderSummary(d.summary);
-    if(S.mode==='groups') renderGroups(d.rows);
+    if(S.mode==='groups'){renderGroups(d.rows);updateBulkBar();}
     else{renderTargets(d.rows);updateBulkBar();}
     renderPagination(d.total,d.page,d.per_page);
     document.getElementById('tblCount').textContent=`${d.total.toLocaleString()} записей`;
@@ -628,6 +639,7 @@ function renderGroups(rows){
   const thead=document.getElementById('thead');
   const tbody=document.getElementById('tbody');
   thead.innerHTML=`<tr>
+    <th class="ns" style="width:32px"><input type="checkbox" class="row-cb" id="cbSelectAll" onclick="bulkSelectAll(this)" title="Выбрать все"></th>
     ${thSort('ad_group_name','Группа','left')}
     ${thSort('campaign_name','Кампания','left')}
     ${thSort('portfolio_name','Портфолио','left')}
@@ -643,9 +655,11 @@ function renderGroups(rows){
     ${thNum('acos','ACoS')}
     <th class="ns" style="width:28px"></th>
   </tr>`;
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="16" class="te">Нет данных</td></tr>';return;}
   tbody.innerHTML=rows.map(r=>{
     const gid=esc(r.ad_group_id);
+    const mkt=esc(r.marketplace||'');
+    const curState=(r.ad_group_state||'ENABLED').toUpperCase();
     const bidVal=r.ad_group_default_bid!=null?r.ad_group_default_bid.toFixed(2):'';
     const bidId='gbid_'+gid.replace(/[^a-z0-9]/gi,'_');
     const bidCell=bidVal
@@ -653,14 +667,18 @@ function renderGroups(rows){
            <button class="bid-btn" onclick="event.stopPropagation();openBidEdit('${bidId}')">$${bidVal}</button>
            <span class="bid-edit">
              <input class="bid-inp" type="number" value="${bidVal}" min="0.02" step="0.01"
-               onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${esc(r.marketplace||'')}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
+               onkeydown="if(event.key==='Enter'){event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${mkt}');} if(event.key==='Escape')closeBidEdit('${bidId}')"
                onclick="event.stopPropagation()">
-             <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${esc(r.marketplace||'')}')">✓</button>
+             <button class="bid-ok" onclick="event.stopPropagation();saveBid('${bidId}','ad_group','${gid}','${bidVal}','${mkt}')">✓</button>
              <button class="bid-cx" onclick="event.stopPropagation();closeBidEdit('${bidId}')">✕</button>
            </span>
          </span>`
       : '<span class="dv">—</span>';
-    return `<tr class="dr" id="gr_${gid}" onclick="toggleGroup('${gid}','${esc(r.marketplace||'')}')">
+    return `<tr class="dr" id="gr_${gid}" onclick="toggleGroup('${gid}','${mkt}')">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb tgt-cb"
+        data-id="${gid}" data-type="ad_group" data-mkt="${mkt}"
+        data-state="${curState}" data-bid="${bidVal||'0'}"
+        onchange="updateBulkBar()"></td>
       <td><div class="name-cell"><span class="name-main">${esc(r.ad_group_name||'—')}</span></div></td>
       <td><div class="name-cell"><span class="name-sub">${esc(r.campaign_name||'—')}</span>
         <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
@@ -679,7 +697,7 @@ function renderGroups(rows){
       <td class="r"><svg class="rchev" id="chev_${gid}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></td>
     </tr>
     <tr class="er" id="er_${gid}" style="display:none">
-      <td colspan="14"><div class="ei" id="ei_${gid}"></div></td>
+      <td colspan="16"><div class="ei" id="ei_${gid}"></div></td>
     </tr>`;
   }).join('');
 }
@@ -1135,12 +1153,18 @@ function toast(msg,ok=true){
 }
 
 // ── Pagination ────────────────────────────────────────────
+function onPerPageChange(val){
+  S.perPage=parseInt(val)||50;
+  load(1);
+}
 function renderPagination(total,page,perPage){
   const pages=Math.ceil(total/perPage)||1;
   const wrap=document.getElementById('pgWrap');
   const info=document.getElementById('pgInfo');
   const btns=document.getElementById('pgBtns');
+  const sel=document.getElementById('perPageSel');
   wrap.style.display='';
+  if(sel)sel.value=String(perPage);
   const from=(page-1)*perPage+1,to=Math.min(page*perPage,total);
   info.textContent=`${from}–${to} из ${total.toLocaleString()}`;
   let html=`<button class="pbb" ${page<=1?'disabled':''} onclick="load(${page-1})">‹</button>`;
