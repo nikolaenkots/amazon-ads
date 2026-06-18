@@ -457,6 +457,7 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
       </select>
     </div>
     <input type="hidden" id="mnegGroupId">
+    <input type="hidden" id="mnegDomGid">
     <input type="hidden" id="mnegCampId">
     <input type="hidden" id="mnegMkt">
     <div class="modal-acts">
@@ -969,7 +970,7 @@ function buildCampHtml(data, campId, mkt){
       <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
         <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddKw('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Ключевое слово</button>
         <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddNeg('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">+ Минус</button>
-        <button class="act-btn st-neg-btn" id="stnb_${je(gid)}" style="height:24px;font-size:11px;display:none;background:var(--accent);color:#fff;border-color:var(--accent)" onclick="event.stopPropagation();openNegFromSt('${je(g.id||'')}','${je(campId)}','${je(mkt)}')">→ Минус (<span class="st-neg-cnt" id="stnc_${je(gid)}">0</span>)</button>
+        <button class="act-btn st-neg-btn" id="stnb_${je(gid)}" style="height:24px;font-size:11px;display:none;background:var(--accent);color:#fff;border-color:var(--accent)" onclick="event.stopPropagation();openNegFromSt('${je(gid)}','${je(g.id||'')}','${je(campId)}','${je(mkt)}')">→ Минус (<span class="st-neg-cnt" id="stnc_${je(gid)}">0</span>)</button>
       </div>
     </div>`;
 
@@ -1307,13 +1308,14 @@ function stCbChange(gid){
   if(cntEl){cntEl.textContent=cnt;}
 }
 function isAsin(str){str=str.trim();return /^[Bb][0-9A-Za-z]{9}$/.test(str);}
-function openNegFromSt(groupId,campId,mkt){
-  const cbs=document.querySelectorAll(`.st-cb[data-gid="${groupId}"]:checked`);
+function openNegFromSt(domGid,realGroupId,campId,mkt){
+  const cbs=document.querySelectorAll(`.st-cb[data-gid="${domGid}"]:checked`);
   if(!cbs.length){toast('Выберите поисковые запросы',false);return;}
   const terms=Array.from(cbs).map(cb=>cb.dataset.term.trim()).filter(Boolean);
   const asins=terms.filter(t=>isAsin(t));
   const words=terms.filter(t=>!isAsin(t));
-  document.getElementById('mnegGroupId').value=groupId;
+  document.getElementById('mnegGroupId').value=realGroupId;
+  document.getElementById('mnegDomGid').value=domGid;
   document.getElementById('mnegCampId').value=campId;
   document.getElementById('mnegMkt').value=mkt;
   if(asins.length>0&&words.length===0){
@@ -1328,16 +1330,16 @@ function openNegFromSt(groupId,campId,mkt){
     document.querySelector('input[name="mnegType"][value="keyword"]').checked=true;
     onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
     document.getElementById('mnegText').value=words.join('\n');
-    if(asins.length){window._pendingNegAsins={asins,groupId,campId,mkt};}
+    if(asins.length){window._pendingNegAsins={asins,groupId:realGroupId,campId,mkt};}
   }
   openModal('modalNeg');
 }
 function openAddNeg(groupId,campId,mkt){document.getElementById('mnegGroupId').value=groupId;document.getElementById('mnegCampId').value=campId;document.getElementById('mnegMkt').value=mkt;document.getElementById('mnegText').value='';openModal('modalNeg');}
 function onNegTypeChange(radio){const isP=radio.value==='product';document.getElementById('mnegTextLabel').textContent=isP?'ASIN (по одному на строку)':'Слова (по одному на строку)';document.getElementById('mnegText').placeholder=isP?'B0FT63YVTW\nB0FX36C3YS':'free\ncheap';document.getElementById('mnegMatchRow').style.display=isP?'none':'';}
 async function submitAddNeg(){const text=document.getElementById('mnegText').value.trim();const match=document.getElementById('mnegMatch').value;const groupId=document.getElementById('mnegGroupId').value;const campId=document.getElementById('mnegCampId').value;const mkt=document.getElementById('mnegMkt').value;const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';if(!text){toast('Введите значения',false);return;}const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);const negPayloads=items.map(w=>negType==='product'?{account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})}:{account_type:state.acct,marketplace:mkt,profile_id:getProfileId(state.acct,mkt),entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})});const batchNeg=await ctrlAddBatch(negPayloads);const ok=batchNeg.inserted;const fail=batchNeg.errors.length;closeModal('modalNeg');
-  const gid=groupId;
-  document.querySelectorAll(`.st-cb[data-gid="${gid}"]`).forEach(cb=>{cb.checked=false;});
-  stCbChange(gid);
+  const domGid=document.getElementById('mnegDomGid').value||groupId;
+  document.querySelectorAll(`.st-cb[data-gid="${domGid}"]`).forEach(cb=>{cb.checked=false;});
+  stCbChange(domGid);
   if(window._pendingNegAsins&&window._pendingNegAsins.groupId===groupId){
     const {asins,groupId:pg,campId:pc,mkt:pm}=window._pendingNegAsins;
     window._pendingNegAsins=null;
