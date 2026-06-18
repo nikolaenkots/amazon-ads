@@ -583,9 +583,15 @@ function renderRows(rows){
     const initiator=r.keyword||r.targeting||'';
     const isAuto=r.keyword_type==='TARGETING_EXPRESSION_PREDEFINED';
     const isProduct=r.keyword_type==='TARGETING_EXPRESSION';
-    const initiatorCell=isAuto?'<span class="b bauto">AUTO</span>':(isProduct?`<span class="b bprod" title="${esc(initiator)}">${esc((initiator||'').substring(0,20))}</span>`:`<span class="n" style="font-size:11px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`);
+    // Initiator: show the actual text (keyword or targeting), not the type badge
+    const initiatorCell=isAuto
+      ?'<span class="dv">—</span>'
+      :(isProduct
+        ?`<span class="n" style="font-size:10px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`
+        :`<span class="n" style="font-size:11px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`);
     const kwBadge=kwTypeBadge(r.keyword_type);
-    const mtBadge=matchTypeBadge(r.match_type);
+    // Match type: hide for AUTO (already shown in Тип column)
+    const mtBadge=isAuto?'<span class="dv">—</span>':matchTypeBadge(r.match_type);
 
     const grp=r.ad_group_name||'';
     const grpState=r.ad_group_state||'';
