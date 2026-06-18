@@ -203,10 +203,26 @@ thead th.s .sa{opacity:1;color:var(--accent)}
 textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;font-family:'DM Mono',monospace}
 .modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 /* toast */
-.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px;transition:bottom .2s}
+body.bulk-active .toast-wrap{bottom:70px}
 .toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
 .toast-item.ok{border-color:var(--green-bd)}
 .toast-item.err{border-color:var(--red-bd);color:var(--red)}
+/* bulk action bar */
+.bulk-bar{position:fixed;bottom:0;left:0;right:0;z-index:7000;background:var(--surface);border-top:1px solid var(--accent);padding:10px 24px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+.bulk-bar.vis{display:flex}
+.bulk-cnt{font-size:13px;font-weight:600;color:var(--accent);min-width:90px}
+.bulk-sep{width:1px;height:24px;background:var(--border)}
+.bulk-btn{height:30px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;white-space:nowrap}
+.bulk-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bulk-btn.green{border-color:var(--green-bd);color:#34a853}
+.bulk-btn.green:hover{background:#34a85315}
+.bulk-btn.red{border-color:var(--red-bd);color:var(--red)}
+.bulk-btn.red:hover{background:rgba(220,53,69,.08)}
+.bulk-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.bulk-btn.pri:hover{opacity:.88}
+/* row checkbox */
+.row-cb{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
@@ -587,7 +603,7 @@ function load(pg){
     S.total=d.total;
     renderSummary(d.summary);
     if(S.mode==='groups') renderGroups(d.rows);
-    else renderTargets(d.rows);
+    else{renderTargets(d.rows);updateBulkBar();}
     renderPagination(d.total,d.page,d.per_page);
     document.getElementById('tblCount').textContent=`${d.total.toLocaleString()} записей`;
   }).catch(e=>showErr(e.message));
@@ -673,6 +689,7 @@ function renderTargets(rows){
   const thead=document.getElementById('thead');
   const tbody=document.getElementById('tbody');
   thead.innerHTML=`<tr>
+    <th class="ns" style="width:32px"><input type="checkbox" class="row-cb" id="cbSelectAll" onclick="bulkSelectAll(this)" title="Выбрать все"></th>
     <th class="ns" style="width:32px"></th>
     ${thSort('kw_text','Таргет','left')}
     ${thSort('keyword_type','Тип','left')}
@@ -687,7 +704,7 @@ function renderTargets(rows){
     ${thNum('purchases_14d','Заказы')}
     ${thNum('acos','ACoS')}
   </tr>`;
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="14" class="te">Нет данных</td></tr>';return;}
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="15" class="te">Нет данных</td></tr>';return;}
   tbody.innerHTML=rows.map((r,ri)=>{
     const ownBid=r.bid!=null?Number(r.bid).toFixed(2):null;
     const grpBid=r.ad_group_default_bid!=null?Number(r.ad_group_default_bid).toFixed(2):null;
@@ -712,7 +729,12 @@ function renderTargets(rows){
           </span>
         </span>`
       :'<span class="dv">—</span>';
+    const bidForData=ownBid||grpBid||'0';
     return `<tr class="dr" style="cursor:default">
+      <td><input type="checkbox" class="row-cb tgt-cb"
+        data-id="${eid}" data-type="${itType}" data-mkt="${mkt}"
+        data-state="${curState}" data-bid="${bidForData}"
+        onclick="event.stopPropagation()" onchange="updateBulkBar()"></td>
       <td><button class="stog ${isEn?'en':'pa'}"
         onclick="event.stopPropagation();toggleState(event,'${itType}','${eid}','${curState}','${mkt}')"></button></td>
       <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
@@ -1146,6 +1168,136 @@ function kwTypeIcon(t){if(t==='TARGETING_EXPRESSION_PREDEFINED')return'<svg widt
 function acosClass(v){if(v==null)return'';if(v<=20)return'ok';if(v<=40)return'hi';return'cr';}
 function fmtNum(n){return(n||0).toLocaleString();}
 function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Bulk actions ──────────────────────────────────────────
+function getSelectedRows(){
+  return Array.from(document.querySelectorAll('.tgt-cb:checked'));
+}
+function updateBulkBar(){
+  const sel=getSelectedRows();
+  const bar=document.getElementById('bulkBar');
+  const cnt=document.getElementById('bulkCnt');
+  if(sel.length>0){bar.classList.add('vis');cnt.textContent=`${sel.length} выбрано`;document.body.classList.add('bulk-active');}
+  else{bar.classList.remove('vis');document.body.classList.remove('bulk-active');}
+  // sync select-all checkbox state
+  const all=document.querySelectorAll('.tgt-cb');
+  const allCb=document.getElementById('cbSelectAll');
+  if(allCb){allCb.indeterminate=sel.length>0&&sel.length<all.length;allCb.checked=all.length>0&&sel.length===all.length;}
+}
+function bulkSelectAll(cb){
+  document.querySelectorAll('.tgt-cb').forEach(c=>c.checked=cb.checked);
+  updateBulkBar();
+}
+function bulkClear(){
+  document.querySelectorAll('.tgt-cb').forEach(c=>c.checked=false);
+  updateBulkBar();
+}
+
+async function bulkSetState(newState){
+  const sel=getSelectedRows();
+  if(!sel.length)return;
+  const label=newState==='ENABLED'?'Включение':'newState'==='PAUSED'?'Пауза':'Архивация';
+  const payloads=sel.map(cb=>({
+    account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
+    entity_type:cb.dataset.type,entity_id:cb.dataset.id,
+    field_name:'state',old_value:cb.dataset.state,new_value:newState
+  }));
+  try{
+    const res=await ctrlAddBatch(payloads);
+    bulkClear();
+    const stateLabel=newState==='ENABLED'?'включение':newState==='PAUSED'?'пауза':'архивация';
+    toast(`В очередь: ${stateLabel} ${res.inserted} таргет(ов)${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+  }catch(err){toast(err.message,false);}
+}
+
+function openBulkBid(){
+  const sel=getSelectedRows();
+  if(!sel.length)return;
+  document.getElementById('bbidMode').value='exact';
+  document.getElementById('bbidVal').value='';
+  document.getElementById('bbidValLabel').textContent='Новая ставка ($)';
+  document.getElementById('bbidVal').placeholder='0.50';
+  document.getElementById('bbidVal').min='0.02';
+  document.getElementById('bbidVal').step='0.01';
+  document.getElementById('bbidSelCount').textContent=sel.length;
+  openModal('modalBulkBid');
+  setTimeout(()=>document.getElementById('bbidVal').focus(),50);
+}
+function onBbidModeChange(){
+  const mode=document.getElementById('bbidMode').value;
+  const inp=document.getElementById('bbidVal');
+  const lbl=document.getElementById('bbidValLabel');
+  inp.value='';
+  if(mode==='exact'){lbl.textContent='Новая ставка ($)';inp.placeholder='0.50';inp.min='0.02';inp.step='0.01';}
+  else if(mode==='inc'){lbl.textContent='Увеличить на (%)';inp.placeholder='20';inp.min='1';inp.step='1';}
+  else{lbl.textContent='Уменьшить на (%)';inp.placeholder='20';inp.min='1';inp.step='1';}
+  setTimeout(()=>inp.focus(),50);
+}
+async function submitBulkBid(){
+  const sel=getSelectedRows();
+  if(!sel.length){closeModal('modalBulkBid');return;}
+  const mode=document.getElementById('bbidMode').value;
+  const raw=parseFloat(document.getElementById('bbidVal').value);
+  if(isNaN(raw)||raw<=0){toast('Введите корректное значение',false);return;}
+  if(mode==='exact'&&raw<0.02){toast('Минимальная ставка $0.02',false);return;}
+  if((mode==='inc'||mode==='dec')&&raw>99){toast('Процент должен быть от 1 до 99',false);return;}
+
+  const payloads=sel.map(cb=>{
+    const curBid=parseFloat(cb.dataset.bid)||0;
+    let newBid;
+    if(mode==='exact'){newBid=raw;}
+    else if(mode==='inc'){newBid=Math.round(curBid*(1+raw/100)*100)/100;}
+    else{newBid=Math.round(curBid*(1-raw/100)*100)/100;}
+    newBid=Math.max(0.02,newBid);
+    return{account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
+      entity_type:cb.dataset.type,entity_id:cb.dataset.id,
+      field_name:'bid',old_value:String(curBid),new_value:String(newBid)};
+  });
+  try{
+    const res=await ctrlAddBatch(payloads);
+    closeModal('modalBulkBid');
+    bulkClear();
+    toast(`В очередь: ставки обновлены ${res.inserted} таргет(ов)${res.errors.length?', ошибок: '+res.errors.length:''}`,res.errors.length===0);
+  }catch(err){toast(err.message,false);}
+}
 </script>
+
+<!-- Bulk action bar -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-cnt" id="bulkCnt">0 выбрано</span>
+  <div class="bulk-sep"></div>
+  <button class="bulk-btn green" onclick="bulkSetState('ENABLED')">▶ Включить</button>
+  <button class="bulk-btn" onclick="bulkSetState('PAUSED')">⏸ Пауза</button>
+  <button class="bulk-btn red" onclick="bulkSetState('ARCHIVED')">✕ Архивировать</button>
+  <div class="bulk-sep"></div>
+  <button class="bulk-btn pri" onclick="openBulkBid()">$ Изменить ставку</button>
+  <div style="flex:1"></div>
+  <button class="bulk-btn" onclick="bulkClear()" style="color:var(--muted)">Снять выбор</button>
+</div>
+
+<!-- Modal: bulk bid change -->
+<div class="modal-bg" id="modalBulkBid" onclick="if(event.target===this)closeModal('modalBulkBid')">
+  <div class="modal">
+    <div class="modal-title">Изменить ставку — <span id="bbidSelCount">0</span> таргет(ов)</div>
+    <div class="modal-row">
+      <div class="modal-label">Режим</div>
+      <select class="modal-inp" id="bbidMode" onchange="onBbidModeChange()">
+        <option value="exact">Точное значение ($)</option>
+        <option value="inc">Увеличить на %</option>
+        <option value="dec">Уменьшить на %</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label" id="bbidValLabel">Новая ставка ($)</div>
+      <input class="modal-inp" id="bbidVal" type="number" min="0.02" step="0.01" placeholder="0.50"
+        onkeydown="if(event.key==='Enter')submitBulkBid()">
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalBulkBid')">Отмена</button>
+      <button class="btn btn-p" onclick="submitBulkBid()">Применить</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
