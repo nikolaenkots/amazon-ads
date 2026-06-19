@@ -80,7 +80,7 @@ def sales_comparison_data():
     date_to      = args.get('date_to', '')
     marketplace  = args.get('marketplace', 'US').upper()
     name_filter  = args.get('name', '').strip()
-    product_type = args.get('product_type', '').strip()
+    product_type = args.get('product_types', args.get('product_type', '')).strip()
     ad_filter    = args.get('ad_filter', '')
     portfolio_ids_raw = args.get('portfolio_ids', '')
     sort_by      = args.get('sort_by', 'ad_spend')
@@ -122,9 +122,16 @@ def sales_comparison_data():
 
     pt_cond = ''
     if product_type:
-        spt = product_type.replace("'", "''")
-        # earnings.product_type stores human values like "Standard T-Shirt"; use LIKE
-        pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) LIKE UPPER('%{spt}%')"
+        pts = [p.strip() for p in product_type.split(',') if p.strip()]
+        if len(pts) == 1:
+            spt = pts[0].replace("'", "''")
+            pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) LIKE UPPER('%{spt}%')"
+        elif pts:
+            quoted = ', '.join(f"'{p.replace(chr(39), chr(39)*2)}'" for p in pts)
+            pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) IN ({', '.join(f'UPPER({q})' for q in [repr(p) for p in pts])})"
+            # use LIKE for each to be safe with case
+            parts = [f"UPPER(COALESCE(o.product_type,'')) LIKE UPPER('%{p.replace(chr(39), chr(39)*2)}%')" for p in pts]
+            pt_cond = f"AND ({' OR '.join(parts)})"
 
     ad_cond = ''
     if ad_filter == 'advertised':

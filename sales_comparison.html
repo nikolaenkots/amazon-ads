@@ -49,8 +49,8 @@ main{padding:18px 32px;max-width:1820px;margin:0 auto}
 .mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .sep{width:1px;height:20px;background:var(--border);margin:0 4px}
 
-/* Portfolio dropdown */
-.pdw{position:relative}
+/* Portfolio / ProductType dropdowns */
+.pdw,.ptdw{position:relative}
 .pdt{height:34px;min-width:160px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
 .pdt:hover,.pdt.on{border-color:var(--accent)}
 .pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
@@ -251,7 +251,16 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
   <!-- Mode rows -->
   <div class="mode-row">
     <span class="mode-lbl">Тип</span>
-    <div id="pt-btns" class="at"></div>
+    <div class="ptdw">
+      <div class="pdt" id="pt-trigger" onclick="togglePtDrop()">
+        <span id="pt-trigger-lbl">Все типы</span>
+        <svg class="pda" width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+      </div>
+      <div class="pdd" id="pt-drop">
+        <input class="pds" id="pt-search" placeholder="Поиск..." oninput="renderPtItems(this.value)">
+        <div id="pt-list"></div>
+      </div>
+    </div>
     <div class="sep"></div>
     <span class="mode-lbl">Реклама</span>
     <div class="at">
@@ -313,16 +322,25 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
 <script>
 // Values must match product_type field in earnings table (case-insensitive LIKE)
 const MERCH_TYPES = [
-  {label:'Standard t-shirt', val:'Standard t-shirt'},
-  {label:'Pullover hoodie',  val:'Pullover hoodie'},
-  {label:'Long sleeve',      val:'Long sleeve'},
-  {label:'Sweatshirt',       val:'Sweatshirt'},
-  {label:'Tank top',         val:'Tank top'},
-  {label:'V-neck',           val:'V-neck'},
-  {label:'Zip hoodie',       val:'Zip hoodie'},
-  {label:'PopSockets',       val:'PopSockets'},
-  {label:'iPhone cases',     val:'iPhone cases'},
-  {label:'Premium t-shirt',  val:'Premium t-shirt'},
+  {label:'Standard t-shirt',          val:'Standard t-shirt'},
+  {label:'Pullover hoodie',            val:'Pullover hoodie'},
+  {label:'Long sleeve t-shirt',        val:'Long sleeve t-shirt'},
+  {label:'Sweatshirt',                 val:'Sweatshirt'},
+  {label:'Tank top',                   val:'Tank top'},
+  {label:'V-neck t-shirt',             val:'V-neck t-shirt'},
+  {label:'Zip hoodie',                 val:'Zip hoodie'},
+  {label:'PopSockets',                 val:'PopSockets'},
+  {label:'iPhone cases',               val:'iPhone cases'},
+  {label:'Premium t-shirt',            val:'Premium t-shirt'},
+  {label:'Performance t-shirt',        val:'Performance t-shirt'},
+  {label:'Baseball hat',               val:'Baseball hat'},
+  {label:'Trucker hat',                val:'Trucker hat'},
+  {label:'Crop top',                   val:'Crop top'},
+  {label:'Raglan',                     val:'Raglan'},
+  {label:'Tote bag',                   val:'Tote bag'},
+  {label:'Throw pillow',               val:'Throw pillow'},
+  {label:'Fleece jacket',              val:'Fleece jacket'},
+  {label:'Youth t-shirt',              val:'Youth t-shirt'},
 ];
 const KDP_TYPES = [
   {label:'Paperback',  val:'Standard - Paperback'},
@@ -331,7 +349,7 @@ const KDP_TYPES = [
 
 const S = {
   acct: 'MERCH', mkt: 'US', dateFrom: '', dateTo: '',
-  portfolios: [], name: '', productType: '', adFilter: '',
+  portfolios: [], name: '', productTypes: new Set(), adFilter: '',
   sortBy: 'ad_spend', sortDir: 'desc', page: 1, perPage: 50,
   numFilters: {}, chartPeriod: 'week'
 };
@@ -382,19 +400,59 @@ function setAdFilter(v) {
   load();
 }
 
-function setPt(v) {
-  S.productType = v;
+let ptAllTypes = [];
+
+function renderPtButtons() {
+  ptAllTypes = S.acct === 'MERCH' ? MERCH_TYPES : KDP_TYPES;
+  S.productTypes = new Set();
+  updatePtLabel();
+  renderPtItems('');
+}
+
+function updatePtLabel() {
+  const lbl = document.getElementById('pt-trigger-lbl');
+  if (!lbl) return;
+  if (S.productTypes.size === 0) lbl.textContent = 'Все типы';
+  else if (S.productTypes.size === 1) lbl.textContent = [...S.productTypes][0];
+  else lbl.textContent = `Выбрано: ${S.productTypes.size}`;
+}
+
+function renderPtItems(q) {
+  const list = document.getElementById('pt-list');
+  if (!list) return;
+  const filtered = q ? ptAllTypes.filter(t => t.label.toLowerCase().includes(q.toLowerCase())) : ptAllTypes;
+  if (!filtered.length) { list.innerHTML = '<div class="pd-empty">Нет вариантов</div>'; return; }
+  list.innerHTML = filtered.map(t => {
+    const chk = S.productTypes.has(t.val) ? 'checked' : '';
+    return `<label class="pdi"><input type="checkbox" ${chk} onchange="togglePt('${esc(t.val)}',this.checked)"><span>${t.label}</span></label>`;
+  }).join('');
+}
+
+function togglePt(val, checked) {
+  if (checked) S.productTypes.add(val);
+  else S.productTypes.delete(val);
   S.page = 1;
-  document.querySelectorAll('#pt-btns .mbt').forEach(b => b.classList.toggle('on', b.dataset.val === v));
+  updatePtLabel();
   load();
 }
 
-function renderPtButtons() {
-  const types = S.acct === 'MERCH' ? MERCH_TYPES : KDP_TYPES;
-  const wrap = document.getElementById('pt-btns');
-  wrap.innerHTML = `<button class="mbt on" data-val="" onclick="setPt('')">Все</button>` +
-    types.map(t => `<button class="mbt" data-val="${esc(t.val)}" onclick="setPt('${esc(t.val)}')">${t.label}</button>`).join('');
-  S.productType = '';
+function togglePtDrop() {
+  const drop = document.getElementById('pt-drop');
+  const trig = document.getElementById('pt-trigger');
+  const open = drop.classList.toggle('on');
+  trig.classList.toggle('on', open);
+  if (open) { document.getElementById('pt-search').value = ''; renderPtItems(''); document.getElementById('pt-search').focus(); }
+  if (open) document.addEventListener('click', closePtOutside, {once: true, capture: true});
+}
+
+function closePtOutside(e) {
+  const wrap = document.querySelector('.ptdw');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('pt-drop').classList.remove('on');
+    document.getElementById('pt-trigger').classList.remove('on');
+  } else if (wrap && wrap.contains(e.target)) {
+    document.addEventListener('click', closePtOutside, {once: true, capture: true});
+  }
 }
 
 // ── Portfolio dropdown ────────────────────────────────────────────────────────
@@ -603,7 +661,7 @@ async function load() {
     date_from: S.dateFrom,
     date_to: S.dateTo,
     name: S.name,
-    product_type: S.productType,
+    product_types: [...S.productTypes].join(','),
     ad_filter: S.adFilter,
     portfolio_ids: S.portfolios.join(','),
     sort_by: S.sortBy,
