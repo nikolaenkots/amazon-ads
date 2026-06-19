@@ -50,6 +50,18 @@ MKT_DOMAIN_MAP = {
     'JP': '.co.jp',
 }
 
+KDP_DOMAIN_MAP = {
+    'US': 'Amazon.com',
+    'UK': 'Amazon.co.uk',
+    'DE': 'Amazon.de',
+    'FR': 'Amazon.fr',
+    'ES': 'Amazon.es',
+    'IT': 'Amazon.it',
+    'JP': 'Amazon.co.jp',
+    'CA': 'Amazon.ca',
+    'AU': 'Amazon.com.au',
+}
+
 
 def _cvt(v):
     return float(v) if isinstance(v, decimal.Decimal) else v
@@ -81,8 +93,11 @@ def sales_comparison_data():
         sort_by = 'ad_spend'
 
     safe_mkt = marketplace.replace("'", "''")
-    # earnings table stores marketplace as domain (e.g. amazon.com); map from code
-    earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
+    # MERCH earnings uses suffix (.com), KDP uses full domain (Amazon.com)
+    if account_type == 'KDP':
+        earn_mkt = KDP_DOMAIN_MAP.get(marketplace, f'Amazon.{safe_mkt.lower()}').replace("'", "''")
+    else:
+        earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
 
     if account_type == 'MERCH':
         earn_date_field = 'sale_date'
@@ -352,8 +367,10 @@ def sales_comparison_weekly():
         return jsonify({'weeks': []})
 
     safe_mkt  = marketplace.replace("'", "''")
-    # both earnings and earnings_kdp store marketplace as domain (amazon.com etc.)
-    earn_mkt  = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
+    if account_type == 'KDP':
+        earn_mkt = KDP_DOMAIN_MAP.get(marketplace, f'Amazon.{safe_mkt.lower()}').replace("'", "''")
+    else:
+        earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
     safe_asin = asin.replace("'", "''")
 
     if account_type == 'MERCH':
