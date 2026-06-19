@@ -207,7 +207,8 @@ earn_keyed AS (
     COALESCE(c.product_type_norm, e.earn_pt) AS pt_key,
     '{safe_mkt}'                              AS marketplace,
     e.total_units, e.royalties, e.total_revenue,
-    c.title, c.image_url, c.status
+    c.title, c.image_url, c.status,
+    e.asin AS earn_asin
   FROM earn_raw e
   LEFT JOIN cat1 c ON c.asin = e.asin AND c.marketplace = '{safe_mkt}'
 ),
@@ -218,7 +219,8 @@ organic AS (
     ROUND(SUM(total_revenue),2) AS total_revenue,
     MAX(title)     AS title,
     MAX(image_url) AS image_url,
-    MAX(status)    AS status
+    MAX(status)    AS status,
+    MIN(earn_asin) AS primary_asin
   FROM earn_keyed
   GROUP BY grp_key, pt_key, marketplace
 ),
@@ -263,7 +265,7 @@ base AS (
     COALESCE(o.pt_key, a.pt_key, '')      AS product_type,
     COALESCE(o.image_url, a.image_url)    AS image_url,
     COALESCE(o.status, a.status)          AS status,
-    COALESCE(a.primary_asin, o.grp_key)  AS primary_asin,
+    COALESCE(a.primary_asin, o.primary_asin, o.grp_key)  AS primary_asin,
     COALESCE(o.total_units, 0)  AS total_units,
     COALESCE(o.royalties, 0)    AS royalties,
     COALESCE(o.total_revenue, 0) AS total_revenue,
