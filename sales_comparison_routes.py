@@ -131,11 +131,17 @@ def sales_comparison_data():
             parts = [f"UPPER(COALESCE(product_type,'')) LIKE UPPER('%{p.replace(chr(39), chr(39)*2)}%')" for p in pts]
             pt_cond = f"AND ({' OR '.join(parts)})"
 
-    ad_cond = ''
+    # ad_cond is applied in base CTE WHERE clause:
+    # MERCH uses aliases o (organic) and a (ads), KDP uses o and ads
+    # Build both variants; correct one is used based on account_type
+    ad_cond_merch = ''
+    ad_cond_kdp   = ''
     if ad_filter == 'advertised':
-        ad_cond = 'AND COALESCE(ads.ad_spend, 0) > 0'
+        ad_cond_merch = 'AND a.grp_key IS NOT NULL'
+        ad_cond_kdp   = 'AND ads.asin IS NOT NULL'
     elif ad_filter == 'organic':
-        ad_cond = 'AND COALESCE(ads.ad_spend, 0) = 0'
+        ad_cond_merch = 'AND a.grp_key IS NULL'
+        ad_cond_kdp   = 'AND ads.asin IS NULL'
 
     num_where = _build_num_where(args)
 
@@ -287,7 +293,7 @@ base AS (
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key AND a.marketplace = o.marketplace
-  WHERE 1=1 {ad_cond} {portfolio_cond}
+  WHERE 1=1 {ad_cond_merch} {portfolio_cond}
 ),
 filtered AS (SELECT * FROM base WHERE 1=1 {name_cond} {pt_cond} {num_where.replace('WHERE','AND') if num_where else ''})
 SELECT *, COUNT(*) OVER() AS _total,
@@ -357,7 +363,7 @@ base AS (
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
-  WHERE 1=1 {ad_cond}
+  WHERE 1=1 {ad_cond_kdp}
 ),
 filtered AS (SELECT * FROM base WHERE 1=1 {name_cond} {pt_cond} {num_where.replace('WHERE','AND') if num_where else ''})
 SELECT *, COUNT(*) OVER() AS _total,
