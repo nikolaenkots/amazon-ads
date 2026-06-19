@@ -118,7 +118,7 @@ def sales_comparison_data():
     name_cond = ''
     if name_filter:
         sn = name_filter.replace("'", "''")
-        name_cond = f"AND (LOWER(COALESCE(o.asin, ads.asin, '')) LIKE LOWER('%{sn}%') OR LOWER(COALESCE(o.title, '')) LIKE LOWER('%{sn}%'))"
+        name_cond = f"AND (LOWER(COALESCE(title, '')) LIKE LOWER('%{sn}%') OR LOWER(COALESCE(primary_asin, asin, '')) LIKE LOWER('%{sn}%'))"
 
     pt_cond = ''
     if product_type:
@@ -330,6 +330,7 @@ ads AS (
 base AS (
   SELECT
     COALESCE(o.asin, ads.asin) AS asin,
+    COALESCE(o.asin, ads.asin) AS primary_asin,
     COALESCE(o.marketplace, ads.marketplace) AS marketplace,
     COALESCE(o.title, '') AS title,
     COALESCE(o.product_type, '') AS product_type,
