@@ -305,15 +305,15 @@ LIMIT {per_page} OFFSET {offset}
 
         sql = f"""
 WITH organic AS (
-  SELECT e.asin_isbn AS asin, '{safe_mkt}' AS marketplace,
+  SELECT e.asin, '{safe_mkt}' AS marketplace,
     SUM(e.net_units_sold) AS total_units,
     ROUND(SUM(e.royalty), 2) AS royalties,
     ROUND(SUM(e.royalty), 2) AS total_revenue,
     MAX(e.title) AS title,
     MAX(e.transaction_type) AS product_type
   FROM `{earn_table}` e
-  WHERE e.marketplace = '{earn_mkt}' {earn_date_cond}
-  GROUP BY e.asin_isbn
+  WHERE e.marketplace = '{earn_mkt}' AND e.asin IS NOT NULL {earn_date_cond}
+  GROUP BY e.asin
 ),
 ads AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
@@ -439,7 +439,7 @@ def sales_comparison_weekly():
     else:
         earn_table         = f"{PROJECT_ID}.{DATASET}.earnings_kdp"
         asin_table         = f"{PROJECT_ID}.{DATASET}.asin_stats_kdp"
-        earn_asin_field    = 'asin_isbn'
+        earn_asin_field    = 'asin'
         earn_date_field    = 'royalty_date'
         earn_royalty_field = 'royalty'
         earn_units_field   = 'net_units_sold'
