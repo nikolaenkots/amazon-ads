@@ -187,10 +187,24 @@ cat AS (
       WHEN 'ZIP_HOODIE'             THEN 'Zip hoodie'
       WHEN 'STANDARD_ZIP_HOODIE'    THEN 'Zip hoodie'
       WHEN 'POPSOCKET'              THEN 'PopSockets'
+      WHEN 'POP_SOCKET'             THEN 'PopSockets'
       WHEN 'IPHONE_CASE'            THEN 'iPhone cases'
+      WHEN 'PHONE_CASE_APPLE_IPHONE' THEN 'iPhone cases'
       WHEN 'PREMIUM_TSHIRT'         THEN 'Premium t-shirt'
       WHEN 'RAGLAN'                 THEN 'Raglan'
       WHEN 'TANK_TOP'               THEN 'Tank top'
+      WHEN 'PERFORMANCE_TSHIRT'     THEN 'Performance t-shirt'
+      WHEN 'PRINTED_BASEBALL_HAT'   THEN 'Baseball hat'
+      WHEN 'BASEBALL_HAT'           THEN 'Baseball hat'
+      WHEN 'TRUCKER_HAT'            THEN 'Trucker hat'
+      WHEN 'CROP_TOP'               THEN 'Crop top'
+      WHEN 'TOTE_BAG'               THEN 'Tote bag'
+      WHEN 'THROW_PILLOW'           THEN 'Throw pillow'
+      WHEN 'FLEECE_JACKET'          THEN 'Fleece jacket'
+      WHEN 'YOUTH_TSHIRT'           THEN 'Youth t-shirt'
+      WHEN 'WATER_BOTTLE'           THEN 'Water bottle'
+      WHEN 'TUMBLER'                THEN 'Tumbler'
+      WHEN 'OVERSIZED_TSHIRT'       THEN 'Oversized t-shirt'
       ELSE product_type
     END AS product_type_norm,
     ROW_NUMBER() OVER (PARTITION BY asin, marketplace ORDER BY imported_at DESC) rn
@@ -202,7 +216,39 @@ earn_raw AS (
     SUM(e.purchased) AS total_units,
     ROUND(SUM(e.royalties), 2) AS royalties,
     ROUND(SUM(e.revenue), 2) AS total_revenue,
-    MAX(e.product_type) AS earn_pt
+    CASE MAX(e.product_type)
+      WHEN 'STANDARD_TSHIRT'          THEN 'Standard t-shirt'
+      WHEN 'HOODIE'                   THEN 'Pullover hoodie'
+      WHEN 'STANDARD_PULLOVER_HOODIE' THEN 'Pullover hoodie'
+      WHEN 'SWEATSHIRT'               THEN 'Sweatshirt'
+      WHEN 'STANDARD_SWEATSHIRT'      THEN 'Sweatshirt'
+      WHEN 'TANK_TOP'                 THEN 'Tank top'
+      WHEN 'LONG_SLEEVE_TEE'          THEN 'Long sleeve t-shirt'
+      WHEN 'STANDARD_LONG_SLEEVE'     THEN 'Long sleeve t-shirt'
+      WHEN 'V_NECK_TEE'               THEN 'V-neck t-shirt'
+      WHEN 'VNECK'                    THEN 'V-neck t-shirt'
+      WHEN 'ZIP_HOODIE'               THEN 'Zip hoodie'
+      WHEN 'STANDARD_ZIP_HOODIE'      THEN 'Zip hoodie'
+      WHEN 'POPSOCKET'                THEN 'PopSockets'
+      WHEN 'POP_SOCKET'               THEN 'PopSockets'
+      WHEN 'IPHONE_CASE'              THEN 'iPhone cases'
+      WHEN 'PHONE_CASE_APPLE_IPHONE'  THEN 'iPhone cases'
+      WHEN 'PREMIUM_TSHIRT'           THEN 'Premium t-shirt'
+      WHEN 'RAGLAN'                   THEN 'Raglan'
+      WHEN 'PERFORMANCE_TSHIRT'       THEN 'Performance t-shirt'
+      WHEN 'PRINTED_BASEBALL_HAT'     THEN 'Baseball hat'
+      WHEN 'BASEBALL_HAT'             THEN 'Baseball hat'
+      WHEN 'TRUCKER_HAT'              THEN 'Trucker hat'
+      WHEN 'CROP_TOP'                 THEN 'Crop top'
+      WHEN 'TOTE_BAG'                 THEN 'Tote bag'
+      WHEN 'THROW_PILLOW'             THEN 'Throw pillow'
+      WHEN 'FLEECE_JACKET'            THEN 'Fleece jacket'
+      WHEN 'YOUTH_TSHIRT'             THEN 'Youth t-shirt'
+      WHEN 'WATER_BOTTLE'             THEN 'Water bottle'
+      WHEN 'TUMBLER'                  THEN 'Tumbler'
+      WHEN 'OVERSIZED_TSHIRT'         THEN 'Oversized t-shirt'
+      ELSE MAX(e.product_type)
+    END AS earn_pt
   FROM `{earn_table}` e
   WHERE e.marketplace = '{earn_mkt}' {earn_date_cond}
   GROUP BY e.asin
