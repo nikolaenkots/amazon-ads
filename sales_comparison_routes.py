@@ -172,7 +172,7 @@ def sales_comparison_data():
         sql = f"""
 WITH {portfolio_cte}
 cat AS (
-  SELECT asin, design_id, marketplace, title, image_url, status,
+  SELECT asin, design_id, marketplace, title, image_url, status, imported_at,
     CASE product_type
       WHEN 'STANDARD_TSHIRT'        THEN 'Standard t-shirt'
       WHEN 'HOODIE'                 THEN 'Pullover hoodie'
