@@ -10,12 +10,12 @@ PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 ALLOWED_SORT = {
-    'asin', 'title', 'product_type', 'total_units', 'total_sales',
+    'asin', 'title', 'product_type', 'total_units', 'royalties', 'total_revenue',
     'clicks', 'ad_spend', 'ad_orders', 'ad_sales',
     'ad_share_pct', 'tacos', 'acos', 'cpc',
 }
 
-NUM_FIELDS = ['total_sales', 'total_units', 'ad_spend', 'ad_sales', 'ad_orders',
+NUM_FIELDS = ['royalties', 'total_revenue', 'total_units', 'ad_spend', 'ad_sales', 'ad_orders',
               'clicks', 'cpc', 'tacos', 'acos', 'ad_share_pct']
 
 OP_MAP = {'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<=', 'eq': '='}
@@ -147,8 +147,9 @@ def sales_comparison_data():
 WITH {portfolio_cte}
 organic AS (
   SELECT e.asin, '{safe_mkt}' AS marketplace,
-    SUM(e.purchased) AS organic_units,
-    ROUND(SUM(e.royalties), 2) AS organic_royalties,
+    SUM(e.purchased) AS total_units,
+    ROUND(SUM(e.royalties), 2) AS royalties,
+    ROUND(SUM(e.revenue), 2) AS total_revenue,
     MAX(e.title) AS title,
     MAX(e.product_type) AS product_type
   FROM `{earn_table}` e
@@ -159,14 +160,27 @@ ads AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
     SUM(a.clicks) AS clicks,
     ROUND(SUM(a.cost), 2) AS ad_spend,
-    SUM(a.purchases_14d) AS attributed_orders,
-    ROUND(SUM(a.sales_14d), 2) AS attributed_sales
+    SUM(a.purchases_14d) AS ad_orders,
+    ROUND(SUM(a.sales_14d), 2) AS ad_sales
   FROM `{asin_table}` a
   WHERE a.marketplace = '{safe_mkt}' {ads_date_cond}
   GROUP BY a.advertised_asin, a.marketplace
 ),
 cat AS (
-  SELECT asin, marketplace, title, product_type, image_url, status,
+  SELECT asin, marketplace, title, image_url, status,
+    CASE product_type
+      WHEN 'STANDARD_TSHIRT'   THEN 'Standard t-shirt'
+      WHEN 'HOODIE'            THEN 'Pullover hoodie'
+      WHEN 'SWEATSHIRT'        THEN 'Sweatshirt'
+      WHEN 'TANK_TOP'          THEN 'Tank top'
+      WHEN 'LONG_SLEEVE_TEE'   THEN 'Long sleeve t-shirt'
+      WHEN 'V_NECK_TEE'        THEN 'V-neck t-shirt'
+      WHEN 'ZIP_HOODIE'        THEN 'Zip hoodie'
+      WHEN 'POPSOCKET'         THEN 'PopSockets'
+      WHEN 'IPHONE_CASE'       THEN 'iPhone cases'
+      WHEN 'PREMIUM_TSHIRT'    THEN 'Premium t-shirt'
+      ELSE product_type
+    END AS product_type,
     ROW_NUMBER() OVER (PARTITION BY asin, marketplace ORDER BY imported_at DESC) rn
   FROM `{cat_table}`
 ),
@@ -177,25 +191,26 @@ base AS (
     COALESCE(o.title, c.title, '') AS title,
     COALESCE(o.product_type, c.product_type, '') AS product_type,
     c.image_url, c.status,
-    COALESCE(o.organic_units, 0) AS total_units,
-    COALESCE(o.organic_royalties, 0) AS total_sales,
+    COALESCE(o.total_units, 0) AS total_units,
+    COALESCE(o.royalties, 0) AS royalties,
+    COALESCE(o.total_revenue, 0) AS total_revenue,
     COALESCE(ads.clicks, 0) AS clicks,
     COALESCE(ads.ad_spend, 0) AS ad_spend,
-    COALESCE(ads.attributed_orders, 0) AS ad_orders,
-    COALESCE(ads.attributed_sales, 0) AS ad_sales,
-    -- ad_share: attributed_sales / total_sales (capped at 100%)
-    CASE WHEN COALESCE(o.organic_royalties,0) > 0
-         THEN LEAST(ROUND(COALESCE(ads.attributed_sales,0) / o.organic_royalties * 100, 1), 100.0)
+    COALESCE(ads.ad_orders, 0) AS ad_orders,
+    COALESCE(ads.ad_sales, 0) AS ad_sales,
+    -- Доля рекламы = расходы / роялти
+    CASE WHEN COALESCE(o.royalties,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.royalties * 100, 1)
          ELSE NULL END AS ad_share_pct,
-    -- TACoS: ad_spend / total_sales
-    CASE WHEN COALESCE(o.organic_royalties,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / o.organic_royalties * 100, 1)
+    -- TACoS = роялти / общие продажи (выручка)
+    CASE WHEN COALESCE(o.total_revenue,0) > 0
+         THEN ROUND(COALESCE(o.royalties,0) / o.total_revenue * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
          ELSE NULL END AS cpc,
-    CASE WHEN COALESCE(ads.attributed_sales,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.attributed_sales * 100, 1)
+    CASE WHEN COALESCE(ads.ad_sales,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.ad_sales * 100, 1)
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
@@ -204,7 +219,8 @@ base AS (
 ),
 filtered AS (SELECT * FROM base {num_where})
 SELECT *, COUNT(*) OVER() AS _total,
-  ROUND(SUM(total_sales) OVER(), 2) AS _sum_total_sales,
+  ROUND(SUM(royalties) OVER(), 2) AS _sum_royalties,
+  ROUND(SUM(total_revenue) OVER(), 2) AS _sum_total_revenue,
   ROUND(SUM(ad_spend) OVER(), 2) AS _sum_spend,
   ROUND(SUM(ad_sales) OVER(), 2) AS _sum_ad_sales,
   SUM(clicks) OVER() AS _sum_clicks,
@@ -220,8 +236,9 @@ LIMIT {per_page} OFFSET {offset}
         sql = f"""
 WITH organic AS (
   SELECT e.asin_isbn AS asin, '{safe_mkt}' AS marketplace,
-    SUM(e.net_units_sold) AS organic_units,
-    ROUND(SUM(e.royalty), 2) AS organic_royalties,
+    SUM(e.net_units_sold) AS total_units,
+    ROUND(SUM(e.royalty), 2) AS royalties,
+    ROUND(SUM(e.royalty), 2) AS total_revenue,
     MAX(e.title) AS title,
     MAX(e.transaction_type) AS product_type
   FROM `{earn_table}` e
@@ -232,8 +249,8 @@ ads AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
     SUM(a.clicks) AS clicks,
     ROUND(SUM(a.cost), 2) AS ad_spend,
-    SUM(a.purchases_14d) AS attributed_orders,
-    ROUND(SUM(a.sales_14d), 2) AS attributed_sales
+    SUM(a.purchases_14d) AS ad_orders,
+    ROUND(SUM(a.sales_14d), 2) AS ad_sales
   FROM `{asin_table}` a
   WHERE a.marketplace = '{safe_mkt}' {ads_date_cond}
   GROUP BY a.advertised_asin, a.marketplace
@@ -246,23 +263,24 @@ base AS (
     COALESCE(o.product_type, '') AS product_type,
     CAST(NULL AS STRING) AS image_url,
     CAST(NULL AS STRING) AS status,
-    COALESCE(o.organic_units, 0) AS total_units,
-    COALESCE(o.organic_royalties, 0) AS total_sales,
+    COALESCE(o.total_units, 0) AS total_units,
+    COALESCE(o.royalties, 0) AS royalties,
+    COALESCE(o.total_revenue, 0) AS total_revenue,
     COALESCE(ads.clicks, 0) AS clicks,
     COALESCE(ads.ad_spend, 0) AS ad_spend,
-    COALESCE(ads.attributed_orders, 0) AS ad_orders,
-    COALESCE(ads.attributed_sales, 0) AS ad_sales,
-    CASE WHEN COALESCE(o.organic_royalties,0) > 0
-         THEN LEAST(ROUND(COALESCE(ads.attributed_sales,0) / o.organic_royalties * 100, 1), 100.0)
+    COALESCE(ads.ad_orders, 0) AS ad_orders,
+    COALESCE(ads.ad_sales, 0) AS ad_sales,
+    CASE WHEN COALESCE(o.royalties,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.royalties * 100, 1)
          ELSE NULL END AS ad_share_pct,
-    CASE WHEN COALESCE(o.organic_royalties,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / o.organic_royalties * 100, 1)
+    CASE WHEN COALESCE(o.total_revenue,0) > 0
+         THEN ROUND(COALESCE(o.royalties,0) / o.total_revenue * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
          ELSE NULL END AS cpc,
-    CASE WHEN COALESCE(ads.attributed_sales,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.attributed_sales * 100, 1)
+    CASE WHEN COALESCE(ads.ad_sales,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.ad_sales * 100, 1)
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
@@ -270,7 +288,8 @@ base AS (
 ),
 filtered AS (SELECT * FROM base {num_where})
 SELECT *, COUNT(*) OVER() AS _total,
-  ROUND(SUM(total_sales) OVER(), 2) AS _sum_total_sales,
+  ROUND(SUM(royalties) OVER(), 2) AS _sum_royalties,
+  ROUND(SUM(total_revenue) OVER(), 2) AS _sum_total_revenue,
   ROUND(SUM(ad_spend) OVER(), 2) AS _sum_spend,
   ROUND(SUM(ad_sales) OVER(), 2) AS _sum_ad_sales,
   SUM(clicks) OVER() AS _sum_clicks,
@@ -289,27 +308,27 @@ LIMIT {per_page} OFFSET {offset}
     if not rows:
         return jsonify({
             'rows': [], 'total': 0, 'page': page, 'per_page': per_page,
-            'summary': {'sum_total_sales': 0, 'sum_spend': 0, 'sum_ad_sales': 0,
-                        'sum_clicks': 0, 'sum_units': 0}
+            'summary': {'sum_royalties': 0, 'sum_total_revenue': 0, 'sum_spend': 0,
+                        'sum_ad_sales': 0, 'sum_clicks': 0, 'sum_units': 0}
         })
 
-    total           = int(rows[0]['_total'])
-    sum_total_sales = float(rows[0]['_sum_total_sales'] or 0)
-    sum_spend       = float(rows[0]['_sum_spend'] or 0)
-    sum_ad_sales    = float(rows[0]['_sum_ad_sales'] or 0)
-    sum_clicks      = int(rows[0]['_sum_clicks'] or 0)
-    sum_units       = int(rows[0]['_sum_units'] or 0)
+    total             = int(rows[0]['_total'])
+    sum_royalties     = float(rows[0]['_sum_royalties'] or 0)
+    sum_total_revenue = float(rows[0]['_sum_total_revenue'] or 0)
+    sum_spend         = float(rows[0]['_sum_spend'] or 0)
+    sum_ad_sales      = float(rows[0]['_sum_ad_sales'] or 0)
+    sum_clicks        = int(rows[0]['_sum_clicks'] or 0)
+    sum_units         = int(rows[0]['_sum_units'] or 0)
 
-    skip = {'_total', '_sum_total_sales', '_sum_spend', '_sum_ad_sales', '_sum_clicks', '_sum_units'}
+    skip = {'_total', '_sum_royalties', '_sum_total_revenue', '_sum_spend',
+            '_sum_ad_sales', '_sum_clicks', '_sum_units'}
     result_rows = [{k: _cvt(v) for k, v in dict(r).items() if k not in skip} for r in rows]
 
     return jsonify({
-        'rows': result_rows,
-        'total': total,
-        'page': page,
-        'per_page': per_page,
+        'rows': result_rows, 'total': total, 'page': page, 'per_page': per_page,
         'summary': {
-            'sum_total_sales': sum_total_sales,
+            'sum_royalties': sum_royalties,
+            'sum_total_revenue': sum_total_revenue,
             'sum_spend': sum_spend,
             'sum_ad_sales': sum_ad_sales,
             'sum_clicks': sum_clicks,
@@ -365,8 +384,8 @@ def sales_comparison_weekly():
 WITH earn_weekly AS (
   SELECT
     DATE_TRUNC(e.{earn_date_field}, WEEK(MONDAY)) AS week,
-    SUM(e.{earn_units_field}) AS organic_units,
-    ROUND(SUM(e.{earn_royalty_field}), 2) AS organic_royalties
+    SUM(e.{earn_units_field}) AS total_units,
+    ROUND(SUM(e.{earn_royalty_field}), 2) AS royalties
   FROM `{earn_table}` e
   WHERE e.{earn_asin_field} = '{safe_asin}' AND e.marketplace = '{earn_mkt}' {earn_date_cond}
   GROUP BY 1
@@ -376,18 +395,21 @@ ads_weekly AS (
     DATE_TRUNC(a.date, WEEK(MONDAY)) AS week,
     SUM(a.clicks) AS clicks,
     ROUND(SUM(a.cost), 2) AS ad_spend,
-    ROUND(SUM(a.sales_14d), 2) AS attributed_sales
+    SUM(a.purchases_14d) AS ad_units,
+    ROUND(SUM(a.sales_14d), 2) AS ad_sales
   FROM `{asin_table}` a
   WHERE a.advertised_asin = '{safe_asin}' AND a.marketplace = '{safe_mkt}' {ads_date_cond}
   GROUP BY 1
 )
 SELECT
   COALESCE(e.week, a.week) AS week,
-  COALESCE(e.organic_units, 0) AS organic_units,
-  COALESCE(e.organic_royalties, 0) AS organic_royalties,
+  COALESCE(e.total_units, 0) AS total_units,
+  COALESCE(a.ad_units, 0) AS ad_units,
+  GREATEST(COALESCE(e.total_units, 0) - COALESCE(a.ad_units, 0), 0) AS organic_units,
+  COALESCE(e.royalties, 0) AS royalties,
   COALESCE(a.clicks, 0) AS clicks,
   COALESCE(a.ad_spend, 0) AS ad_spend,
-  COALESCE(a.attributed_sales, 0) AS attributed_sales
+  COALESCE(a.ad_sales, 0) AS ad_sales
 FROM earn_weekly e
 FULL OUTER JOIN ads_weekly a ON a.week = e.week
 ORDER BY 1
@@ -440,7 +462,7 @@ WITH agg AS (
     a.marketplace,
     SUM(a.clicks) AS clicks,
     ROUND(SUM(a.cost), 2) AS ad_spend,
-    ROUND(SUM(a.sales_14d), 2) AS attributed_sales
+    ROUND(SUM(a.sales_14d), 2) AS ad_sales
   FROM `{asin_table}` a
   WHERE a.advertised_asin = '{safe_asin}' AND a.marketplace = '{safe_mkt}' {ads_date_cond}
   GROUP BY a.campaign_id, a.marketplace
@@ -456,9 +478,9 @@ SELECT
   c.campaign_state,
   agg.clicks,
   agg.ad_spend,
-  agg.attributed_sales,
-  CASE WHEN agg.attributed_sales > 0
-       THEN ROUND(agg.ad_spend / agg.attributed_sales * 100, 1)
+  agg.ad_sales,
+  CASE WHEN agg.ad_sales > 0
+       THEN ROUND(agg.ad_spend / agg.ad_sales * 100, 1)
        ELSE NULL END AS acos
 FROM agg
 JOIN c ON c.campaign_id = agg.campaign_id AND c.marketplace = agg.marketplace

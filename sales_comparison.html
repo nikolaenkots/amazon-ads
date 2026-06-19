@@ -263,7 +263,8 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
 <!-- Summary bar -->
 <div class="sr" id="summary-bar">
   <div class="sc"><div class="sl">Товаров</div><div class="sv" id="s-total">—</div></div>
-  <div class="sc"><div class="sl">Продажи всего</div><div class="sv g" id="s-royalties">—</div></div>
+  <div class="sc"><div class="sl">Роялти</div><div class="sv g" id="s-royalties">—</div></div>
+  <div class="sc"><div class="sl">Продажи всего</div><div class="sv g" id="s-total-rev">—</div></div>
   <div class="sc"><div class="sl">Расходы на рекламу</div><div class="sv a" id="s-spend">—</div></div>
   <div class="sc"><div class="sl">Продажи рекл.</div><div class="sv b" id="s-attr">—</div></div>
   <div class="sc"><div class="sl">Клики</div><div class="sv" id="s-clicks">—</div></div>
@@ -284,7 +285,8 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
           <th onclick="sortBy('asin')" id="th-asin" style="width:110px">ASIN <span class="sa">↕</span></th>
           <th class="ns">Название</th>
           <th class="ns">Тип</th>
-          <th id="th-total_sales"></th>
+          <th id="th-royalties"></th>
+          <th id="th-total_revenue"></th>
           <th id="th-ad_sales"></th>
           <th id="th-total_units"></th>
           <th id="th-ad_orders"></th>
@@ -297,7 +299,7 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
         </tr>
       </thead>
       <tbody id="tbl-body">
-        <tr><td colspan="14" class="te">Загрузка...</td></tr>
+        <tr><td colspan="15" class="te">Загрузка...</td></tr>
       </tbody>
     </table>
   </div>
@@ -548,7 +550,8 @@ function thNum(col, label) {
 }
 
 function renderNumHeaders() {
-  thNum('total_sales',  'Продажи всего');
+  thNum('royalties',    'Роялти');
+  thNum('total_revenue','Продажи всего');
   thNum('ad_sales',     'Продажи рекл.');
   thNum('total_units',  'Заказы всего');
   thNum('ad_orders',    'Заказы рекл.');
@@ -614,7 +617,7 @@ async function load() {
   }
 
   renderNumHeaders();
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="14" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="15" class="te"><span class="sp"></span></td></tr>';
   document.getElementById('err-bar').style.display = 'none';
 
   try {
@@ -634,7 +637,7 @@ function showErr(msg) {
   const bar = document.getElementById('err-bar');
   bar.textContent = 'Ошибка: ' + msg;
   bar.style.display = '';
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="14" class="te">Ошибка загрузки</td></tr>';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="15" class="te">Ошибка загрузки</td></tr>';
 }
 
 // ── Render rows ───────────────────────────────────────────────────────────────
@@ -642,7 +645,7 @@ function showErr(msg) {
 function renderRows(rows) {
   const tbody = document.getElementById('tbl-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="14" class="te">Нет данных</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" class="te">Нет данных</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map((r, i) => {
@@ -657,7 +660,8 @@ function renderRows(rows) {
       <td class="n" style="font-size:12px;white-space:nowrap">${esc(r.asin || '—')}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="${esc(r.title || '')}">${esc(r.title || '—')}</td>
       <td>${ptBadge}</td>
-      <td class="r n gn">${fmtMoney(r.total_sales)}</td>
+      <td class="r n gn">${fmtMoney(r.royalties)}</td>
+      <td class="r n gn">${fmtMoney(r.total_revenue)}</td>
       <td class="r n bn">${fmtMoney(r.ad_sales)}</td>
       <td class="r n">${fmtNum(r.total_units)}</td>
       <td class="r n">${fmtNum(r.ad_orders)}</td>
@@ -680,11 +684,12 @@ function esc(s) {
 
 function renderSummary(sum, total) {
   document.getElementById('s-total').textContent     = fmtNum(total);
-  document.getElementById('s-royalties').textContent = fmtMoney(sum.sum_total_sales);
+  document.getElementById('s-royalties').textContent = fmtMoney(sum.sum_royalties);
+  document.getElementById('s-total-rev').textContent = fmtMoney(sum.sum_total_revenue);
   document.getElementById('s-spend').textContent     = fmtMoney(sum.sum_spend);
   document.getElementById('s-attr').textContent      = fmtMoney(sum.sum_ad_sales);
   document.getElementById('s-clicks').textContent    = fmtNum(sum.sum_clicks);
-  const tacos = sum.sum_total_sales > 0 ? (sum.sum_spend / sum.sum_total_sales * 100) : null;
+  const tacos = sum.sum_total_revenue > 0 ? (sum.sum_royalties / sum.sum_total_revenue * 100) : null;
   const tacoEl = document.getElementById('s-tacos');
   tacoEl.textContent = tacos != null ? tacos.toFixed(1) + '%' : '—';
   tacoEl.className = 'sv ' + tacosColor(tacos);
@@ -755,16 +760,12 @@ function toggleDetail(asin, mkt, tr) {
   // Insert detail row
   const detailTr = document.createElement('tr');
   detailTr.className = 'detail-row';
-  detailTr.innerHTML = `<td colspan="14">
-    <div class="detail-panel">
-      <div>
-        <div class="detail-section-title">Недельный тренд</div>
-        <div class="detail-chart-wrap"><canvas id="week-chart"></canvas></div>
-      </div>
-      <div>
-        <div class="detail-section-title">Кампании</div>
-        <div id="camp-wrap" class="detail-camp-table"><div class="detail-loading"><span class="sp"></span></div></div>
-      </div>
+  detailTr.innerHTML = `<td colspan="15">
+    <div style="padding:16px">
+      <div class="detail-section-title">Недельный тренд</div>
+      <div class="detail-chart-wrap" style="height:220px"><canvas id="week-chart"></canvas></div>
+      <div class="detail-section-title" style="margin-top:16px">Кампании</div>
+      <div id="camp-wrap" class="detail-camp-table"><div class="detail-loading"><span class="sp"></span></div></div>
     </div>
   </td>`;
   tr.parentNode.insertBefore(detailTr, tr.nextSibling);
@@ -793,10 +794,11 @@ function renderWeekChart(weeks) {
   const canvas = document.getElementById('week-chart');
   if (!canvas || !weeks.length) return;
 
-  const labels  = weeks.map(w => w.week ? w.week.slice(0,10) : '');
-  const organic = weeks.map(w => w.organic_royalties || 0);
-  const attrSal = weeks.map(w => w.attributed_sales  || 0);
-  const spend   = weeks.map(w => w.ad_spend           || 0);
+  const labels      = weeks.map(w => w.week ? w.week.slice(0,10) : '');
+  const adUnits     = weeks.map(w => w.ad_units      || 0);
+  const orgUnits    = weeks.map(w => w.organic_units  || 0);
+  const spend       = weeks.map(w => w.ad_spend       || 0);
+  const royalties   = weeks.map(w => w.royalties      || 0);
 
   weekChart = new Chart(canvas, {
     data: {
@@ -804,22 +806,22 @@ function renderWeekChart(weeks) {
       datasets: [
         {
           type: 'bar',
-          label: 'Роялти (органика)',
-          data: organic,
+          label: 'Органические заказы',
+          data: orgUnits,
           backgroundColor: 'rgba(26,143,92,0.5)',
           borderColor: 'rgba(26,143,92,0.8)',
           borderWidth: 1,
-          stack: 'revenue',
+          stack: 'units',
           yAxisID: 'y',
         },
         {
           type: 'bar',
-          label: 'Атриб. продажи',
-          data: attrSal,
+          label: 'Рекламные заказы',
+          data: adUnits,
           backgroundColor: 'rgba(26,111,212,0.5)',
           borderColor: 'rgba(26,111,212,0.8)',
           borderWidth: 1,
-          stack: 'revenue',
+          stack: 'units',
           yAxisID: 'y',
         },
         {
@@ -828,6 +830,18 @@ function renderWeekChart(weeks) {
           data: spend,
           borderColor: 'rgba(200,75,20,0.9)',
           backgroundColor: 'rgba(200,75,20,0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.3,
+          yAxisID: 'y2',
+          fill: false,
+        },
+        {
+          type: 'line',
+          label: 'Роялти',
+          data: royalties,
+          borderColor: 'rgba(26,143,92,0.9)',
+          backgroundColor: 'transparent',
           borderWidth: 2,
           pointRadius: 3,
           tension: 0.3,
@@ -844,7 +858,11 @@ function renderWeekChart(weeks) {
         legend: { labels: { font: { size: 11 }, boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (ctx.dataset.yAxisID === 'y2') return `${ctx.dataset.label}: $${v.toFixed(2)}`;
+              return `${ctx.dataset.label}: ${Math.round(v)}`;
+            }
           }
         }
       },
@@ -853,12 +871,14 @@ function renderWeekChart(weeks) {
         y: {
           stacked: true,
           position: 'left',
-          ticks: { font: { size: 10 }, callback: v => '$' + v },
+          title: { display: true, text: 'Заказы', font: { size: 10 } },
+          ticks: { font: { size: 10 }, stepSize: 1 },
         },
         y2: {
           stacked: false,
           position: 'right',
           grid: { drawOnChartArea: false },
+          title: { display: true, text: '$', font: { size: 10 } },
           ticks: { font: { size: 10 }, callback: v => '$' + v },
         }
       }
@@ -886,7 +906,7 @@ function renderCampTable(camps) {
       <td>${stateBadge(c.campaign_state)}</td>
       <td class="r n">${fmtNum(c.clicks)}</td>
       <td class="r n an">${fmtMoney(c.ad_spend)}</td>
-      <td class="r n bn">${fmtMoney(c.attributed_sales)}</td>
+      <td class="r n bn">${fmtMoney(c.ad_sales)}</td>
       <td class="r n ${acosColor(c.acos)}">${fmtPct(c.acos)}</td>
     </tr>`).join('')}
     </tbody>
