@@ -50,6 +50,18 @@ MKT_DOMAIN_MAP = {
     'JP': '.co.jp',
 }
 
+KDP_DOMAIN_MAP = {
+    'US': 'Amazon.com',
+    'UK': 'Amazon.co.uk',
+    'DE': 'Amazon.de',
+    'FR': 'Amazon.fr',
+    'ES': 'Amazon.es',
+    'IT': 'Amazon.it',
+    'JP': 'Amazon.co.jp',
+    'CA': 'Amazon.ca',
+    'AU': 'Amazon.com.au',
+}
+
 
 def _cvt(v):
     return float(v) if isinstance(v, decimal.Decimal) else v
@@ -81,8 +93,11 @@ def sales_comparison_data():
         sort_by = 'ad_spend'
 
     safe_mkt = marketplace.replace("'", "''")
-    # earnings table stores marketplace as domain (e.g. amazon.com); map from code
-    earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
+    # MERCH earnings uses suffix (.com), KDP uses full domain (Amazon.com)
+    if account_type == 'KDP':
+        earn_mkt = KDP_DOMAIN_MAP.get(marketplace, f'Amazon.{safe_mkt.lower()}').replace("'", "''")
+    else:
+        earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
 
     if account_type == 'MERCH':
         earn_date_field = 'sale_date'
@@ -202,9 +217,9 @@ base AS (
     CASE WHEN COALESCE(o.royalties,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / o.royalties * 100, 1)
          ELSE NULL END AS ad_share_pct,
-    -- TACoS = роялти / общие продажи (выручка)
+    -- TACoS = расходы на рекламу / продажи всего (выручка)
     CASE WHEN COALESCE(o.total_revenue,0) > 0
-         THEN ROUND(COALESCE(o.royalties,0) / o.total_revenue * 100, 1)
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.total_revenue * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
@@ -274,7 +289,7 @@ base AS (
          THEN ROUND(COALESCE(ads.ad_spend,0) / o.royalties * 100, 1)
          ELSE NULL END AS ad_share_pct,
     CASE WHEN COALESCE(o.total_revenue,0) > 0
-         THEN ROUND(COALESCE(o.royalties,0) / o.total_revenue * 100, 1)
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.total_revenue * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
@@ -345,13 +360,17 @@ def sales_comparison_weekly():
     marketplace  = args.get('marketplace', 'US').upper()
     date_from    = args.get('date_from', '')
     date_to      = args.get('date_to', '')
+    period       = args.get('period', 'week')  # 'week' or 'month'
+    trunc_unit   = 'MONTH' if period == 'month' else 'WEEK(MONDAY)'
 
     if not asin:
         return jsonify({'weeks': []})
 
     safe_mkt  = marketplace.replace("'", "''")
-    # both earnings and earnings_kdp store marketplace as domain (amazon.com etc.)
-    earn_mkt  = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
+    if account_type == 'KDP':
+        earn_mkt = KDP_DOMAIN_MAP.get(marketplace, f'Amazon.{safe_mkt.lower()}').replace("'", "''")
+    else:
+        earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
     safe_asin = asin.replace("'", "''")
 
     if account_type == 'MERCH':
@@ -383,7 +402,7 @@ def sales_comparison_weekly():
     sql = f"""
 WITH earn_weekly AS (
   SELECT
-    DATE_TRUNC(e.{earn_date_field}, WEEK(MONDAY)) AS week,
+    DATE_TRUNC(e.{earn_date_field}, {trunc_unit}) AS week,
     SUM(e.{earn_units_field}) AS total_units,
     ROUND(SUM(e.{earn_royalty_field}), 2) AS royalties
   FROM `{earn_table}` e
@@ -392,7 +411,7 @@ WITH earn_weekly AS (
 ),
 ads_weekly AS (
   SELECT
-    DATE_TRUNC(a.date, WEEK(MONDAY)) AS week,
+    DATE_TRUNC(a.date, {trunc_unit}) AS week,
     SUM(a.clicks) AS clicks,
     ROUND(SUM(a.cost), 2) AS ad_spend,
     SUM(a.purchases_14d) AS ad_units,
