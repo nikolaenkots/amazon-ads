@@ -365,6 +365,7 @@ function setMkt(v) {
   S.mkt = v;
   S.page = 1;
   document.querySelectorAll('#mkt-btns .atb').forEach(b => b.classList.toggle('on', b.textContent === v));
+  if (S.acct === 'MERCH') filterPortfolios();
   load();
 }
 
@@ -445,13 +446,27 @@ function updatePfLabel() {
     pfSelected.size === 0 ? 'Все' : `Выбрано: ${pfSelected.size}`;
 }
 
+let _allPortfolios = [];
+
 async function loadPortfolios() {
   try {
-    const r = await fetch(`/portfolios/list?account_type=${S.acct}`);
-    const d = await r.json();
-    pfPortfolios = d.portfolios || [];
-    renderPfItems();
+    if (!_allPortfolios.length) {
+      const r = await fetch('/portfolios/list');
+      const d = await r.json();
+      _allPortfolios = d.portfolios || [];
+    }
+    filterPortfolios();
   } catch(e) {}
+}
+
+function filterPortfolios() {
+  pfPortfolios = _allPortfolios.filter(p =>
+    p.account_type === S.acct && p.marketplace === S.mkt
+  );
+  // drop selected that no longer match
+  pfSelected = new Set([...pfSelected].filter(id => pfPortfolios.some(p => p.portfolio_id === id)));
+  S.portfolios = [...pfSelected];
+  renderPfItems();
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
