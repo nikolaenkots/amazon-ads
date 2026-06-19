@@ -118,6 +118,20 @@ td.r{text-align:right}
 thead th.s .sa{opacity:1;color:var(--accent)}
 .th-wrap{display:flex;align-items:center;gap:3px;justify-content:flex-end;position:relative}
 .th-wrap.left{justify-content:flex-start}
+.th-fi{width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:3px;cursor:pointer;color:var(--dim);flex-shrink:0}
+.th-fi:hover,.th-fi.on{color:var(--accent);background:var(--accent-bg)}
+.th-sort{cursor:pointer;white-space:nowrap}
+.npop{position:absolute;top:calc(100% + 4px);right:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none}
+.npop.op{display:block}
+.npop-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.npop-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.npop-op{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 6px;outline:none;flex-shrink:0}
+.npop-v{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 7px;outline:none;flex:1;min-width:0}
+.npop-acts{display:flex;gap:6px;margin-top:8px}
+.npop-apply{height:26px;padding:0 10px;border-radius:5px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:500;cursor:pointer}
+.npop-apply:hover{background:#a83d10}
+.npop-clear{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.npop-clear:hover{background:var(--surface2)}
 .th-sort{cursor:pointer;display:flex;align-items:center;gap:2px;flex:1;min-width:0}
 .th-sort.left{justify-content:flex-start}
 
@@ -249,9 +263,9 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
 <!-- Summary bar -->
 <div class="sr" id="summary-bar">
   <div class="sc"><div class="sl">Товаров</div><div class="sv" id="s-total">—</div></div>
-  <div class="sc"><div class="sl">Продажи (роялти)</div><div class="sv g" id="s-royalties">—</div></div>
+  <div class="sc"><div class="sl">Продажи всего</div><div class="sv g" id="s-royalties">—</div></div>
   <div class="sc"><div class="sl">Расходы на рекламу</div><div class="sv a" id="s-spend">—</div></div>
-  <div class="sc"><div class="sl">Атриб. продажи</div><div class="sv b" id="s-attr">—</div></div>
+  <div class="sc"><div class="sl">Продажи рекл.</div><div class="sv b" id="s-attr">—</div></div>
   <div class="sc"><div class="sl">Клики</div><div class="sv" id="s-clicks">—</div></div>
   <div class="sc"><div class="sl">TACoS</div><div class="sv" id="s-tacos">—</div></div>
 </div>
@@ -270,18 +284,20 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
           <th onclick="sortBy('asin')" id="th-asin" style="width:110px">ASIN <span class="sa">↕</span></th>
           <th class="ns">Название</th>
           <th class="ns">Тип</th>
-          <th onclick="sortBy('organic_royalties')" id="th-organic_royalties">Роялти <span class="sa">↕</span></th>
-          <th onclick="sortBy('ad_spend')" id="th-ad_spend">Расходы <span class="sa">↕</span></th>
-          <th onclick="sortBy('attributed_sales')" id="th-attributed_sales">Атриб. продажи <span class="sa">↕</span></th>
-          <th onclick="sortBy('ad_share_pct')" id="th-ad_share_pct">Доля рекл. <span class="sa">↕</span></th>
-          <th onclick="sortBy('tacos')" id="th-tacos">TACoS <span class="sa">↕</span></th>
-          <th onclick="sortBy('acos')" id="th-acos">ACoS <span class="sa">↕</span></th>
-          <th onclick="sortBy('clicks')" id="th-clicks">Клики <span class="sa">↕</span></th>
-          <th onclick="sortBy('cpc')" id="th-cpc">CPC <span class="sa">↕</span></th>
+          <th id="th-total_sales"></th>
+          <th id="th-ad_sales"></th>
+          <th id="th-total_units"></th>
+          <th id="th-ad_orders"></th>
+          <th id="th-ad_spend"></th>
+          <th id="th-ad_share_pct"></th>
+          <th id="th-tacos"></th>
+          <th id="th-acos"></th>
+          <th id="th-clicks"></th>
+          <th id="th-cpc"></th>
         </tr>
       </thead>
       <tbody id="tbl-body">
-        <tr><td colspan="12" class="te">Загрузка...</td></tr>
+        <tr><td colspan="14" class="te">Загрузка...</td></tr>
       </tbody>
     </table>
   </div>
@@ -313,7 +329,8 @@ const KDP_TYPES = [
 const S = {
   acct: 'MERCH', mkt: 'US', dateFrom: '', dateTo: '',
   portfolios: [], name: '', productType: '', adFilter: '',
-  sortBy: 'ad_spend', sortDir: 'desc', page: 1, perPage: 50
+  sortBy: 'ad_spend', sortDir: 'desc', page: 1, perPage: 50,
+  numFilters: {}
 };
 
 let openAsin = null;
@@ -496,7 +513,7 @@ function sortBy(field) {
 }
 
 function updateSortHeaders() {
-  const SORTABLE = ['organic_royalties','ad_spend','attributed_sales','ad_share_pct','tacos','acos','clicks','cpc'];
+  const SORTABLE = ['asin','total_sales','ad_sales','total_units','ad_orders','ad_spend','ad_share_pct','tacos','acos','clicks','cpc'];
   SORTABLE.forEach(f => {
     const th = document.getElementById('th-' + f);
     if (!th) return;
@@ -505,6 +522,57 @@ function updateSortHeaders() {
     th.innerHTML = th.textContent.replace(/\s[↕↓↑]$/, '') + ` <span class="sa">${arrow.trim()}</span>`;
   });
 }
+
+// ── Numeric filter helpers ────────────────────────────────────────────────────
+function thNum(col, label) {
+  const isAct = S.sortBy === col;
+  const nf = S.numFilters[col] || {};
+  const hasFilter = (nf.op && nf.val !== '') || nf.min || nf.max;
+  const arr = isAct ? (S.sortDir === 'asc' ? '↑' : '↓') : '';
+  document.getElementById('th-' + col).outerHTML = `<th id="th-${col}" class="${isAct?'s':''}"><div class="th-wrap"><div class="th-sort" onclick="sortBy('${col}')">${label} <span class="sa">${arr}</span></div><div class="th-fi ${hasFilter?'on':''}" data-fi="${col}" onclick="openNumPop('${col}',this)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div><div class="npop" id="np_${col}"><div class="npop-title">${label}</div><div class="npop-row"><select class="npop-op" id="nop_${col}"><option value="">—</option><option value="gt">&gt;</option><option value="gte">&ge;</option><option value="lt">&lt;</option><option value="lte">&le;</option><option value="eq">=</option></select><input class="npop-v" id="nval_${col}" type="number" placeholder="Значение"></div><div class="npop-row"><input class="npop-v" id="nmin_${col}" type="number" placeholder="Мин"><input class="npop-v" id="nmax_${col}" type="number" placeholder="Макс"></div><div class="npop-acts"><button class="npop-apply" onclick="applyNumFilter('${col}')">Применить</button><button class="npop-clear" onclick="clearNumFilter('${col}')">Сбросить</button></div></div></div></th>`;
+}
+
+function renderNumHeaders() {
+  thNum('total_sales',  'Продажи всего');
+  thNum('ad_sales',     'Продажи рекл.');
+  thNum('total_units',  'Заказы всего');
+  thNum('ad_orders',    'Заказы рекл.');
+  thNum('ad_spend',     'Расходы');
+  thNum('ad_share_pct', 'Доля рекл. %');
+  thNum('tacos',        'TACoS %');
+  thNum('acos',         'ACoS %');
+  thNum('clicks',       'Клики');
+  thNum('cpc',          'CPC');
+}
+
+function openNumPop(col, el) {
+  document.querySelectorAll('.npop').forEach(p => p.classList.remove('op'));
+  const p = document.getElementById('np_' + col);
+  if (p) { p.classList.add('op'); el.classList.add('on'); }
+}
+
+function applyNumFilter(col) {
+  const op  = document.getElementById('nop_'  + col)?.value || '';
+  const val = document.getElementById('nval_' + col)?.value || '';
+  const mn  = document.getElementById('nmin_' + col)?.value || '';
+  const mx  = document.getElementById('nmax_' + col)?.value || '';
+  S.numFilters[col] = {op, val, min: mn, max: mx};
+  document.querySelectorAll('.npop').forEach(p => p.classList.remove('op'));
+  load(1);
+}
+
+function clearNumFilter(col) {
+  S.numFilters[col] = {op:'', val:'', min:'', max:''};
+  ['nop_','nval_','nmin_','nmax_'].forEach(pfx => {
+    const el = document.getElementById(pfx + col); if (el) el.value = '';
+  });
+  document.querySelectorAll('.npop').forEach(p => p.classList.remove('op'));
+  load(1);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.th-wrap')) document.querySelectorAll('.npop').forEach(p => p.classList.remove('op'));
+});
 
 // ── Main load ─────────────────────────────────────────────────────────────────
 
@@ -524,8 +592,14 @@ async function load() {
     page: S.page,
     per_page: S.perPage,
   });
+  for (const [k, v] of Object.entries(S.numFilters)) {
+    if (v.op && v.val !== '') { params.set(k + '_op', v.op); params.set(k + '_val', v.val); }
+    if (v.min !== '') params.set(k + '_min', v.min);
+    if (v.max !== '') params.set(k + '_max', v.max);
+  }
 
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
+  renderNumHeaders();
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="14" class="te"><span class="sp"></span></td></tr>';
   document.getElementById('err-bar').style.display = 'none';
 
   try {
@@ -545,7 +619,7 @@ function showErr(msg) {
   const bar = document.getElementById('err-bar');
   bar.textContent = 'Ошибка: ' + msg;
   bar.style.display = '';
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="12" class="te">Ошибка загрузки</td></tr>';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="14" class="te">Ошибка загрузки</td></tr>';
 }
 
 // ── Render rows ───────────────────────────────────────────────────────────────
@@ -553,7 +627,7 @@ function showErr(msg) {
 function renderRows(rows) {
   const tbody = document.getElementById('tbl-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="te">Нет данных</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="te">Нет данных</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map((r, i) => {
@@ -568,9 +642,11 @@ function renderRows(rows) {
       <td class="n" style="font-size:12px;white-space:nowrap">${esc(r.asin || '—')}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="${esc(r.title || '')}">${esc(r.title || '—')}</td>
       <td>${ptBadge}</td>
-      <td class="r n gn">${fmtMoney(r.organic_royalties)}</td>
+      <td class="r n gn">${fmtMoney(r.total_sales)}</td>
+      <td class="r n bn">${fmtMoney(r.ad_sales)}</td>
+      <td class="r n">${fmtNum(r.total_units)}</td>
+      <td class="r n">${fmtNum(r.ad_orders)}</td>
       <td class="r n an">${fmtMoney(r.ad_spend)}</td>
-      <td class="r n bn">${fmtMoney(r.attributed_sales)}</td>
       <td class="r n ${adShareColor(r.ad_share_pct)}">${fmtPct(r.ad_share_pct)}</td>
       <td class="r n ${tacosColor(r.tacos)}">${fmtPct(r.tacos)}</td>
       <td class="r n ${acosColor(r.acos)}">${fmtPct(r.acos)}</td>
@@ -589,13 +665,11 @@ function esc(s) {
 
 function renderSummary(sum, total) {
   document.getElementById('s-total').textContent     = fmtNum(total);
-  document.getElementById('s-royalties').textContent = fmtMoney(sum.sum_royalties);
+  document.getElementById('s-royalties').textContent = fmtMoney(sum.sum_total_sales);
   document.getElementById('s-spend').textContent     = fmtMoney(sum.sum_spend);
-  document.getElementById('s-attr').textContent      = fmtMoney(sum.sum_attr_sales);
+  document.getElementById('s-attr').textContent      = fmtMoney(sum.sum_ad_sales);
   document.getElementById('s-clicks').textContent    = fmtNum(sum.sum_clicks);
-  const tacos = (sum.sum_royalties + sum.sum_attr_sales) > 0
-    ? (sum.sum_spend / (sum.sum_royalties + sum.sum_attr_sales) * 100)
-    : null;
+  const tacos = sum.sum_total_sales > 0 ? (sum.sum_spend / sum.sum_total_sales * 100) : null;
   const tacoEl = document.getElementById('s-tacos');
   tacoEl.textContent = tacos != null ? tacos.toFixed(1) + '%' : '—';
   tacoEl.className = 'sv ' + tacosColor(tacos);
@@ -666,7 +740,7 @@ function toggleDetail(asin, mkt, tr) {
   // Insert detail row
   const detailTr = document.createElement('tr');
   detailTr.className = 'detail-row';
-  detailTr.innerHTML = `<td colspan="12">
+  detailTr.innerHTML = `<td colspan="14">
     <div class="detail-panel">
       <div>
         <div class="detail-section-title">Недельный тренд</div>

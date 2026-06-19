@@ -10,10 +10,34 @@ PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 ALLOWED_SORT = {
-    'asin', 'title', 'product_type', 'organic_units', 'organic_royalties',
-    'clicks', 'ad_spend', 'attributed_orders', 'attributed_sales',
+    'asin', 'title', 'product_type', 'total_units', 'total_sales',
+    'clicks', 'ad_spend', 'ad_orders', 'ad_sales',
     'ad_share_pct', 'tacos', 'acos', 'cpc',
 }
+
+NUM_FIELDS = ['total_sales', 'total_units', 'ad_spend', 'ad_sales', 'ad_orders',
+              'clicks', 'cpc', 'tacos', 'acos', 'ad_share_pct']
+
+OP_MAP = {'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<=', 'eq': '='}
+
+
+def _build_num_where(args):
+    parts = []
+    for fld in NUM_FIELDS:
+        op  = args.get(fld + '_op', '')
+        val = args.get(fld + '_val', '')
+        mn  = args.get(fld + '_min', '')
+        mx  = args.get(fld + '_max', '')
+        if op and val != '' and op in OP_MAP:
+            try: parts.append(f'{fld} {OP_MAP[op]} {float(val)}')
+            except ValueError: pass
+        if mn != '':
+            try: parts.append(f'{fld} >= {float(mn)}')
+            except ValueError: pass
+        if mx != '':
+            try: parts.append(f'{fld} <= {float(mx)}')
+            except ValueError: pass
+    return ('WHERE ' + ' AND '.join(parts)) if parts else ''
 
 # earnings table stores marketplace as domain suffix (from Merch CSV): .com, .co.uk, .de ...
 MKT_DOMAIN_MAP = {
@@ -93,6 +117,8 @@ def sales_comparison_data():
     elif ad_filter == 'organic':
         ad_cond = 'AND COALESCE(ads.ad_spend, 0) = 0'
 
+    num_where = _build_num_where(args)
+
     if account_type == 'MERCH':
         earn_table = f"{PROJECT_ID}.{DATASET}.earnings"
         asin_table = f"{PROJECT_ID}.{DATASET}.asin_stats_merch"
@@ -140,7 +166,7 @@ ads AS (
   GROUP BY a.advertised_asin, a.marketplace
 ),
 cat AS (
-  SELECT asin, marketplace, image_url, status,
+  SELECT asin, marketplace, title, product_type, image_url, status,
     ROW_NUMBER() OVER (PARTITION BY asin, marketplace ORDER BY imported_at DESC) rn
   FROM `{cat_table}`
 ),
@@ -151,17 +177,19 @@ base AS (
     COALESCE(o.title, c.title, '') AS title,
     COALESCE(o.product_type, c.product_type, '') AS product_type,
     c.image_url, c.status,
-    COALESCE(o.organic_units, 0) AS organic_units,
-    COALESCE(o.organic_royalties, 0) AS organic_royalties,
+    COALESCE(o.organic_units, 0) AS total_units,
+    COALESCE(o.organic_royalties, 0) AS total_sales,
     COALESCE(ads.clicks, 0) AS clicks,
     COALESCE(ads.ad_spend, 0) AS ad_spend,
-    COALESCE(ads.attributed_orders, 0) AS attributed_orders,
-    COALESCE(ads.attributed_sales, 0) AS attributed_sales,
-    CASE WHEN (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) > 0
-         THEN ROUND(COALESCE(ads.attributed_sales,0) / (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) * 100, 1)
+    COALESCE(ads.attributed_orders, 0) AS ad_orders,
+    COALESCE(ads.attributed_sales, 0) AS ad_sales,
+    -- ad_share: attributed_sales / total_sales (capped at 100%)
+    CASE WHEN COALESCE(o.organic_royalties,0) > 0
+         THEN LEAST(ROUND(COALESCE(ads.attributed_sales,0) / o.organic_royalties * 100, 1), 100.0)
          ELSE NULL END AS ad_share_pct,
-    CASE WHEN (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) * 100, 1)
+    -- TACoS: ad_spend / total_sales
+    CASE WHEN COALESCE(o.organic_royalties,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.organic_royalties * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
@@ -173,14 +201,15 @@ base AS (
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
   LEFT JOIN cat c ON c.asin = COALESCE(o.asin, ads.asin) AND c.marketplace = COALESCE(o.marketplace, ads.marketplace) AND c.rn = 1
   WHERE 1=1 {name_cond} {pt_cond} {ad_cond} {portfolio_cond}
-)
+),
+filtered AS (SELECT * FROM base {num_where})
 SELECT *, COUNT(*) OVER() AS _total,
-  ROUND(SUM(organic_royalties) OVER(), 2) AS _sum_royalties,
+  ROUND(SUM(total_sales) OVER(), 2) AS _sum_total_sales,
   ROUND(SUM(ad_spend) OVER(), 2) AS _sum_spend,
-  ROUND(SUM(attributed_sales) OVER(), 2) AS _sum_attr_sales,
+  ROUND(SUM(ad_sales) OVER(), 2) AS _sum_ad_sales,
   SUM(clicks) OVER() AS _sum_clicks,
-  SUM(organic_units) OVER() AS _sum_units
-FROM base
+  SUM(total_units) OVER() AS _sum_units
+FROM filtered
 ORDER BY {sort_by} {sort_dir} NULLS LAST
 LIMIT {per_page} OFFSET {offset}
 """
@@ -217,17 +246,17 @@ base AS (
     COALESCE(o.product_type, '') AS product_type,
     CAST(NULL AS STRING) AS image_url,
     CAST(NULL AS STRING) AS status,
-    COALESCE(o.organic_units, 0) AS organic_units,
-    COALESCE(o.organic_royalties, 0) AS organic_royalties,
+    COALESCE(o.organic_units, 0) AS total_units,
+    COALESCE(o.organic_royalties, 0) AS total_sales,
     COALESCE(ads.clicks, 0) AS clicks,
     COALESCE(ads.ad_spend, 0) AS ad_spend,
-    COALESCE(ads.attributed_orders, 0) AS attributed_orders,
-    COALESCE(ads.attributed_sales, 0) AS attributed_sales,
-    CASE WHEN (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) > 0
-         THEN ROUND(COALESCE(ads.attributed_sales,0) / (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) * 100, 1)
+    COALESCE(ads.attributed_orders, 0) AS ad_orders,
+    COALESCE(ads.attributed_sales, 0) AS ad_sales,
+    CASE WHEN COALESCE(o.organic_royalties,0) > 0
+         THEN LEAST(ROUND(COALESCE(ads.attributed_sales,0) / o.organic_royalties * 100, 1), 100.0)
          ELSE NULL END AS ad_share_pct,
-    CASE WHEN (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / (COALESCE(o.organic_royalties,0) + COALESCE(ads.attributed_sales,0)) * 100, 1)
+    CASE WHEN COALESCE(o.organic_royalties,0) > 0
+         THEN ROUND(COALESCE(ads.ad_spend,0) / o.organic_royalties * 100, 1)
          ELSE NULL END AS tacos,
     CASE WHEN COALESCE(ads.clicks,0) > 0
          THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
@@ -238,14 +267,15 @@ base AS (
   FROM organic o
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
   WHERE 1=1 {name_cond} {pt_cond} {ad_cond}
-)
+),
+filtered AS (SELECT * FROM base {num_where})
 SELECT *, COUNT(*) OVER() AS _total,
-  ROUND(SUM(organic_royalties) OVER(), 2) AS _sum_royalties,
+  ROUND(SUM(total_sales) OVER(), 2) AS _sum_total_sales,
   ROUND(SUM(ad_spend) OVER(), 2) AS _sum_spend,
-  ROUND(SUM(attributed_sales) OVER(), 2) AS _sum_attr_sales,
+  ROUND(SUM(ad_sales) OVER(), 2) AS _sum_ad_sales,
   SUM(clicks) OVER() AS _sum_clicks,
-  SUM(organic_units) OVER() AS _sum_units
-FROM base
+  SUM(total_units) OVER() AS _sum_units
+FROM filtered
 ORDER BY {sort_by} {sort_dir} NULLS LAST
 LIMIT {per_page} OFFSET {offset}
 """
@@ -259,18 +289,18 @@ LIMIT {per_page} OFFSET {offset}
     if not rows:
         return jsonify({
             'rows': [], 'total': 0, 'page': page, 'per_page': per_page,
-            'summary': {'sum_royalties': 0, 'sum_spend': 0, 'sum_attr_sales': 0,
+            'summary': {'sum_total_sales': 0, 'sum_spend': 0, 'sum_ad_sales': 0,
                         'sum_clicks': 0, 'sum_units': 0}
         })
 
-    total          = int(rows[0]['_total'])
-    sum_royalties  = float(rows[0]['_sum_royalties'] or 0)
-    sum_spend      = float(rows[0]['_sum_spend'] or 0)
-    sum_attr_sales = float(rows[0]['_sum_attr_sales'] or 0)
-    sum_clicks     = int(rows[0]['_sum_clicks'] or 0)
-    sum_units      = int(rows[0]['_sum_units'] or 0)
+    total           = int(rows[0]['_total'])
+    sum_total_sales = float(rows[0]['_sum_total_sales'] or 0)
+    sum_spend       = float(rows[0]['_sum_spend'] or 0)
+    sum_ad_sales    = float(rows[0]['_sum_ad_sales'] or 0)
+    sum_clicks      = int(rows[0]['_sum_clicks'] or 0)
+    sum_units       = int(rows[0]['_sum_units'] or 0)
 
-    skip = {'_total', '_sum_royalties', '_sum_spend', '_sum_attr_sales', '_sum_clicks', '_sum_units'}
+    skip = {'_total', '_sum_total_sales', '_sum_spend', '_sum_ad_sales', '_sum_clicks', '_sum_units'}
     result_rows = [{k: _cvt(v) for k, v in dict(r).items() if k not in skip} for r in rows]
 
     return jsonify({
@@ -279,9 +309,9 @@ LIMIT {per_page} OFFSET {offset}
         'page': page,
         'per_page': per_page,
         'summary': {
-            'sum_royalties': sum_royalties,
+            'sum_total_sales': sum_total_sales,
             'sum_spend': sum_spend,
-            'sum_attr_sales': sum_attr_sales,
+            'sum_ad_sales': sum_ad_sales,
             'sum_clicks': sum_clicks,
             'sum_units': sum_units,
         }
