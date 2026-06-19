@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Сравнение продаж · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.2);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-anchor:none}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+nav{display:flex;gap:2px}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+main{padding:18px 32px;max-width:1820px;margin:0 auto}
+
+/* Filter panel */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.mode-row{display:flex;align-items:center;gap:8px;padding-top:10px;margin-top:10px;border-top:1px solid var(--border);flex-wrap:wrap}
+.mode-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mbt{height:28px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* Portfolio dropdown */
+.pdw{position:relative}
+.pdt{height:34px;min-width:160px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:300px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+
+/* Summary bar */
+.sr{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.sv{font-size:16px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}
+
+/* Table */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.s{color:var(--accent)}
+thead th.ns{cursor:default}
+thead th.ns:hover{color:var(--muted)}
+tr.dr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+tr.dr.open{background:var(--accent-bg)}
+td{padding:8px 11px;vertical-align:middle}
+
+/* Badges */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+/* Numbers */
+.n{font-family:'DM Mono',monospace;font-size:12px}
+td.r{text-align:right}
+.gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
+.ok{color:var(--green);font-weight:600}.hi{color:var(--amber);font-weight:600}.cr{color:var(--red);font-weight:600}.dv{color:var(--dim)}
+.eb{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px}
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Pagination */
+.pg{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);gap:12px}
+.pg-right{display:flex;align-items:center;gap:12px}
+.per-page-sel{height:26px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;padding:0 6px;cursor:pointer;outline:none}
+.pi{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.pb{display:flex;gap:4px}
+.pbb{height:28px;min-width:28px;padding:0 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pbb:hover{background:var(--surface2)}.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbb:disabled{opacity:.4;cursor:not-allowed}
+.sa{opacity:.3;margin-left:2px}
+thead th.s .sa{opacity:1;color:var(--accent)}
+.th-wrap{display:flex;align-items:center;gap:3px;justify-content:flex-end;position:relative}
+.th-wrap.left{justify-content:flex-start}
+.th-sort{cursor:pointer;display:flex;align-items:center;gap:2px;flex:1;min-width:0}
+.th-sort.left{justify-content:flex-start}
+
+/* Thumbnail */
+.thumb{width:32px;height:32px;border-radius:4px;object-fit:cover;border:1px solid var(--border);background:var(--surface2)}
+.thumb-ph{width:32px;height:32px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:11px}
+
+/* ASIN cell */
+.asin-cell{display:flex;flex-direction:column;gap:2px}
+.asin-code{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.asin-title{font-size:11px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* Detail row */
+tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
+.detail-panel{padding:20px 24px;background:#fafbfc;display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.detail-chart-wrap{position:relative;height:220px}
+.detail-camp-table{font-size:12px}
+.detail-camp-table table{font-size:12px}
+.detail-camp-table thead th{font-size:9px;padding:6px 8px}
+.detail-camp-table td{padding:6px 8px}
+.detail-section-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.detail-loading{padding:40px;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+    </div>
+    Amazon Ads Automation
+  </div>
+  <nav>
+    <a href="/">Главная</a>
+    <a href="/analytics/campaigns">Кампании</a>
+    <a href="/search-terms">Запросы</a>
+    <a href="/sales-comparison" class="active">Продажи</a>
+  </nav>
+</header>
+
+<main>
+
+<div id="err-bar" class="eb" style="display:none"></div>
+
+<!-- Filters -->
+<div class="fp">
+  <div class="fr">
+    <!-- Account type -->
+    <div class="fg">
+      <span class="fl">Аккаунт</span>
+      <div class="at">
+        <button class="atb on" onclick="setAcct('MERCH')">MERCH</button>
+        <button class="atb" onclick="setAcct('KDP')">KDP</button>
+      </div>
+    </div>
+
+    <!-- Dates -->
+    <div class="fg">
+      <span class="fl">От</span>
+      <input type="date" id="date-from" oninput="S.dateFrom=this.value;S.page=1;load()">
+    </div>
+    <div class="fg">
+      <span class="fl">До</span>
+      <input type="date" id="date-to" oninput="S.dateTo=this.value;S.page=1;load()">
+    </div>
+
+    <!-- Marketplace -->
+    <div class="fg">
+      <span class="fl">Маркетплейс</span>
+      <div class="at" id="mkt-btns">
+        <button class="atb on" onclick="setMkt('US')">US</button>
+        <button class="atb" onclick="setMkt('DE')">DE</button>
+        <button class="atb" onclick="setMkt('UK')">UK</button>
+        <button class="atb" onclick="setMkt('FR')">FR</button>
+        <button class="atb" onclick="setMkt('ES')">ES</button>
+        <button class="atb" onclick="setMkt('IT')">IT</button>
+      </div>
+    </div>
+
+    <!-- Portfolio (MERCH only) -->
+    <div class="fg" id="portfolio-wrap">
+      <span class="fl">Портфолио</span>
+      <div class="pdw">
+        <div class="pdt" id="pf-trigger" onclick="togglePfDrop()">
+          <span id="pf-label">Все</span>
+        </div>
+        <span class="pda">▾</span>
+        <div class="pdd" id="pf-drop">
+          <input class="pds" placeholder="Поиск..." oninput="filterPfItems(this.value)">
+          <div id="pf-items"><div class="pd-empty">Загрузка...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Name search -->
+    <div class="fg">
+      <span class="fl">Поиск</span>
+      <input type="text" id="name-inp" placeholder="ASIN или название..." style="min-width:200px"
+             oninput="S.name=this.value;S.page=1;debounceLoad()">
+    </div>
+
+    <!-- Per page -->
+    <div class="fg" style="margin-left:auto">
+      <span class="fl">На странице</span>
+      <select class="per-page-sel" style="height:34px" onchange="S.perPage=+this.value;S.page=1;load()">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Mode rows -->
+  <div class="mode-row">
+    <span class="mode-lbl">Тип</span>
+    <div id="pt-btns" class="at"></div>
+    <div class="sep"></div>
+    <span class="mode-lbl">Реклама</span>
+    <div class="at">
+      <button class="mbt on" onclick="setAdFilter('')">Все</button>
+      <button class="mbt" onclick="setAdFilter('advertised')">Только рекламируемые</button>
+      <button class="mbt" onclick="setAdFilter('organic')">Только органика</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary bar -->
+<div class="sr" id="summary-bar">
+  <div class="sc"><div class="sl">Товаров</div><div class="sv" id="s-total">—</div></div>
+  <div class="sc"><div class="sl">Продажи (роялти)</div><div class="sv g" id="s-royalties">—</div></div>
+  <div class="sc"><div class="sl">Расходы на рекламу</div><div class="sv a" id="s-spend">—</div></div>
+  <div class="sc"><div class="sl">Атриб. продажи</div><div class="sv b" id="s-attr">—</div></div>
+  <div class="sc"><div class="sl">Клики</div><div class="sv" id="s-clicks">—</div></div>
+  <div class="sc"><div class="sl">TACoS</div><div class="sv" id="s-tacos">—</div></div>
+</div>
+
+<!-- Table -->
+<div class="tw">
+  <div class="thr">
+    <span class="tt">Сравнение продаж</span>
+    <span class="tc" id="tbl-count">—</span>
+  </div>
+  <div class="tsx">
+    <table>
+      <thead>
+        <tr>
+          <th class="ns" style="width:42px">Фото</th>
+          <th class="ns">ASIN / Название</th>
+          <th class="ns">Тип</th>
+          <th onclick="sortBy('organic_royalties')" id="th-organic_royalties">Роялти <span class="sa">↕</span></th>
+          <th onclick="sortBy('ad_spend')" id="th-ad_spend">Расходы <span class="sa">↕</span></th>
+          <th onclick="sortBy('attributed_sales')" id="th-attributed_sales">Атриб. продажи <span class="sa">↕</span></th>
+          <th onclick="sortBy('ad_share_pct')" id="th-ad_share_pct">Доля рекл. <span class="sa">↕</span></th>
+          <th onclick="sortBy('tacos')" id="th-tacos">TACoS <span class="sa">↕</span></th>
+          <th onclick="sortBy('acos')" id="th-acos">ACoS <span class="sa">↕</span></th>
+          <th onclick="sortBy('clicks')" id="th-clicks">Клики <span class="sa">↕</span></th>
+          <th onclick="sortBy('cpc')" id="th-cpc">CPC <span class="sa">↕</span></th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body">
+        <tr><td colspan="11" class="te">Загрузка...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pg" id="pagination"></div>
+</div>
+
+</main>
+
+<script>
+const MERCH_TYPES = ['T-SHIRT','HOODIE','SWEATSHIRT','POPSOCKET','PHONE CASE','TANK TOP','LONG SLEEVE'];
+const KDP_TYPES   = ['eBook','Paperback','Hardcover'];
+
+const S = {
+  acct: 'MERCH', mkt: 'US', dateFrom: '', dateTo: '',
+  portfolios: [], name: '', productType: '', adFilter: '',
+  sortBy: 'ad_spend', sortDir: 'desc', page: 1, perPage: 50
+};
+
+let openAsin = null;
+let openMkt  = null;
+let openTr   = null;
+let weekChart = null;
+let pfPortfolios = [];
+let pfSelected = new Set();
+let debTimer = null;
+
+function debounceLoad() {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(load, 350);
+}
+
+// ── Account / Marketplace / Filters ──────────────────────────────────────────
+
+function setAcct(v) {
+  S.acct = v;
+  S.page = 1;
+  S.portfolios = [];
+  pfSelected.clear();
+  updatePfLabel();
+  document.querySelectorAll('[onclick^="setAcct"]').forEach(b => b.classList.toggle('on', b.textContent === v));
+  document.getElementById('portfolio-wrap').style.display = v === 'MERCH' ? '' : 'none';
+  renderPtButtons();
+  if (v === 'MERCH') loadPortfolios();
+  load();
+}
+
+function setMkt(v) {
+  S.mkt = v;
+  S.page = 1;
+  document.querySelectorAll('#mkt-btns .atb').forEach(b => b.classList.toggle('on', b.textContent === v));
+  load();
+}
+
+function setAdFilter(v) {
+  S.adFilter = v;
+  S.page = 1;
+  document.querySelectorAll('.mode-row .mbt').forEach(b => {
+    const map = {'': 'Все', 'advertised': 'Только рекламируемые', 'organic': 'Только органика'};
+    b.classList.toggle('on', map[v] === b.textContent);
+  });
+  load();
+}
+
+function setPt(v) {
+  S.productType = v;
+  S.page = 1;
+  document.querySelectorAll('#pt-btns .mbt').forEach(b => b.classList.toggle('on', b.dataset.val === v));
+  load();
+}
+
+function renderPtButtons() {
+  const types = S.acct === 'MERCH' ? MERCH_TYPES : KDP_TYPES;
+  const wrap = document.getElementById('pt-btns');
+  wrap.innerHTML = `<button class="mbt on" data-val="" onclick="setPt('')">Все</button>` +
+    types.map(t => `<button class="mbt" data-val="${t}" onclick="setPt('${t}')">${t}</button>`).join('');
+  S.productType = '';
+}
+
+// ── Portfolio dropdown ────────────────────────────────────────────────────────
+
+function togglePfDrop() {
+  const drop = document.getElementById('pf-drop');
+  const trig = document.getElementById('pf-trigger');
+  const open = drop.classList.toggle('on');
+  trig.classList.toggle('on', open);
+  if (open) drop.querySelector('input').focus();
+  if (open) document.addEventListener('click', closePfOutside, {once: true, capture: true});
+}
+
+function closePfOutside(e) {
+  const wrap = document.querySelector('.pdw');
+  if (!wrap.contains(e.target)) {
+    document.getElementById('pf-drop').classList.remove('on');
+    document.getElementById('pf-trigger').classList.remove('on');
+  } else {
+    document.addEventListener('click', closePfOutside, {once: true, capture: true});
+  }
+}
+
+function filterPfItems(q) {
+  const items = document.querySelectorAll('#pf-items .pdi');
+  items.forEach(it => {
+    it.style.display = it.querySelector('span').textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function renderPfItems() {
+  const wrap = document.getElementById('pf-items');
+  if (!pfPortfolios.length) { wrap.innerHTML = '<div class="pd-empty">Нет данных</div>'; return; }
+  wrap.innerHTML = pfPortfolios.map(p => `
+    <label class="pdi">
+      <input type="checkbox" value="${p.portfolio_id}" ${pfSelected.has(p.portfolio_id) ? 'checked' : ''}
+             onchange="togglePf('${p.portfolio_id}')">
+      <span>${p.portfolio_name || p.portfolio_id}</span>
+    </label>`).join('');
+}
+
+function togglePf(id) {
+  if (pfSelected.has(id)) pfSelected.delete(id); else pfSelected.add(id);
+  updatePfLabel();
+  S.portfolios = [...pfSelected];
+  S.page = 1;
+  load();
+}
+
+function updatePfLabel() {
+  document.getElementById('pf-label').textContent =
+    pfSelected.size === 0 ? 'Все' : `Выбрано: ${pfSelected.size}`;
+}
+
+async function loadPortfolios() {
+  try {
+    const r = await fetch(`/portfolios/list?account_type=${S.acct}`);
+    const d = await r.json();
+    pfPortfolios = d.portfolios || [];
+    renderPfItems();
+  } catch(e) {}
+}
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
+
+function fmtMoney(v) {
+  if (v == null) return '—';
+  return '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function fmtNum(v) {
+  if (v == null) return '—';
+  return Number(v).toLocaleString('en-US');
+}
+
+function fmtPct(v) {
+  if (v == null) return '—';
+  return v.toFixed(1) + '%';
+}
+
+function tacosColor(v) {
+  if (v == null) return 'dv';
+  if (v < 15)  return 'ok';
+  if (v < 35)  return 'hi';
+  return 'cr';
+}
+
+function acosColor(v) {
+  if (v == null) return 'dv';
+  if (v < 15)  return 'ok';
+  if (v < 35)  return 'hi';
+  return 'cr';
+}
+
+function adShareColor(v) {
+  if (v == null) return 'dv';
+  if (v < 30)  return 'ok';
+  if (v < 60)  return 'hi';
+  return 'cr';
+}
+
+function stateBadge(s) {
+  if (!s) return '';
+  const cls = s === 'ENABLED' ? 'be' : 'bp';
+  return `<span class="b ${cls}">${s}</span>`;
+}
+
+// ── Sorting ───────────────────────────────────────────────────────────────────
+
+function sortBy(field) {
+  if (S.sortBy === field) {
+    S.sortDir = S.sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    S.sortBy  = field;
+    S.sortDir = 'desc';
+  }
+  S.page = 1;
+  updateSortHeaders();
+  load();
+}
+
+function updateSortHeaders() {
+  const SORTABLE = ['organic_royalties','ad_spend','attributed_sales','ad_share_pct','tacos','acos','clicks','cpc'];
+  SORTABLE.forEach(f => {
+    const th = document.getElementById('th-' + f);
+    if (!th) return;
+    const arrow = f === S.sortBy ? (S.sortDir === 'desc' ? ' ↓' : ' ↑') : ' ↕';
+    th.classList.toggle('s', f === S.sortBy);
+    th.innerHTML = th.textContent.replace(/\s[↕↓↑]$/, '') + ` <span class="sa">${arrow.trim()}</span>`;
+  });
+}
+
+// ── Main load ─────────────────────────────────────────────────────────────────
+
+async function load() {
+  collapseDetail();
+  const params = new URLSearchParams({
+    account_type: S.acct,
+    marketplace: S.mkt,
+    date_from: S.dateFrom,
+    date_to: S.dateTo,
+    name: S.name,
+    product_type: S.productType,
+    ad_filter: S.adFilter,
+    portfolio_ids: S.portfolios.join(','),
+    sort_by: S.sortBy,
+    sort_dir: S.sortDir,
+    page: S.page,
+    per_page: S.perPage,
+  });
+
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="11" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('err-bar').style.display = 'none';
+
+  try {
+    const r   = await fetch('/sales-comparison/data?' + params);
+    const d   = await r.json();
+    if (d.error) { showErr(d.error); return; }
+    renderRows(d.rows);
+    renderSummary(d.summary, d.total);
+    renderPagination(d.total, d.page, d.per_page);
+    document.getElementById('tbl-count').textContent = `${fmtNum(d.total)} записей`;
+  } catch(e) {
+    showErr(e.message);
+  }
+}
+
+function showErr(msg) {
+  const bar = document.getElementById('err-bar');
+  bar.textContent = 'Ошибка: ' + msg;
+  bar.style.display = '';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="11" class="te">Ошибка загрузки</td></tr>';
+}
+
+// ── Render rows ───────────────────────────────────────────────────────────────
+
+function renderRows(rows) {
+  const tbody = document.getElementById('tbl-body');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="te">Нет данных</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => {
+    const thumb = (S.acct === 'MERCH' && r.image_url)
+      ? `<img class="thumb" src="${r.image_url}" loading="lazy" onerror="this.style.display='none'">`
+      : `<div class="thumb-ph">—</div>`;
+
+    const ptBadge = r.product_type ? `<span class="b bm">${r.product_type}</span>` : '—';
+
+    return `<tr class="dr" data-asin="${esc(r.asin)}" data-mkt="${esc(r.marketplace)}" data-idx="${i}" onclick="toggleDetail('${esc(r.asin)}','${esc(r.marketplace)}',this)">
+      <td>${thumb}</td>
+      <td>
+        <div class="asin-cell">
+          <span class="asin-code">${esc(r.asin || '—')}</span>
+          <span class="asin-title">${esc(r.title || '')}</span>
+        </div>
+      </td>
+      <td>${ptBadge}</td>
+      <td class="r n gn">${fmtMoney(r.organic_royalties)}</td>
+      <td class="r n an">${fmtMoney(r.ad_spend)}</td>
+      <td class="r n bn">${fmtMoney(r.attributed_sales)}</td>
+      <td class="r n ${adShareColor(r.ad_share_pct)}">${fmtPct(r.ad_share_pct)}</td>
+      <td class="r n ${tacosColor(r.tacos)}">${fmtPct(r.tacos)}</td>
+      <td class="r n ${acosColor(r.acos)}">${fmtPct(r.acos)}</td>
+      <td class="r n">${fmtNum(r.clicks)}</td>
+      <td class="r n">${r.cpc != null ? fmtMoney(r.cpc) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Summary bar ───────────────────────────────────────────────────────────────
+
+function renderSummary(sum, total) {
+  document.getElementById('s-total').textContent     = fmtNum(total);
+  document.getElementById('s-royalties').textContent = fmtMoney(sum.sum_royalties);
+  document.getElementById('s-spend').textContent     = fmtMoney(sum.sum_spend);
+  document.getElementById('s-attr').textContent      = fmtMoney(sum.sum_attr_sales);
+  document.getElementById('s-clicks').textContent    = fmtNum(sum.sum_clicks);
+  const tacos = (sum.sum_royalties + sum.sum_attr_sales) > 0
+    ? (sum.sum_spend / (sum.sum_royalties + sum.sum_attr_sales) * 100)
+    : null;
+  const tacoEl = document.getElementById('s-tacos');
+  tacoEl.textContent = tacos != null ? tacos.toFixed(1) + '%' : '—';
+  tacoEl.className = 'sv ' + tacosColor(tacos);
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+function renderPagination(total, page, perPage) {
+  const pages = Math.ceil(total / perPage);
+  const pg = document.getElementById('pagination');
+  if (pages <= 1) { pg.innerHTML = ''; return; }
+
+  let btns = '';
+  const lo = Math.max(1, page - 2);
+  const hi = Math.min(pages, page + 2);
+  if (lo > 1) btns += `<button class="pbb" onclick="goPage(1)">1</button>`;
+  if (lo > 2) btns += `<button class="pbb" disabled>…</button>`;
+  for (let p = lo; p <= hi; p++) {
+    btns += `<button class="pbb ${p === page ? 'on' : ''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  if (hi < pages - 1) btns += `<button class="pbb" disabled>…</button>`;
+  if (hi < pages) btns += `<button class="pbb" onclick="goPage(${pages})">${pages}</button>`;
+
+  const from = (page - 1) * perPage + 1;
+  const to   = Math.min(page * perPage, total);
+  pg.innerHTML = `
+    <span class="pi">${from}–${to} из ${fmtNum(total)}</span>
+    <div class="pg-right">
+      <div class="pb">
+        <button class="pbb" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>
+        ${btns}
+        <button class="pbb" onclick="goPage(${page+1})" ${page===pages?'disabled':''}>›</button>
+      </div>
+    </div>`;
+}
+
+function goPage(p) {
+  S.page = p;
+  load();
+}
+
+// ── Detail row (inline expand) ────────────────────────────────────────────────
+
+function collapseDetail() {
+  if (openTr) {
+    openTr.classList.remove('open');
+    const next = openTr.nextSibling;
+    if (next && next.classList && next.classList.contains('detail-row')) next.remove();
+    openTr  = null;
+    openAsin = null;
+    openMkt  = null;
+  }
+  if (weekChart) { weekChart.destroy(); weekChart = null; }
+}
+
+function toggleDetail(asin, mkt, tr) {
+  if (openAsin === asin && openMkt === mkt) {
+    collapseDetail();
+    return;
+  }
+  collapseDetail();
+
+  openAsin = asin;
+  openMkt  = mkt;
+  openTr   = tr;
+  tr.classList.add('open');
+
+  // Insert detail row
+  const detailTr = document.createElement('tr');
+  detailTr.className = 'detail-row';
+  detailTr.innerHTML = `<td colspan="11">
+    <div class="detail-panel">
+      <div>
+        <div class="detail-section-title">Недельный тренд</div>
+        <div class="detail-chart-wrap"><canvas id="week-chart"></canvas></div>
+      </div>
+      <div>
+        <div class="detail-section-title">Кампании</div>
+        <div id="camp-wrap" class="detail-camp-table"><div class="detail-loading"><span class="sp"></span></div></div>
+      </div>
+    </div>
+  </td>`;
+  tr.parentNode.insertBefore(detailTr, tr.nextSibling);
+
+  // Fetch in parallel
+  const params = new URLSearchParams({
+    account_type: S.acct, asin, marketplace: mkt,
+    date_from: S.dateFrom, date_to: S.dateTo
+  });
+
+  Promise.all([
+    fetch('/sales-comparison/weekly?' + params).then(r => r.json()),
+    fetch('/sales-comparison/campaigns?' + params).then(r => r.json()),
+  ]).then(([wd, cd]) => {
+    renderWeekChart(wd.weeks || []);
+    renderCampTable(cd.campaigns || []);
+  }).catch(e => {
+    document.getElementById('camp-wrap').innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">Ошибка: ${e.message}</div>`;
+  });
+}
+
+// ── Weekly chart ──────────────────────────────────────────────────────────────
+
+function renderWeekChart(weeks) {
+  if (weekChart) { weekChart.destroy(); weekChart = null; }
+  const canvas = document.getElementById('week-chart');
+  if (!canvas || !weeks.length) return;
+
+  const labels  = weeks.map(w => w.week ? w.week.slice(0,10) : '');
+  const organic = weeks.map(w => w.organic_royalties || 0);
+  const attrSal = weeks.map(w => w.attributed_sales  || 0);
+  const spend   = weeks.map(w => w.ad_spend           || 0);
+
+  weekChart = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Роялти (органика)',
+          data: organic,
+          backgroundColor: 'rgba(26,143,92,0.5)',
+          borderColor: 'rgba(26,143,92,0.8)',
+          borderWidth: 1,
+          stack: 'revenue',
+          yAxisID: 'y',
+        },
+        {
+          type: 'bar',
+          label: 'Атриб. продажи',
+          data: attrSal,
+          backgroundColor: 'rgba(26,111,212,0.5)',
+          borderColor: 'rgba(26,111,212,0.8)',
+          borderWidth: 1,
+          stack: 'revenue',
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: 'Расходы на рекламу',
+          data: spend,
+          borderColor: 'rgba(200,75,20,0.9)',
+          backgroundColor: 'rgba(200,75,20,0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.3,
+          yAxisID: 'y2',
+          fill: false,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+        y: {
+          stacked: true,
+          position: 'left',
+          ticks: { font: { size: 10 }, callback: v => '$' + v },
+        },
+        y2: {
+          stacked: false,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { font: { size: 10 }, callback: v => '$' + v },
+        }
+      }
+    }
+  });
+}
+
+// ── Campaign table ────────────────────────────────────────────────────────────
+
+function renderCampTable(camps) {
+  const wrap = document.getElementById('camp-wrap');
+  if (!camps.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px">Нет данных</div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th style="text-align:left">Кампания</th>
+      <th>Статус</th>
+      <th>Клики</th>
+      <th>Расходы</th>
+      <th>Атриб.</th>
+      <th>ACoS</th>
+    </tr></thead>
+    <tbody>
+    ${camps.map(c => `<tr class="dr">
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.campaign_name)}">${esc(c.campaign_name)}</td>
+      <td>${stateBadge(c.campaign_state)}</td>
+      <td class="r n">${fmtNum(c.clicks)}</td>
+      <td class="r n an">${fmtMoney(c.ad_spend)}</td>
+      <td class="r n bn">${fmtMoney(c.attributed_sales)}</td>
+      <td class="r n ${acosColor(c.acos)}">${fmtPct(c.acos)}</td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+function init() {
+  // Default dates: last 30 days
+  const today = new Date();
+  const from  = new Date(today);
+  from.setDate(today.getDate() - 30);
+  const fmt = d => d.toISOString().slice(0,10);
+  S.dateFrom = fmt(from);
+  S.dateTo   = fmt(today);
+  document.getElementById('date-from').value = S.dateFrom;
+  document.getElementById('date-to').value   = S.dateTo;
+
+  renderPtButtons();
+  loadPortfolios();
+  load();
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.pdw')) {
+      document.getElementById('pf-drop').classList.remove('on');
+      document.getElementById('pf-trigger').classList.remove('on');
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
