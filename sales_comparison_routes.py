@@ -207,13 +207,14 @@ earn_keyed AS (
   SELECT
     COALESCE(c.design_id, e.asin)            AS grp_key,
     COALESCE(c.product_type_norm, e.earn_pt) AS pt_key,
+    '{safe_mkt}'                              AS marketplace,
     e.total_units, e.royalties, e.total_revenue,
     c.title, c.image_url, c.status
   FROM earn_raw e
   LEFT JOIN cat1 c ON c.asin = e.asin AND c.marketplace = '{safe_mkt}'
 ),
 organic AS (
-  SELECT grp_key, pt_key, '{safe_mkt}' AS marketplace,
+  SELECT grp_key, pt_key, marketplace,
     SUM(total_units)        AS total_units,
     ROUND(SUM(royalties),2) AS royalties,
     ROUND(SUM(total_revenue),2) AS total_revenue,
@@ -221,7 +222,7 @@ organic AS (
     MAX(image_url) AS image_url,
     MAX(status)    AS status
   FROM earn_keyed
-  GROUP BY grp_key, pt_key
+  GROUP BY grp_key, pt_key, marketplace
 ),
 ads_raw AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
@@ -285,7 +286,7 @@ base AS (
          THEN ROUND(COALESCE(a.ad_spend,0) / a.ad_sales * 100, 1)
          ELSE NULL END AS acos
   FROM organic o
-  FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key
+  FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key AND a.marketplace = o.marketplace
   WHERE 1=1 {name_cond} {pt_cond} {ad_cond} {portfolio_cond}
 ),
 filtered AS (SELECT * FROM base {num_where})
