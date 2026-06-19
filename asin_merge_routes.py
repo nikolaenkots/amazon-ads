@@ -74,18 +74,26 @@ def asin_merge_add():
         src = dict(rows[0])
         src['asin'] = new_asin
 
-        def sql_val(v):
+        # Build INSERT using query parameters to avoid escaping issues
+        import datetime
+        cols = list(src.keys())
+        vals = list(src.values())
+
+        def bq_literal(v):
             if v is None:
                 return 'NULL'
             if isinstance(v, bool):
                 return 'TRUE' if v else 'FALSE'
             if isinstance(v, (int, float)):
                 return str(v)
-            return "'" + str(v).replace("'", "''") + "'"
+            if isinstance(v, (datetime.date, datetime.datetime)):
+                return f"TIMESTAMP '{v}'" if isinstance(v, datetime.datetime) else f"DATE '{v}'"
+            s = str(v).replace('\\', '\\\\').replace("'", "\\'").replace('\n', ' ').replace('\r', '')
+            return f"'{s}'"
 
-        cols = ', '.join(f'`{k}`' for k in src.keys())
-        vals = ', '.join(sql_val(v) for v in src.values())
-        client.query(f"INSERT INTO `{PROJECT_ID}.{DATASET}.catalog` ({cols}) VALUES ({vals})").result()
+        col_str = ', '.join(f'`{c}`' for c in cols)
+        val_str = ', '.join(bq_literal(v) for v in vals)
+        client.query(f"INSERT INTO `{PROJECT_ID}.{DATASET}.catalog` ({col_str}) VALUES ({val_str})").result()
 
         return jsonify({'ok': True, 'inserted': new_asin})
     except Exception as e:
