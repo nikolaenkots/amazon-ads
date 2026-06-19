@@ -115,6 +115,7 @@ def sales_comparison_data():
     earn_date_cond = ('AND ' + ' AND '.join(earn_date_parts)) if earn_date_parts else ''
     ads_date_cond  = ('AND ' + ' AND '.join(ads_date_parts))  if ads_date_parts  else ''
 
+    # name_cond and pt_cond applied in 'filtered' CTE where columns are unambiguous
     name_cond = ''
     if name_filter:
         sn = name_filter.replace("'", "''")
@@ -125,12 +126,9 @@ def sales_comparison_data():
         pts = [p.strip() for p in product_type.split(',') if p.strip()]
         if len(pts) == 1:
             spt = pts[0].replace("'", "''")
-            pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) LIKE UPPER('%{spt}%')"
+            pt_cond = f"AND UPPER(COALESCE(product_type, '')) LIKE UPPER('%{spt}%')"
         elif pts:
-            quoted = ', '.join(f"'{p.replace(chr(39), chr(39)*2)}'" for p in pts)
-            pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) IN ({', '.join(f'UPPER({q})' for q in [repr(p) for p in pts])})"
-            # use LIKE for each to be safe with case
-            parts = [f"UPPER(COALESCE(o.product_type,'')) LIKE UPPER('%{p.replace(chr(39), chr(39)*2)}%')" for p in pts]
+            parts = [f"UPPER(COALESCE(product_type,'')) LIKE UPPER('%{p.replace(chr(39), chr(39)*2)}%')" for p in pts]
             pt_cond = f"AND ({' OR '.join(parts)})"
 
     ad_cond = ''
@@ -287,9 +285,9 @@ base AS (
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key AND a.marketplace = o.marketplace
-  WHERE 1=1 {name_cond} {pt_cond} {ad_cond} {portfolio_cond}
+  WHERE 1=1 {ad_cond} {portfolio_cond}
 ),
-filtered AS (SELECT * FROM base {num_where})
+filtered AS (SELECT * FROM base WHERE 1=1 {name_cond} {pt_cond} {num_where.replace('WHERE','AND') if num_where else ''})
 SELECT *, COUNT(*) OVER() AS _total,
   ROUND(SUM(royalties) OVER(), 2)      AS _sum_royalties,
   ROUND(SUM(total_revenue) OVER(), 2)  AS _sum_total_revenue,
@@ -357,9 +355,9 @@ base AS (
          ELSE NULL END AS acos
   FROM organic o
   FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
-  WHERE 1=1 {name_cond} {pt_cond} {ad_cond}
+  WHERE 1=1 {ad_cond}
 ),
-filtered AS (SELECT * FROM base {num_where})
+filtered AS (SELECT * FROM base WHERE 1=1 {name_cond} {pt_cond} {num_where.replace('WHERE','AND') if num_where else ''})
 SELECT *, COUNT(*) OVER() AS _total,
   ROUND(SUM(royalties) OVER(), 2) AS _sum_royalties,
   ROUND(SUM(total_revenue) OVER(), 2) AS _sum_total_revenue,
