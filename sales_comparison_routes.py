@@ -15,15 +15,15 @@ ALLOWED_SORT = {
     'ad_share_pct', 'tacos', 'acos', 'cpc',
 }
 
-# earnings table stores marketplace as domain (from Merch CSV)
+# earnings table stores marketplace as domain suffix (from Merch CSV): .com, .co.uk, .de ...
 MKT_DOMAIN_MAP = {
-    'US': 'amazon.com',
-    'DE': 'amazon.de',
-    'UK': 'amazon.co.uk',
-    'FR': 'amazon.fr',
-    'ES': 'amazon.es',
-    'IT': 'amazon.it',
-    'JP': 'amazon.co.jp',
+    'US': '.com',
+    'DE': '.de',
+    'UK': '.co.uk',
+    'FR': '.fr',
+    'ES': '.es',
+    'IT': '.it',
+    'JP': '.co.jp',
 }
 
 

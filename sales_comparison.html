@@ -267,7 +267,8 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
       <thead>
         <tr>
           <th class="ns" style="width:42px">Фото</th>
-          <th class="ns">ASIN / Название</th>
+          <th onclick="sortBy('asin')" id="th-asin" style="width:110px">ASIN <span class="sa">↕</span></th>
+          <th class="ns">Название</th>
           <th class="ns">Тип</th>
           <th onclick="sortBy('organic_royalties')" id="th-organic_royalties">Роялти <span class="sa">↕</span></th>
           <th onclick="sortBy('ad_spend')" id="th-ad_spend">Расходы <span class="sa">↕</span></th>
@@ -280,7 +281,7 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
         </tr>
       </thead>
       <tbody id="tbl-body">
-        <tr><td colspan="11" class="te">Загрузка...</td></tr>
+        <tr><td colspan="12" class="te">Загрузка...</td></tr>
       </tbody>
     </table>
   </div>
@@ -290,8 +291,24 @@ tr.detail-row td{padding:0;border-bottom:1px solid var(--border)}
 </main>
 
 <script>
-const MERCH_TYPES = ['T-SHIRT','HOODIE','SWEATSHIRT','POPSOCKET','PHONE CASE','TANK TOP','LONG SLEEVE'];
-const KDP_TYPES   = ['eBook','Paperback','Hardcover'];
+// Values must match product_type field in earnings table (case-insensitive LIKE)
+const MERCH_TYPES = [
+  {label:'Standard t-shirt', val:'Standard t-shirt'},
+  {label:'Pullover hoodie',  val:'Pullover hoodie'},
+  {label:'Long sleeve',      val:'Long sleeve'},
+  {label:'Sweatshirt',       val:'Sweatshirt'},
+  {label:'Tank top',         val:'Tank top'},
+  {label:'V-neck',           val:'V-neck'},
+  {label:'Zip hoodie',       val:'Zip hoodie'},
+  {label:'PopSockets',       val:'PopSockets'},
+  {label:'iPhone cases',     val:'iPhone cases'},
+  {label:'Premium t-shirt',  val:'Premium t-shirt'},
+];
+const KDP_TYPES = [
+  {label:'eBook',      val:'eBook'},
+  {label:'Paperback',  val:'Paperback'},
+  {label:'Hardcover',  val:'Hardcover'},
+];
 
 const S = {
   acct: 'MERCH', mkt: 'US', dateFrom: '', dateTo: '',
@@ -355,7 +372,7 @@ function renderPtButtons() {
   const types = S.acct === 'MERCH' ? MERCH_TYPES : KDP_TYPES;
   const wrap = document.getElementById('pt-btns');
   wrap.innerHTML = `<button class="mbt on" data-val="" onclick="setPt('')">Все</button>` +
-    types.map(t => `<button class="mbt" data-val="${t}" onclick="setPt('${t}')">${t}</button>`).join('');
+    types.map(t => `<button class="mbt" data-val="${esc(t.val)}" onclick="setPt('${esc(t.val)}')">${t.label}</button>`).join('');
   S.productType = '';
 }
 
@@ -508,7 +525,7 @@ async function load() {
     per_page: S.perPage,
   });
 
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="11" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
   document.getElementById('err-bar').style.display = 'none';
 
   try {
@@ -528,7 +545,7 @@ function showErr(msg) {
   const bar = document.getElementById('err-bar');
   bar.textContent = 'Ошибка: ' + msg;
   bar.style.display = '';
-  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="11" class="te">Ошибка загрузки</td></tr>';
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="12" class="te">Ошибка загрузки</td></tr>';
 }
 
 // ── Render rows ───────────────────────────────────────────────────────────────
@@ -536,7 +553,7 @@ function showErr(msg) {
 function renderRows(rows) {
   const tbody = document.getElementById('tbl-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="te">Нет данных</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="te">Нет данных</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map((r, i) => {
@@ -548,12 +565,8 @@ function renderRows(rows) {
 
     return `<tr class="dr" data-asin="${esc(r.asin)}" data-mkt="${esc(r.marketplace)}" data-idx="${i}" onclick="toggleDetail('${esc(r.asin)}','${esc(r.marketplace)}',this)">
       <td>${thumb}</td>
-      <td>
-        <div class="asin-cell">
-          <span class="asin-code">${esc(r.asin || '—')}</span>
-          <span class="asin-title">${esc(r.title || '')}</span>
-        </div>
-      </td>
+      <td class="n" style="font-size:12px;white-space:nowrap">${esc(r.asin || '—')}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="${esc(r.title || '')}">${esc(r.title || '—')}</td>
       <td>${ptBadge}</td>
       <td class="r n gn">${fmtMoney(r.organic_royalties)}</td>
       <td class="r n an">${fmtMoney(r.ad_spend)}</td>
@@ -653,7 +666,7 @@ function toggleDetail(asin, mkt, tr) {
   // Insert detail row
   const detailTr = document.createElement('tr');
   detailTr.className = 'detail-row';
-  detailTr.innerHTML = `<td colspan="11">
+  detailTr.innerHTML = `<td colspan="12">
     <div class="detail-panel">
       <div>
         <div class="detail-section-title">Недельный тренд</div>
