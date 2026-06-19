@@ -714,9 +714,10 @@ function renderRows(rows) {
 
     const ptBadge = r.product_type ? `<span class="b bm">${r.product_type}</span>` : '—';
 
-    return `<tr class="dr" data-asin="${esc(r.asin)}" data-mkt="${esc(r.marketplace)}" data-idx="${i}" onclick="toggleDetail('${esc(r.asin)}','${esc(r.marketplace)}',this)">
+    const displayAsin = r.primary_asin || r.asin;
+    return `<tr class="dr" data-asin="${esc(displayAsin)}" data-mkt="${esc(r.marketplace)}" data-idx="${i}" onclick="toggleDetail('${esc(displayAsin)}','${esc(r.marketplace)}',this)">
       <td>${thumb}</td>
-      <td class="n" style="font-size:12px;white-space:nowrap">${esc(r.asin || '—')}</td>
+      <td class="n" style="font-size:12px;white-space:nowrap">${esc(displayAsin || '—')}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px" title="${esc(r.title || '')}">${esc(r.title || '—')}</td>
       <td>${ptBadge}</td>
       <td class="r n gn">${fmtMoney(r.royalties)}</td>

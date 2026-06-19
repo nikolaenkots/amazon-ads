@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Слияние ASIN — Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--green:#1a8f5c;--red:#c0392b;--blue:#1a6fd4;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;gap:16px;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+a.back{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:5px}
+a.back:hover{border-color:var(--accent);color:var(--accent)}
+main{max-width:900px;margin:0 auto;padding:32px}
+h2{font-size:18px;font-weight:600;margin-bottom:4px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
+.card-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:14px}
+
+/* Form */
+.row{display:flex;gap:10px;align-items:flex-end}
+.fld{flex:1}
+label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:4px}
+input[type=text]{width:100%;height:38px;border:1px solid var(--border);border-radius:6px;padding:0 12px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+input[type=text]:focus{border-color:var(--accent)}
+.btn{height:38px;padding:0 18px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--border)}
+
+/* Preview */
+.preview{margin-top:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;display:none}
+.preview.show{display:flex;gap:14px;align-items:flex-start}
+.preview img{width:56px;height:56px;object-fit:contain;border-radius:5px;flex-shrink:0;background:var(--surface)}
+.preview-info{flex:1;min-width:0}
+.preview-title{font-size:13px;font-weight:500;margin-bottom:6px}
+.preview-meta{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace}
+
+/* Add section */
+.add-section{margin-top:16px;display:none;padding-top:16px;border-top:1px solid var(--border)}
+.add-section.show{display:block}
+
+/* Status */
+.msg{margin-top:12px;font-size:13px;padding:10px 14px;border-radius:6px;display:none}
+.msg.show{display:block}
+.msg.ok{background:rgba(26,143,92,.1);color:var(--green);border:1px solid rgba(26,143,92,.2)}
+.msg.err{background:rgba(192,57,43,.1);color:var(--red);border:1px solid rgba(192,57,43,.2)}
+
+/* Groups table */
+.gtable{width:100%;border-collapse:collapse;font-size:12px}
+.gtable th{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border)}
+.gtable td{padding:8px 10px;border-bottom:1px solid var(--surface2);vertical-align:top}
+.gtable tr:hover td{background:var(--surface2)}
+.asins-list{font-family:'DM Mono',monospace;color:var(--blue);font-size:11px}
+.cnt-badge{display:inline-block;background:var(--accent);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-family:'DM Mono',monospace}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="#fff"/><rect x="8" y="1" width="5" height="5" rx="1.5" fill="#fff" opacity=".6"/><rect x="1" y="8" width="5" height="5" rx="1.5" fill="#fff" opacity=".6"/><rect x="8" y="8" width="5" height="5" rx="1.5" fill="#fff"/></svg>
+    </div>
+    Amazon Ads
+  </div>
+  <a href="/" class="back">← Главная</a>
+</header>
+
+<main>
+  <h2>Слияние ASIN</h2>
+  <p class="sub">Добавить дубль ASIN в каталог — когда один дизайн продаётся под разными ASINами, чтобы объединить данные о продажах и рекламе.</p>
+
+  <!-- Add form -->
+  <div class="card">
+    <div class="card-title">Добавить новый ASIN к дизайну</div>
+    <div class="row">
+      <div class="fld">
+        <label>Исходный ASIN (уже есть в каталоге)</label>
+        <input type="text" id="src-asin" placeholder="B0FT3S9J6T" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')lookupAsin()">
+      </div>
+      <button class="btn btn-p" onclick="lookupAsin()">Найти</button>
+    </div>
+
+    <div class="preview" id="preview">
+      <img id="prev-img" src="" alt="">
+      <div class="preview-info">
+        <div class="preview-title" id="prev-title"></div>
+        <div class="preview-meta" id="prev-meta"></div>
+      </div>
+    </div>
+
+    <div class="add-section" id="add-section">
+      <div class="row">
+        <div class="fld">
+          <label>Новый ASIN (добавить в каталог с тем же design_id)</label>
+          <input type="text" id="new-asin" placeholder="B0GJ41KXC9" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')addAsin()">
+        </div>
+        <button class="btn btn-p" onclick="addAsin()">Добавить</button>
+      </div>
+      <div class="msg" id="add-msg"></div>
+    </div>
+  </div>
+
+  <!-- Existing groups -->
+  <div class="card">
+    <div class="card-title">Группы с несколькими ASINами <span id="grp-loading"><span class="sp"></span></span></div>
+    <div id="grp-wrap"></div>
+  </div>
+</main>
+
+<script>
+let srcData = null;
+
+async function lookupAsin() {
+  const asin = document.getElementById('src-asin').value.trim();
+  if (!asin) return;
+  const prev = document.getElementById('preview');
+  prev.className = 'preview';
+  document.getElementById('add-section').className = 'add-section';
+
+  const r = await fetch('/asin-merge/lookup?asin=' + encodeURIComponent(asin));
+  const j = await r.json();
+  if (!r.ok) { alert(j.error); return; }
+
+  srcData = j.data;
+  document.getElementById('prev-img').src = srcData.image_url || '';
+  document.getElementById('prev-title').textContent = srcData.title || '—';
+  document.getElementById('prev-meta').innerHTML = [
+    {k:'ASIN', v: srcData.asin},
+    {k:'Design ID', v: (srcData.design_id||'').slice(0,12)+'…'},
+    {k:'Тип', v: srcData.product_type},
+    {k:'Маркет', v: srcData.marketplace},
+    {k:'Статус', v: srcData.status},
+  ].map(x=>`<span class="tag">${x.k}: ${x.v||'—'}</span>`).join('');
+  prev.className = 'preview show';
+  document.getElementById('add-section').className = 'add-section show';
+  document.getElementById('add-msg').className = 'msg';
+  document.getElementById('new-asin').value = '';
+  document.getElementById('new-asin').focus();
+}
+
+async function addAsin() {
+  if (!srcData) return;
+  const newAsin = document.getElementById('new-asin').value.trim();
+  if (!newAsin) return;
+  const msg = document.getElementById('add-msg');
+  msg.className = 'msg';
+
+  const r = await fetch('/asin-merge/add', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({source_asin: srcData.asin, new_asin: newAsin})
+  });
+  const j = await r.json();
+  if (r.ok) {
+    msg.className = 'msg ok show';
+    msg.textContent = `✓ ${newAsin} добавлен в каталог с design_id ${srcData.design_id}`;
+    document.getElementById('new-asin').value = '';
+    loadGroups();
+  } else {
+    msg.className = 'msg err show';
+    msg.textContent = j.error;
+  }
+}
+
+async function loadGroups() {
+  document.getElementById('grp-loading').innerHTML = '<span class="sp"></span>';
+  const r = await fetch('/asin-merge/list');
+  const j = await r.json();
+  document.getElementById('grp-loading').innerHTML = '';
+  const wrap = document.getElementById('grp-wrap');
+  if (!j.groups || !j.groups.length) {
+    wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:8px 0">Нет групп с несколькими ASINами</p>';
+    return;
+  }
+  wrap.innerHTML = `<table class="gtable">
+    <thead><tr><th>Дизайн (сокр.)</th><th>Тип</th><th>Маркет</th><th>Название</th><th>ASINы</th><th>Кол-во</th></tr></thead>
+    <tbody>` +
+    j.groups.map(g => `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(g.design_id||'').slice(0,10)}…</td>
+      <td>${g.product_type||'—'}</td>
+      <td>${g.marketplace||'—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.title||'—'}</td>
+      <td class="asins-list">${(g.asins||'').split(',').join('<br>')}</td>
+      <td><span class="cnt-badge">${g.cnt}</span></td>
+    </tr>`).join('') +
+    `</tbody></table>`;
+}
+
+loadGroups();
+</script>
+</body>
+</html>

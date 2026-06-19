@@ -163,90 +163,139 @@ def sales_comparison_data():
   ) c ON c.campaign_id = a.campaign_id AND c.marketplace = a.marketplace AND c.rn = 1
   WHERE c.portfolio_id IN ({quoted_pids}) AND a.marketplace = '{safe_mkt}'
 ),"""
-                portfolio_cond = f"AND COALESCE(o.asin, ads.asin) IN (SELECT advertised_asin FROM portfolio_asins)"
+                portfolio_cond = f"AND COALESCE(a.primary_asin, o.grp_key) IN (SELECT advertised_asin FROM portfolio_asins)"
 
         sql = f"""
 WITH {portfolio_cte}
-organic AS (
-  SELECT e.asin, '{safe_mkt}' AS marketplace,
+cat AS (
+  SELECT asin, design_id, marketplace, title, image_url, status,
+    CASE product_type
+      WHEN 'STANDARD_TSHIRT'        THEN 'Standard t-shirt'
+      WHEN 'HOODIE'                 THEN 'Pullover hoodie'
+      WHEN 'STANDARD_PULLOVER_HOODIE' THEN 'Pullover hoodie'
+      WHEN 'SWEATSHIRT'             THEN 'Sweatshirt'
+      WHEN 'STANDARD_SWEATSHIRT'    THEN 'Sweatshirt'
+      WHEN 'TANK_TOP'               THEN 'Tank top'
+      WHEN 'LONG_SLEEVE_TEE'        THEN 'Long sleeve t-shirt'
+      WHEN 'STANDARD_LONG_SLEEVE'   THEN 'Long sleeve t-shirt'
+      WHEN 'V_NECK_TEE'             THEN 'V-neck t-shirt'
+      WHEN 'VNECK'                  THEN 'V-neck t-shirt'
+      WHEN 'ZIP_HOODIE'             THEN 'Zip hoodie'
+      WHEN 'STANDARD_ZIP_HOODIE'    THEN 'Zip hoodie'
+      WHEN 'POPSOCKET'              THEN 'PopSockets'
+      WHEN 'IPHONE_CASE'            THEN 'iPhone cases'
+      WHEN 'PREMIUM_TSHIRT'         THEN 'Premium t-shirt'
+      WHEN 'RAGLAN'                 THEN 'Raglan'
+      WHEN 'TANK_TOP'               THEN 'Tank top'
+      ELSE product_type
+    END AS product_type_norm,
+    ROW_NUMBER() OVER (PARTITION BY asin, marketplace ORDER BY imported_at DESC) rn
+  FROM `{cat_table}`
+),
+cat1 AS (SELECT * FROM cat WHERE rn = 1),
+earn_raw AS (
+  SELECT e.asin,
     SUM(e.purchased) AS total_units,
     ROUND(SUM(e.royalties), 2) AS royalties,
     ROUND(SUM(e.revenue), 2) AS total_revenue,
-    MAX(e.title) AS title,
-    MAX(e.product_type) AS product_type
+    MAX(e.product_type) AS earn_pt
   FROM `{earn_table}` e
   WHERE e.marketplace = '{earn_mkt}' {earn_date_cond}
   GROUP BY e.asin
 ),
-ads AS (
+earn_keyed AS (
+  SELECT
+    COALESCE(c.design_id, e.asin)            AS grp_key,
+    COALESCE(c.product_type_norm, e.earn_pt) AS pt_key,
+    e.total_units, e.royalties, e.total_revenue,
+    c.title, c.image_url, c.status
+  FROM earn_raw e
+  LEFT JOIN cat1 c ON c.asin = e.asin AND c.marketplace = '{safe_mkt}'
+),
+organic AS (
+  SELECT grp_key, pt_key, '{safe_mkt}' AS marketplace,
+    SUM(total_units)        AS total_units,
+    ROUND(SUM(royalties),2) AS royalties,
+    ROUND(SUM(total_revenue),2) AS total_revenue,
+    MAX(title)     AS title,
+    MAX(image_url) AS image_url,
+    MAX(status)    AS status
+  FROM earn_keyed
+  GROUP BY grp_key, pt_key
+),
+ads_raw AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
-    SUM(a.clicks) AS clicks,
-    ROUND(SUM(a.cost), 2) AS ad_spend,
-    SUM(a.purchases_14d) AS ad_orders,
+    SUM(a.clicks)           AS clicks,
+    ROUND(SUM(a.cost), 2)   AS ad_spend,
+    SUM(a.purchases_14d)    AS ad_orders,
     ROUND(SUM(a.sales_14d), 2) AS ad_sales
   FROM `{asin_table}` a
   WHERE a.marketplace = '{safe_mkt}' {ads_date_cond}
   GROUP BY a.advertised_asin, a.marketplace
 ),
-cat AS (
-  SELECT asin, marketplace, title, image_url, status,
-    CASE product_type
-      WHEN 'STANDARD_TSHIRT'   THEN 'Standard t-shirt'
-      WHEN 'HOODIE'            THEN 'Pullover hoodie'
-      WHEN 'SWEATSHIRT'        THEN 'Sweatshirt'
-      WHEN 'TANK_TOP'          THEN 'Tank top'
-      WHEN 'LONG_SLEEVE_TEE'   THEN 'Long sleeve t-shirt'
-      WHEN 'V_NECK_TEE'        THEN 'V-neck t-shirt'
-      WHEN 'ZIP_HOODIE'        THEN 'Zip hoodie'
-      WHEN 'POPSOCKET'         THEN 'PopSockets'
-      WHEN 'IPHONE_CASE'       THEN 'iPhone cases'
-      WHEN 'PREMIUM_TSHIRT'    THEN 'Premium t-shirt'
-      ELSE product_type
-    END AS product_type,
-    ROW_NUMBER() OVER (PARTITION BY asin, marketplace ORDER BY imported_at DESC) rn
-  FROM `{cat_table}`
+ads_keyed AS (
+  SELECT
+    COALESCE(c.design_id, a.asin) AS grp_key,
+    COALESCE(c.product_type_norm, '') AS pt_key,
+    a.clicks, a.ad_spend, a.ad_orders, a.ad_sales, a.marketplace,
+    c.title, c.image_url, c.status,
+    a.asin AS advertised_asin
+  FROM ads_raw a
+  LEFT JOIN cat1 c ON c.asin = a.asin AND c.marketplace = a.marketplace
+),
+ads AS (
+  SELECT grp_key, pt_key, marketplace,
+    SUM(clicks)            AS clicks,
+    ROUND(SUM(ad_spend),2) AS ad_spend,
+    SUM(ad_orders)         AS ad_orders,
+    ROUND(SUM(ad_sales),2) AS ad_sales,
+    MAX(title)              AS title,
+    MAX(image_url)          AS image_url,
+    MAX(status)             AS status,
+    MIN(advertised_asin)    AS primary_asin
+  FROM ads_keyed
+  GROUP BY grp_key, pt_key, marketplace
 ),
 base AS (
   SELECT
-    COALESCE(o.asin, ads.asin) AS asin,
-    COALESCE(o.marketplace, ads.marketplace) AS marketplace,
-    COALESCE(o.title, c.title, '') AS title,
-    COALESCE(o.product_type, c.product_type, '') AS product_type,
-    c.image_url, c.status,
-    COALESCE(o.total_units, 0) AS total_units,
-    COALESCE(o.royalties, 0) AS royalties,
+    COALESCE(o.grp_key, a.grp_key)       AS asin,
+    COALESCE(o.marketplace, a.marketplace) AS marketplace,
+    COALESCE(o.title, a.title, '')        AS title,
+    COALESCE(o.pt_key, a.pt_key, '')      AS product_type,
+    COALESCE(o.image_url, a.image_url)    AS image_url,
+    COALESCE(o.status, a.status)          AS status,
+    COALESCE(a.primary_asin, o.grp_key)  AS primary_asin,
+    COALESCE(o.total_units, 0)  AS total_units,
+    COALESCE(o.royalties, 0)    AS royalties,
     COALESCE(o.total_revenue, 0) AS total_revenue,
-    COALESCE(ads.clicks, 0) AS clicks,
-    COALESCE(ads.ad_spend, 0) AS ad_spend,
-    COALESCE(ads.ad_orders, 0) AS ad_orders,
-    COALESCE(ads.ad_sales, 0) AS ad_sales,
-    -- Доля рекламы = расходы / роялти
+    COALESCE(a.clicks, 0)       AS clicks,
+    COALESCE(a.ad_spend, 0)     AS ad_spend,
+    COALESCE(a.ad_orders, 0)    AS ad_orders,
+    COALESCE(a.ad_sales, 0)     AS ad_sales,
     CASE WHEN COALESCE(o.royalties,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / o.royalties * 100, 1)
+         THEN ROUND(COALESCE(a.ad_spend,0) / o.royalties * 100, 1)
          ELSE NULL END AS ad_share_pct,
-    -- TACoS = расходы на рекламу / продажи всего (выручка)
     CASE WHEN COALESCE(o.total_revenue,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / o.total_revenue * 100, 1)
+         THEN ROUND(COALESCE(a.ad_spend,0) / o.total_revenue * 100, 1)
          ELSE NULL END AS tacos,
-    CASE WHEN COALESCE(ads.clicks,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.clicks, 2)
+    CASE WHEN COALESCE(a.clicks,0) > 0
+         THEN ROUND(COALESCE(a.ad_spend,0) / a.clicks, 2)
          ELSE NULL END AS cpc,
-    CASE WHEN COALESCE(ads.ad_sales,0) > 0
-         THEN ROUND(COALESCE(ads.ad_spend,0) / ads.ad_sales * 100, 1)
+    CASE WHEN COALESCE(a.ad_sales,0) > 0
+         THEN ROUND(COALESCE(a.ad_spend,0) / a.ad_sales * 100, 1)
          ELSE NULL END AS acos
   FROM organic o
-  FULL OUTER JOIN ads ON ads.asin = o.asin AND ads.marketplace = o.marketplace
-  LEFT JOIN cat c ON c.asin = COALESCE(o.asin, ads.asin) AND c.marketplace = COALESCE(o.marketplace, ads.marketplace) AND c.rn = 1
+  FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key
   WHERE 1=1 {name_cond} {pt_cond} {ad_cond} {portfolio_cond}
 ),
 filtered AS (SELECT * FROM base {num_where})
 SELECT *, COUNT(*) OVER() AS _total,
-  ROUND(SUM(royalties) OVER(), 2) AS _sum_royalties,
-  ROUND(SUM(total_revenue) OVER(), 2) AS _sum_total_revenue,
-  ROUND(SUM(ad_spend) OVER(), 2) AS _sum_spend,
-  ROUND(SUM(ad_sales) OVER(), 2) AS _sum_ad_sales,
-  SUM(clicks) OVER() AS _sum_clicks,
-  SUM(total_units) OVER() AS _sum_units
+  ROUND(SUM(royalties) OVER(), 2)      AS _sum_royalties,
+  ROUND(SUM(total_revenue) OVER(), 2)  AS _sum_total_revenue,
+  ROUND(SUM(ad_spend) OVER(), 2)       AS _sum_spend,
+  ROUND(SUM(ad_sales) OVER(), 2)       AS _sum_ad_sales,
+  SUM(clicks) OVER()                   AS _sum_clicks,
+  SUM(total_units) OVER()              AS _sum_units
 FROM filtered
 ORDER BY {sort_by} {sort_dir} NULLS LAST
 LIMIT {per_page} OFFSET {offset}
