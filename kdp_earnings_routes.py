@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 import pandas as pd
 from flask import Blueprint, request, jsonify
 from google.cloud import bigquery
-from google.cloud.bigquery import LoadJobConfig, SchemaField
+from google.cloud.bigquery import LoadJobConfig, SchemaField, SchemaUpdateOption
 
 kdp_earnings_bp = Blueprint('kdp_earnings', __name__)
 
@@ -253,7 +253,7 @@ def run_kdp_earnings_import(filepath, job_id):
                 chunk, table_ref,
                 job_config=LoadJobConfig(
                     write_disposition="WRITE_APPEND",
-                    schema=BQ_SCHEMA,
+                    schema_update_options=[SchemaUpdateOption.ALLOW_FIELD_ADDITION],
                 )
             )
             errs = job.result().errors
