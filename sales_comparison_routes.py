@@ -148,8 +148,8 @@ base AS (
   SELECT
     COALESCE(o.asin, ads.asin) AS asin,
     COALESCE(o.marketplace, ads.marketplace) AS marketplace,
-    COALESCE(o.title, '') AS title,
-    COALESCE(o.product_type, '') AS product_type,
+    COALESCE(o.title, c.title, '') AS title,
+    COALESCE(o.product_type, c.product_type, '') AS product_type,
     c.image_url, c.status,
     COALESCE(o.organic_units, 0) AS organic_units,
     COALESCE(o.organic_royalties, 0) AS organic_royalties,
