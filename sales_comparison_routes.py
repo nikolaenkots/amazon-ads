@@ -15,6 +15,17 @@ ALLOWED_SORT = {
     'ad_share_pct', 'tacos', 'acos', 'cpc',
 }
 
+# earnings table stores marketplace as domain (from Merch CSV)
+MKT_DOMAIN_MAP = {
+    'US': 'amazon.com',
+    'DE': 'amazon.de',
+    'UK': 'amazon.co.uk',
+    'FR': 'amazon.fr',
+    'ES': 'amazon.es',
+    'IT': 'amazon.it',
+    'JP': 'amazon.co.jp',
+}
+
 
 def _cvt(v):
     return float(v) if isinstance(v, decimal.Decimal) else v
@@ -46,6 +57,8 @@ def sales_comparison_data():
         sort_by = 'ad_spend'
 
     safe_mkt = marketplace.replace("'", "''")
+    # earnings table stores marketplace as domain (e.g. amazon.com); map from code
+    earn_mkt = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
 
     if account_type == 'MERCH':
         earn_date_field = 'sale_date'
@@ -71,7 +84,8 @@ def sales_comparison_data():
     pt_cond = ''
     if product_type:
         spt = product_type.replace("'", "''")
-        pt_cond = f"AND COALESCE(o.product_type, '') = '{spt}'"
+        # earnings.product_type stores human values like "Standard T-Shirt"; use LIKE
+        pt_cond = f"AND UPPER(COALESCE(o.product_type, '')) LIKE UPPER('%{spt}%')"
 
     ad_cond = ''
     if ad_filter == 'advertised':
@@ -106,14 +120,14 @@ def sales_comparison_data():
         sql = f"""
 WITH {portfolio_cte}
 organic AS (
-  SELECT e.asin, e.marketplace,
+  SELECT e.asin, '{safe_mkt}' AS marketplace,
     SUM(e.purchased) AS organic_units,
     ROUND(SUM(e.royalties), 2) AS organic_royalties,
     MAX(e.title) AS title,
     MAX(e.product_type) AS product_type
   FROM `{earn_table}` e
-  WHERE e.marketplace = '{safe_mkt}' {earn_date_cond}
-  GROUP BY e.asin, e.marketplace
+  WHERE e.marketplace = '{earn_mkt}' {earn_date_cond}
+  GROUP BY e.asin
 ),
 ads AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
@@ -176,14 +190,14 @@ LIMIT {per_page} OFFSET {offset}
 
         sql = f"""
 WITH organic AS (
-  SELECT e.asin_isbn AS asin, e.marketplace,
+  SELECT e.asin_isbn AS asin, '{safe_mkt}' AS marketplace,
     SUM(e.net_units_sold) AS organic_units,
     ROUND(SUM(e.royalty), 2) AS organic_royalties,
     MAX(e.title) AS title,
     MAX(e.transaction_type) AS product_type
   FROM `{earn_table}` e
-  WHERE e.marketplace = '{safe_mkt}' {earn_date_cond}
-  GROUP BY e.asin_isbn, e.marketplace
+  WHERE e.marketplace = '{earn_mkt}' {earn_date_cond}
+  GROUP BY e.asin_isbn
 ),
 ads AS (
   SELECT a.advertised_asin AS asin, a.marketplace,
@@ -287,6 +301,8 @@ def sales_comparison_weekly():
         return jsonify({'weeks': []})
 
     safe_mkt  = marketplace.replace("'", "''")
+    # both earnings and earnings_kdp store marketplace as domain (amazon.com etc.)
+    earn_mkt  = MKT_DOMAIN_MAP.get(marketplace, safe_mkt).replace("'", "''")
     safe_asin = asin.replace("'", "''")
 
     if account_type == 'MERCH':
@@ -322,7 +338,7 @@ WITH earn_weekly AS (
     SUM(e.{earn_units_field}) AS organic_units,
     ROUND(SUM(e.{earn_royalty_field}), 2) AS organic_royalties
   FROM `{earn_table}` e
-  WHERE e.{earn_asin_field} = '{safe_asin}' AND e.marketplace = '{safe_mkt}' {earn_date_cond}
+  WHERE e.{earn_asin_field} = '{safe_asin}' AND e.marketplace = '{earn_mkt}' {earn_date_cond}
   GROUP BY 1
 ),
 ads_weekly AS (
