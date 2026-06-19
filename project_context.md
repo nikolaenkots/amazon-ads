@@ -368,6 +368,8 @@ function toast(msg, ok=true){
 | `products_routes.py` | `products_bp` | `/analytics/products` — аналитика по рекламируемым ASIN |
 | `targets_routes.py` | `targets_bp` | `/targets` — анализ таргетов (ключевые слова, авто/мануал) |
 | `control_routes.py` | `control_bp` | `/control` — управление рекламой через pending_changes |
+| `sales_comparison_routes.py` | `sales_comparison_bp` | `/sales-comparison` — сравнение продаж MBA/KDP с рекламой |
+| `asin_merge_routes.py` | `asin_merge_bp` | `/asin-merge` — слияние ASIN дубликатов в каталоге |
 
 ### HTML страницы
 
@@ -381,7 +383,9 @@ function toast(msg, ok=true){
 | `portfolios.html` | `/portfolios` | Управление портфолио |
 | `catalog.html` | `/catalog` | Импорт каталога |
 | `earnings.html` | `/earnings` | Импорт продаж Merch (CSV) |
-| `earnings_kdp.html` | `/earnings-kdp` | Импорт продаж KDP (Excel, вкладка Combined Sales) |
+| `earnings_kdp.html` | `/earnings-kdp` | Импорт продаж KDP (Excel, вкладки Paperback/Hardcover/eBook Royalty) |
+| `sales_comparison.html` | `/sales-comparison` | Сравнение продаж MBA/KDP с рекламой по дизайнам |
+| `asin_merge.html` | `/asin-merge` | Слияние ASIN-дубликатов в каталоге по design_id |
 | `ads.html` | `/ads` | Сбор статистики |
 
 ### CLI скрипты
@@ -404,15 +408,19 @@ function toast(msg, ok=true){
 
 ```
 app.py
-├── catalog_routes.py      → catalog_bp
-├── earnings_routes.py     → earnings_bp
-├── kdp_earnings_routes.py → kdp_earnings_bp
-├── ads_routes.py          → ads_bp
-├── campaigns_routes.py    → campaigns_bp
-├── portfolios.py          → portfolios_bp
-├── analytics_routes.py    → analytics_bp
-├── products_routes.py     → products_bp
-└── control_routes.py      → control_bp
+├── catalog_routes.py          → catalog_bp
+├── earnings_routes.py         → earnings_bp
+├── kdp_earnings_routes.py     → kdp_earnings_bp
+├── ads_routes.py              → ads_bp
+├── campaigns_routes.py        → campaigns_bp
+├── portfolios.py              → portfolios_bp
+├── analytics_routes.py        → analytics_bp
+├── products_routes.py         → products_bp
+├── targets_routes.py          → targets_bp
+├── search_terms_routes.py     → search_terms_bp
+├── sales_comparison_routes.py → sales_comparison_bp
+├── asin_merge_routes.py       → asin_merge_bp
+└── control_routes.py          → control_bp
 ```
 
 `progress_store = {}` — shared dict в `app.py`, используется всеми blueprints:
@@ -428,7 +436,20 @@ def _get_progress_store():
 
 ### Источник данных
 **KDP Sales Report** — Excel файл (.xlsx), скачивается из KDP Reports → Sales Dashboard.
-Используется вкладка **«Combined Sales»** — содержит все типы: Paperback, Hardcover, eBook.
+Читаются три отдельные вкладки: **Paperback Royalty**, **Hardcover Royalty**, **eBook Royalty**.
+⚠️ Вкладка **Combined Sales** НЕ используется — там нет колонки ASIN для paperback/hardcover (только ISBN-13).
+
+### Структура вкладок
+```python
+SHEETS = [
+    {"name": "Paperback Royalty",  "has_isbn": True,  "has_order_date": True},
+    {"name": "Hardcover Royalty",  "has_isbn": True,  "has_order_date": True},
+    {"name": "eBook Royalty",      "has_isbn": False, "has_order_date": False},
+]
+```
+- Все три вкладки имеют колонку **ASIN**
+- Paperback/Hardcover также имеют **ISBN** (ISBN-13) и **Order Date**
+- eBook имеет только **Royalty Date**
 
 ### Endpoints
 
@@ -439,10 +460,17 @@ def _get_progress_store():
 | `GET` | `/kdp-earnings/count` | Количество строк в таблице `earnings_kdp` |
 
 ### Шаги импорта
-1. Читаем Excel (`pandas`, вкладка `Combined Sales`, `dtype=str`)
-2. Парсим строки → dict, дедупликация по MD5-хэшу `(royalty_date, asin_isbn, marketplace, transaction_type, units_sold, units_refunded, royalty, currency)`
-3. Проверяем существующие хэши в BigQuery (батчи по 10 000)
-4. Загружаем только новые строки (`WRITE_APPEND`, чанки по 1000)
+1. Читаем три вкладки Excel (`pandas`, `dtype=str`)
+2. `parse_row(row, sheet_meta)` — извлекает ASIN из колонки `ASIN`, ISBN из `ISBN` (только pb/hc)
+3. Дедупликация внутри файла по MD5-хэшу: `(royalty_date, asin, isbn, marketplace, transaction_type, units_sold, units_refunded, royalty, currency)`
+4. `ensure_table_schema()` — добавляет новые колонки если таблица уже существует
+5. Проверяем существующие хэши в BigQuery (батчи по 10 000)
+6. Загружаем только новые строки (`WRITE_APPEND`, `ALLOW_FIELD_ADDITION`, чанки по 1000)
+
+**Важно:** `schema=BQ_SCHEMA` НЕ передаётся в `LoadJobConfig` — иначе BigQuery конфликтует с REQUIRED/NULLABLE для уже существующих колонок. Используется только `schema_update_options=[ALLOW_FIELD_ADDITION]`.
+
+### Дата в базе
+Записывается `royalty_date` — дата начисления роялти. `order_date` (когда был сделан заказ) тоже хранится для pb/hc.
 
 ### Маршрут в app.py
 ```python
@@ -1348,24 +1376,32 @@ imported_at
 
 ### earnings_kdp
 ```sql
-row_hash          -- MD5 ключ дедупликации
-royalty_date      -- DATE, партиция по этому полю
-asin_isbn         -- ASIN или ISBN-13 (STRING)
-title             -- название книги
-author            -- имя автора
-marketplace       -- Amazon.com / Amazon.co.uk / etc.
-royalty_type      -- 60% / 50%
-transaction_type  -- Standard - Paperback / Hardcover / eBook
-units_sold        -- INT64
-units_refunded    -- INT64
-net_units_sold    -- INT64
-list_price        -- средняя цена листинга без налогов
-offer_price       -- средняя цена предложения без налогов
-delivery_cost     -- средняя стоимость доставки/производства
-royalty           -- роялти в валюте
-currency          -- USD / GBP / EUR / AUD / CAD / JPY / ...
-imported_at       -- TIMESTAMP
--- Партиция: royalty_date; Кластеризация: marketplace, asin_isbn
+row_hash            -- MD5 ключ дедупликации
+royalty_date        -- DATE, дата начисления роялти
+order_date          -- DATE, дата заказа (только pb/hc, NULL для eBook)
+asin                -- STRING, реальный ASIN (из вкладок pb/hc/eBook)
+asin_isbn           -- STRING, ISBN-13 (только pb/hc, NULL для eBook)
+title               -- название книги
+author              -- имя автора
+marketplace         -- Amazon.com / Amazon.co.uk / etc.
+royalty_type        -- 60% / 50%
+transaction_type    -- Standard - Paperback / Hardcover / eBook
+units_sold          -- INT64
+units_refunded      -- INT64
+net_units_sold      -- INT64
+list_price          -- средняя цена листинга без налогов
+offer_price         -- средняя цена предложения без налогов
+manufacturing_cost  -- средняя стоимость производства/доставки
+royalty             -- роялти в валюте
+currency            -- USD / GBP / EUR / AUD / CAD / JPY / ...
+imported_at         -- TIMESTAMP
+
+-- Ключевые вычисления в SQL:
+-- total_revenue = SUM(offer_price * net_units_sold)   -- gross revenue
+-- royalties     = SUM(royalty)                         -- роялти после вычета доли Amazon
+
+-- Маркетплейс хранится как Amazon.com / Amazon.co.uk / Amazon.de (полный домен)
+-- KDP_DOMAIN_MAP в sales_comparison_routes.py: 'US' → 'Amazon.com', 'UK' → 'Amazon.co.uk' ...
 ```
 
 ---
@@ -1634,6 +1670,108 @@ __pycache__/
 
 ---
 
+## Sales Comparison (sales_comparison_routes.py + sales_comparison.html)
+
+### Назначение
+Сравнение органических продаж (earnings MBA / earnings_kdp KDP) с рекламными данными (asin_stats).
+Группировка по **design_id + product_type + marketplace** — объединяет один дизайн под разными ASIN.
+
+### Маршруты
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/sales-comparison` | HTML страница |
+| `GET` | `/sales-comparison/data` | Основная таблица с пагинацией |
+| `GET` | `/sales-comparison/weekly` | График тренда (неделя или месяц) |
+| `GET` | `/sales-comparison/portfolios` | Список портфолио |
+| `GET` | `/sales-comparison/product-types` | Уникальные типы товаров |
+
+### account_type
+- `MERCH` — таблица `earnings`, маркетплейс `.com` / `.co.uk` / `.de` ...
+- `KDP` — таблица `earnings_kdp`, маркетплейс `Amazon.com` / `Amazon.co.uk` ...
+
+Маппинг marketplace (`sales_comparison_routes.py`):
+```python
+MKT_DOMAIN_MAP = {'US': '.com', 'DE': '.de', 'UK': '.co.uk', ...}     # для MERCH
+KDP_DOMAIN_MAP = {'US': 'Amazon.com', 'UK': 'Amazon.co.uk', ...}       # для KDP
+```
+
+### Группировка MERCH по design_id
+```sql
+earn_keyed AS (
+  SELECT COALESCE(c.design_id, e.asin) AS grp_key,   -- design_id или сам ASIN если не в каталоге
+         COALESCE(c.product_type_norm, e.earn_pt) AS pt_key,
+         e.asin AS earn_asin   -- реальный ASIN для primary_asin fallback
+  FROM earn_raw e LEFT JOIN cat1 c ON c.asin = e.asin ...
+),
+organic AS (
+  SELECT grp_key, pt_key, ..., MIN(earn_asin) AS primary_asin
+  FROM earn_keyed GROUP BY grp_key, pt_key, marketplace
+),
+ads AS (
+  SELECT grp_key, ..., MIN(advertised_asin) AS primary_asin
+  FROM ads_keyed GROUP BY grp_key, pt_key, marketplace
+),
+base AS (
+  COALESCE(a.primary_asin, o.primary_asin, o.grp_key) AS primary_asin
+  -- primary_asin — реальный ASIN для отображения в таблице
+  -- grp_key используется только как fallback если нет ни ads ни earnings
+)
+```
+
+### Таблица продаж (колонки)
+`asin` (grp_key) | `title` | `product_type` | `royalties` | `total_revenue` | `ad_sales` | `ad_spend` | `tacos` | `acos` | `ad_share_pct`
+
+**TACoS** = `ad_spend / total_revenue` (не `ad_spend / royalties`)
+
+**primary_asin** — реальный ASIN для отображения в колонке ASIN и для detail-запросов.
+Если у товара нет рекламы и нет earnings → в колонке будет design_id (UUID).
+
+### График тренда (weekly endpoint)
+Параметр `period`:
+- `week` (по умолчанию) → `DATE_TRUNC(date, WEEK(MONDAY))`
+- `month` → `DATE_TRUNC(date, MONTH)`
+
+### product_type фильтр
+Multi-select dropdown. Передаётся как `product_types=TYPE1,TYPE2,...`.
+SQL: `UPPER(COALESCE(product_type,'')) LIKE UPPER('%TYPE%')` в `filtered` CTE.
+
+### Поиск (name фильтр)
+```sql
+AND (LOWER(COALESCE(title, '')) LIKE LOWER('%term%')
+  OR LOWER(COALESCE(primary_asin, asin, '')) LIKE LOWER('%term%'))
+```
+Применяется в `filtered` CTE где колонки однозначны (не в `base`).
+
+---
+
+## ASIN Merge (asin_merge_routes.py + asin_merge.html)
+
+### Назначение
+Страница `/asin-merge` для ручного добавления ASIN-дубликатов в каталог.
+Используется когда один дизайн продаётся под разными ASIN (переиздание, разные SKU), но только один
+из них есть в каталоге. Добавление нового ASIN с тем же `design_id` позволяет группировать продажи.
+
+### Endpoints
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/asin-merge` | HTML страница |
+| `GET` | `/asin-merge/lookup?asin=X` | Найти ASIN в каталоге |
+| `POST` | `/asin-merge/add` | Скопировать строку каталога с новым ASIN |
+| `GET` | `/asin-merge/list` | Все группы design_id с несколькими ASIN |
+
+### Логика добавления
+1. Lookup source ASIN → получить всю строку из `catalog`
+2. Проверить что new ASIN ещё не в каталоге
+3. Скопировать строку с `asin = new_asin` (все остальные поля одинаковые: design_id, title, image_url и т.д.)
+4. INSERT через `bq_literal()` — экранирование через `\'` (не `''`), datetime через `TIMESTAMP 'value'`
+
+### Зачем нужна страница
+BigQuery не поддерживает ON CONFLICT, поэтому не получится автоматически слить ASINы.
+Страница позволяет вручную добавить «зеркальный» ASIN, после чего sales_comparison
+объединит их по design_id при следующей загрузке.
+
+---
+
 ## Частые проблемы и решения
 
 ### JS: template literal с одинарными кавычками
@@ -1645,6 +1783,38 @@ __pycache__/
 const _jeS = (s) => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 // Или использовать &quot; в onkeydown/onclick атрибутах HTML
 ```
+
+### KDP earnings: $0 роялти в sales-comparison
+Причина: `earnings_kdp.marketplace = 'Amazon.com'` (полный домен), а код использовал `.com` (суффикс)
+Решение: `KDP_DOMAIN_MAP` в `sales_comparison_routes.py` — отдельный маппинг для KDP
+
+### KDP earnings: ASIN не определялся (asin_isbn содержит ISBN-13, не ASIN)
+Причина: вкладка `Combined Sales` хранит ISBN-13 в поле asin_isbn для pb/hc
+Решение: читать из отдельных вкладок `Paperback Royalty`, `Hardcover Royalty`, `eBook Royalty` — там есть колонка ASIN
+
+### KDP earnings: дубли после переимпорта
+Причина: старый хэш использовал `asin_isbn`, новый — `asin`. Разные хэши → 311 «новых» строк при повторном импорте
+Решение: удалить старые данные через `DELETE WHERE asin IS NULL` перед переимпортом
+
+### KDP total_revenue = royalties (неверный расчёт)
+Причина: SQL использовал `SUM(e.royalty)` как total_revenue
+Решение: `total_revenue = SUM(e.offer_price * e.net_units_sold)` — gross revenue = цена × кол-во
+
+### sales-comparison: ASIN колонка показывает design_id (UUID)
+Причина: когда у товара нет рекламных данных, `primary_asin = COALESCE(a.primary_asin, o.grp_key)` подставляет grp_key (design_id)
+Решение: передавать `earn_asin` через organic CTE: `MIN(earn_asin) AS primary_asin`, затем `COALESCE(a.primary_asin, o.primary_asin, o.grp_key)`
+
+### BigQuery INSERT: SyntaxError "concatenated string literals"
+Причина: BigQuery не поддерживает `''` для экранирования апострофа в строках
+Решение: использовать `\'` в `bq_literal()` — `s.replace("'", "\\'")`
+
+### BigQuery schema conflict "Field has changed mode from REQUIRED to NULLABLE"
+Причина: `schema=BQ_SCHEMA` в `LoadJobConfig` конфликтует с уже существующей схемой таблицы
+Решение: убрать `schema=BQ_SCHEMA` из LoadJobConfig, оставить только `ALLOW_FIELD_ADDITION`
+
+### BigQuery: "Name asin not found inside o" / "Column name title is ambiguous"
+Причина: `name_cond` и `pt_cond` применялись в `base` CTE, где колонки из разных JOIN имеют одинаковые имена
+Решение: перенести `name_cond` и `pt_cond` в `filtered` CTE (после base), где только unambiguous колонки
 
 ### BigQuery: Aggregations of aggregations
 Причина: `SUM()`, `ROUND(SUM())` поверх CTE с GROUP BY
