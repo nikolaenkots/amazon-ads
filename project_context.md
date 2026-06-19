@@ -1742,6 +1742,60 @@ AND (LOWER(COALESCE(title, '')) LIKE LOWER('%term%')
 ```
 Применяется в `filtered` CTE где колонки однозначны (не в `base`).
 
+### Панель кампаний (detail expand)
+При клике на строку таблицы открывается expand-строка с:
+1. **График тренда** — недельный/месячный (endpoint `/sales-comparison/weekly`)
+2. **Панель кампаний** — полный функционал как в `products_analytics.html`
+
+**Источник данных кампаний:** `/analytics/products/campaigns` (тот же endpoint что и Products Analytics).
+Параметры: `asin`, `marketplace`, `account_type`, `date_from`, `date_to`.
+
+**Ключевые отличия от Products Analytics:**
+- Вместо `S.eKey` через `rowClick` — устанавливается в `toggleDetail` перед вызовом `loadCamps`
+- ID expand-контейнера: `ei_{sk}` где `sk = (asin+'|'+mkt).replace(/[|.]/g,'_')`
+- Date inputs: `'date-from'` / `'date-to'` (не `'df'` / `'dt'` как в products)
+- `campClick` использует `document.getElementById('date-from').value` (исправлено)
+
+**Функции кампаний в sales_comparison.html:**
+- `loadCamps(asin, mkt)` — загружает карточки кампаний из `/analytics/products/campaigns`
+- `campClick(cid, asin, mkt, tgtType)` — раскрывает структуру кампании
+- `buildStruct(data, filterAsin, campId, mkt, tgtTypeFallback)` — строит HTML групп/вкладок
+- `grpClick(hdr)`, `tabClick(e, idx)` — toggle группы и вкладки
+- `tabSortItems`, `tabSortClick` — сортировка внутри вкладок
+- `toggleState`, `ctrlAdd`, `ctrlAddBatch`, `getProfileId`, `toast` — управление
+- `openNameEdit`, `saveName`, `openBidEdit`, `saveBid`, `saveBudget`, `saveEndDate` — inline edit
+- `openAddKw`, `submitAddKw`, `openAddNeg`, `submitAddNeg`, `openCreateGrp`, `submitCreateGrp` — модалы
+- `stCbChange`, `openNegFromSt` — поисковые запросы → минусы
+
+**S object дополнительные поля:**
+```js
+eKey: null,  // 'asin|mkt' открытой строки
+eC: {},      // {campId: bool} — раскрытые кампании
+sc: {},      // {campId: data} — кэш структуры
+ts: {},      // {key: {field, dir}} — состояние сортировки вкладок
+```
+
+**Сброс состояния при закрытии:**
+```js
+function collapseDetail() {
+  // ...remove detail row...
+  S.eKey = null; S.eC = {}; S.sc = {};
+}
+```
+
+**Хелперы (добавлены в sales_comparison.html):**
+```js
+function f(v,d=0)  // компактный форматтер чисел для кампаний (отличается от fmtMoney/fmtNum)
+function xe(s)     // HTML-escape для атрибутов
+function je(s)     // JS-escape для встраивания в onclick/onkeydown
+```
+
+**Модалы (добавлены в HTML после </script>):**
+- `#modalKw` — добавить ключевые слова
+- `#modalNeg` — добавить минусы (слово / продукт ASIN)
+- `#modalGrp` — создать группу объявлений
+- `#toastWrap` — контейнер уведомлений
+
 ---
 
 ## ASIN Merge (asin_merge_routes.py + asin_merge.html)
