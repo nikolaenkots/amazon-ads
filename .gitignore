@@ -3,3 +3,4 @@ uploads/
 *.pyc
 __pycache__/
 streamlit_app.py
+.claude/

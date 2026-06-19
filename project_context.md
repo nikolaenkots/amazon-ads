@@ -2228,3 +2228,77 @@ ORDER BY cnt DESC;
 ```
 **Важно:** колонка называется `created_at` (не `updated_at`) и `error_msg` (не `error_message`).
 перед коммитом, проверяя что не пропали соседние строки/определения функций.
+---
+
+## Страница поисковых запросов `/search-terms` (июнь 2026)
+
+### Файлы
+- `search_terms_routes.py` — Blueprint `search_terms_bp`
+- `search_terms.html` — фронтенд страницы
+- Зарегистрирован в `app.py`: `app.register_blueprint(search_terms_bp)`
+- Карточка добавлена на `index.html` в секцию Analytics
+
+### Таблицы BigQuery
+- `search_terms_{merch|kdp}` — поля: `date, campaign_id, ad_group_id, keyword_id, keyword, keyword_type, targeting, match_type, search_term, impressions, clicks, cost, purchases_14d, sales_14d, marketplace`
+- `asin_stats_{merch|kdp}` — поля: `ad_group_id, advertised_asin, marketplace, ...`
+- `portfolio_labels` (без суффикса) — поля: `portfolio_id, portfolio_name, account_type, marketplace`
+- `campaigns_{merch|kdp}` — `entity_type='campaign'` и `entity_type='ad_group'`
+
+### Типы ключевых слов (keyword_type)
+- `BROAD / PHRASE / EXACT` — ручные ключевые слова (initiator_type=keyword)
+- `TARGETING_EXPRESSION_PREDEFINED` — авто кампания (initiator_type=auto)
+- `TARGETING_EXPRESSION` — таргет по продукту (initiator_type=product)
+
+### API endpoints
+
+**`GET /search-terms/data`** — фильтры:
+- `account_type` (MERCH/KDP), `date_from`, `date_to`, `marketplace`
+- `portfolio_ids` — запятые-разделённые portfolio_id
+- `name` — поиск по тексту search_term (LIKE)
+- `initiator_type` — keyword / auto / product / ''
+- `match_type_filter` — BROAD / PHRASE / EXACT / AUTO / ''
+- `query_type` — text / product (ASIN по regex `^B[0-9A-Z]{9}$`) / ''
+- `state_filter` — ad_group_state (ENABLED/PAUSED)
+- `camp_state_filter` — campaign_state (ENABLED/PAUSED)
+- Числовые: `{field}_op/_val/_min/_max` для impressions, clicks, cost, ctr, sales_14d, purchases_14d, acos
+- Пагинация: `page`, `per_page`, `sort_by`, `sort_dir`
+
+Возвращает: `{rows, total, page, per_page, summary: {total_count, sum_impressions, sum_clicks, sum_cost, sum_sales, sum_purchases}}`
+
+**`GET /search-terms/groups-for-asin`** — принимает `ad_group_id`, ищет ASIN из `asin_stats_{suffix}`, возвращает все группы где рекламируется тот же ASIN:
+- `{groups: [{ad_group_id, ad_group_name, ad_group_state, campaign_id, campaign_name, campaign_state, targeting_type, marketplace}], asin}`
+- Сортировка: активные (ENABLED+ENABLED) первыми, затем по campaign_name / ad_group_name
+
+### Ключевые функции фронтенда
+
+**`renderRows(rows)`** — отрисовка таблицы:
+- `editedTerms{}` — карта локально отредактированных текстов (для использования при добавлении в минус)
+- Колонка "Инициатор": для auto → `—`, для product → текст targeting, для keyword → текст keyword
+- Колонка "Тип": `kwTypeBadge(keyword_type)` — AUTO / PROD / BROAD / PHRASE / EXACT бейджи
+- Колонка "Совп.": для auto → `—`, для остальных → `matchTypeBadge(match_type)`
+- Кнопка "+Ключ" появляется при `tr:hover` (opacity:0 → opacity:1)
+
+**`_negPairs` array** — `[{term, ad_group_id, campaign_id, marketplace, ad_group_name, campaign_name}]`:
+- Хранит точные пары (запрос → группа) из выбранных строк
+- Используется в `openBulkNeg()` и `submitNeg()` для правильного назначения (каждый минус → только в свою группу)
+
+**`isAsin(t)`** — `/^[Bb][0-9A-Za-z]{9}$/.test(t||'')`
+
+**`openBulkNeg()`**:
+- Дедуплицирует пары по `${term}|${ad_group_id}`
+- Если все ASINы → скрывает строку EXACT/PHRASE
+- Показывает тип-подсказку (зелёный бейдж для ASIN, синий для текста)
+
+**`submitNeg()`**:
+- ASINы → `entity_type: 'negative_product_add'`, payload `{asin, ad_group_id, campaign_id}`
+- Текст → `entity_type: 'negative_add'`, payload `{text, match_type, ad_group_id, campaign_id}`
+- Все payloads включают `account_type: S.acct`
+
+**`openRowKw(term, agId, campId, mkt)`** — модал добавления ключевого слова:
+- Загружает группы через `/search-terms/groups-for-asin?ad_group_id=agId&...`
+- Активные группы предчекнуты, источник помечен ★
+
+**`submitAddKw()`**:
+- `entity_type: 'keyword_add'`, payload `{keyword, match_type, bid, campaign_id, ad_group_id}`
+- Включает `account_type: S.acct`
+

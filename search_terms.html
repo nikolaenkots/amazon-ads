@@ -543,7 +543,6 @@ function renderThead(){
     ${thSortLeft('search_term','Запрос')}
     ${thSortLeft('keyword','Инициатор')}
     <th class="ns">Тип</th>
-    <th class="ns">Совп.</th>
     ${thSortLeft('ad_group_name','Группа')}
     ${thSortLeft('campaign_name','Кампания')}
     ${thNum('impressions','Показы')}
@@ -583,9 +582,14 @@ function renderRows(rows){
     const initiator=r.keyword||r.targeting||'';
     const isAuto=r.keyword_type==='TARGETING_EXPRESSION_PREDEFINED';
     const isProduct=r.keyword_type==='TARGETING_EXPRESSION';
-    const initiatorCell=isAuto?'<span class="b bauto">AUTO</span>':(isProduct?`<span class="b bprod" title="${esc(initiator)}">${esc((initiator||'').substring(0,20))}</span>`:`<span class="n" style="font-size:11px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`);
+    // Инициатор: для авто — показываем тип таргетинга; для продукта — targeting; для ключа — keyword
+    const autoTargLabel=isAuto?(r.targeting||'auto'):'';
+    const initiatorCell=isAuto
+      ?`<span class="n" style="font-size:10px;color:var(--muted);max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(autoTargLabel)}">${esc(autoTargLabel)}</span>`
+      :(isProduct
+        ?`<span class="n" style="font-size:10px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`
+        :`<span class="n" style="font-size:11px;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(initiator)}">${esc(initiator)}</span>`);
     const kwBadge=kwTypeBadge(r.keyword_type);
-    const mtBadge=matchTypeBadge(r.match_type);
 
     const grp=r.ad_group_name||'';
     const grpState=r.ad_group_state||'';
@@ -607,7 +611,6 @@ function renderRows(rows){
       <td>${termCell}</td>
       <td>${initiatorCell}</td>
       <td>${kwBadge}</td>
-      <td>${mtBadge}</td>
       <td>${grpCell}</td>
       <td>${campCell}</td>
       <td class="r n">${fmtNum(r.impressions)}</td>
