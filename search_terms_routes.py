@@ -127,11 +127,11 @@ def search_terms_data():
             quoted = ','.join(f"'{p}'" for p in pids)
             portfolio_cond = f"AND c.portfolio_id IN ({quoted})"
 
-    # Name search (on search_term)
+    # Name search (on search_term OR keyword/targeting initiator)
     name_cond = ''
     if name_filter:
         sn = name_filter.replace("'", "''")
-        name_cond = f"AND LOWER(st.search_term) LIKE LOWER('%{sn}%')"
+        name_cond = f"AND (LOWER(st.search_term) LIKE LOWER('%{sn}%') OR LOWER(COALESCE(st.keyword, st.targeting, '')) LIKE LOWER('%{sn}%'))"
 
     # Campaign state (ad_group state filter)
     state_cond = ''
