@@ -212,6 +212,17 @@ cat AS (
   FROM `{cat_table}`
 ),
 cat1 AS (SELECT * FROM cat WHERE rn = 1),
+-- cat_any: picks one row per ASIN regardless of marketplace,
+-- preferring the current marketplace, then most recently imported
+cat_any AS (
+  SELECT asin, design_id, title, image_url, status, product_type_norm,
+    ROW_NUMBER() OVER (
+      PARTITION BY asin
+      ORDER BY (CASE WHEN marketplace = '{safe_mkt}' THEN 0 ELSE 1 END), imported_at DESC
+    ) rn
+  FROM cat
+),
+cat_any1 AS (SELECT * FROM cat_any WHERE rn = 1),
 earn_raw AS (
   SELECT e.asin,
     SUM(e.purchased) AS total_units,
@@ -286,7 +297,7 @@ earn_keyed AS (
     c.title, c.image_url, c.status,
     e.asin AS earn_asin
   FROM earn_raw e
-  LEFT JOIN cat1 c ON c.asin = e.asin AND c.marketplace = '{safe_mkt}'
+  LEFT JOIN cat_any1 c ON c.asin = e.asin
 ),
 organic AS (
   SELECT grp_key, pt_key, marketplace,
