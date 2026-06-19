@@ -362,7 +362,8 @@ base AS (
          THEN ROUND(COALESCE(a.ad_spend,0) / a.ad_sales * 100, 1)
          ELSE NULL END AS acos
   FROM organic o
-  FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.pt_key = o.pt_key AND a.marketplace = o.marketplace
+  FULL OUTER JOIN ads a ON a.grp_key = o.grp_key AND a.marketplace = o.marketplace
+    AND (a.pt_key = o.pt_key OR a.pt_key = '' OR o.pt_key = '')
   WHERE 1=1 {ad_cond_merch} {portfolio_cond}
 ),
 filtered AS (SELECT * FROM base WHERE 1=1 {name_cond} {pt_cond} {num_where.replace('WHERE','AND') if num_where else ''})
