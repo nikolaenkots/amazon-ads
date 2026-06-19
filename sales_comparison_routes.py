@@ -308,7 +308,7 @@ WITH organic AS (
   SELECT e.asin, '{safe_mkt}' AS marketplace,
     SUM(e.net_units_sold) AS total_units,
     ROUND(SUM(e.royalty), 2) AS royalties,
-    ROUND(SUM(e.royalty), 2) AS total_revenue,
+    ROUND(SUM(e.offer_price * e.net_units_sold), 2) AS total_revenue,
     MAX(e.title) AS title,
     MAX(e.transaction_type) AS product_type
   FROM `{earn_table}` e
