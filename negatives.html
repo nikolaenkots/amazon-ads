@@ -683,7 +683,7 @@ async function ctrlAdd(camp, text, matchType) {
     old_value: '',
     new_value: JSON.stringify({ text, match_type: matchType, ad_group_id: '', campaign_id: camp.campaign_id }),
   };
-  const r = await fetch('/control/queue', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const r = await fetch('/control/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || r.statusText); }
   return r.json();
 }
@@ -703,7 +703,7 @@ async function deleteNeg(cid, keywordId, keywordText) {
       old_value: '',
       new_value: 'DELETED',
     };
-    const r = await fetch('/control/queue', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const r = await fetch('/control/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
     const rd = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(rd.error || r.statusText);
     toast('Добавлено в очередь на удаление', 'ok');
