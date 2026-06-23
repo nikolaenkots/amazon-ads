@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Минус слова · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6; --surface:#fff; --surface2:#f0f0f3; --border:#e2e2e8; --border2:#ccccd4;
+  --text:#18181c; --muted:#6b6b7a; --dim:#aaaaB8;
+  --accent:#c84b14; --accent-bg:rgba(200,75,20,.07); --accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c; --green-bg:rgba(26,143,92,.08); --green-bd:rgba(26,143,92,.2);
+  --red:#d94040; --red-bd:rgba(217,64,64,.22);
+  --amber:#b07800;
+  --blue:#1a6fd4; --blue-bg:rgba(26,111,212,.07); --blue-bd:rgba(26,111,212,.2);
+  --purple:#6c3fc9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* ── Header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+
+/* Nav */
+.nav-bar{display:flex;align-items:center;gap:2px}
+.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-home.active{color:var(--accent);background:var(--accent-bg)}
+.nav-drop{position:relative;display:inline-flex;align-items:center}
+.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop.open .nav-drop-btn{color:var(--text)}
+.nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
+.nav-drop.open .nav-drop-menu{display:block}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ── Buttons / inputs ── */
+.btn{height:34px;padding:0 16px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#a83d10}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+/* ── Badges ── */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
+.bu{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bm{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+
+/* ── Spinner ── */
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast-item.ok{border-color:var(--green-bd)}
+.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:520px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-inp{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;width:100%}
+.modal-inp:focus{border-color:var(--accent)}
+textarea.modal-inp{height:100px;padding:8px 10px;resize:vertical;font-size:12px;font-family:'DM Mono',monospace}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.radio-row{display:flex;gap:16px;align-items:center}
+.radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+.radio-row input[type=radio]{accent-color:var(--accent);width:14px;height:14px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:24px}
+.chip{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+
+/* ── Layout ── */
+main{display:flex;height:calc(100vh - 52px);overflow:hidden}
+
+/* ── Left panel ── */
+.nl-panel{width:360px;flex-shrink:0;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);overflow:hidden}
+.nl-filters{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.nl-filters .fg{display:flex;flex-direction:column;gap:4px}
+.nl-filters .fg input,
+.nl-filters .fg select{height:32px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.nl-filters .fg input:focus,
+.nl-filters .fg select:focus{border-color:var(--accent)}
+.nl-filters .at{display:flex;gap:4px}
+.nl-filters .atb{height:30px;padding:0 12px;font-size:12px}
+.nl-filters .btn{height:32px;font-size:12px}
+.nl-filters-row{display:flex;gap:8px;flex-wrap:wrap}
+.nl-list{flex:1;overflow-y:auto;padding:0}
+.nl-list-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.nl-list-header .fl{flex:1}
+.nl-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;user-select:none}
+.nl-row:hover{background:var(--surface2)}
+.nl-row.active{background:var(--accent-bg)}
+.nl-row:last-child{border-bottom:none}
+.nl-row-cb{flex-shrink:0;width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
+.nl-row-info{flex:1;min-width:0}
+.nl-row-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nl-row-meta{display:flex;align-items:center;gap:4px;margin-top:3px;flex-wrap:wrap}
+.nl-neg-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);flex-shrink:0;min-width:20px;text-align:right}
+.nl-empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:13px}
+.nl-loading{padding:30px;text-align:center}
+
+/* ── Right panel ── */
+.nr-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.nr-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);text-align:center;padding:40px}
+.nr-placeholder svg{color:var(--dim)}
+.nr-placeholder p{font-size:13px;max-width:280px;line-height:1.5}
+.nr-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.nr-bulk-bar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--accent-bg);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.nr-bulk-title{font-size:13px;font-weight:600;color:var(--accent);flex:1}
+.nr-single{flex:1;overflow-y:auto;padding:20px}
+.nr-single-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.nr-single-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.nr-kw-table{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.nr-kw-table table{width:100%;border-collapse:collapse;font-size:13px}
+.nr-kw-table thead th{text-align:left;padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border)}
+.nr-kw-table tbody tr{border-bottom:1px solid var(--border)}
+.nr-kw-table tbody tr:last-child{border-bottom:none}
+.nr-kw-table tbody tr:hover{background:var(--surface2)}
+.nr-kw-table td{padding:8px 12px;vertical-align:middle}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--dim);font-size:15px;padding:0 4px;border-radius:4px;transition:color .15s,background .15s;line-height:1}
+.del-btn:hover{color:var(--red);background:rgba(217,64,64,.08)}
+.nr-kw-empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+.nr-kw-loading{padding:30px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
+    Amazon Ads Automation
+  </div>
+  <div class="nav-bar">
+  <a href="/" class="nav-home">Главная</a>
+  <div class="nav-drop" id="navA">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navA');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Аналитика
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+    <a href="/analytics/products" class="nav-link">Продукты</a>
+    <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
+    <a href="/budget-analysis" class="nav-link">Бюджет</a>
+    <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+    <a href="/targets" class="nav-link">Таргеты</a>
+    <a href="/portfolios" class="nav-link">Портфолио</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navM">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navM');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Управление
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/control" class="nav-link">Контроль изменений</a>
+    <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+    <a href="/negatives" class="nav-link active">Минус слова</a>
+    <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navI">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navI');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Импорт
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/campaigns" class="nav-link">Кампании SP API</a>
+    <a href="/catalog" class="nav-link">Каталог</a>
+    <a href="/earnings" class="nav-link">Продажи Merch</a>
+    <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+    <a href="/ads" class="nav-link">Ads отчёты</a>
+  </div>
+</div>
+</div>
+</header>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="nl-panel">
+    <div class="nl-filters">
+      <div class="fg">
+        <div class="fl">Аккаунт</div>
+        <div class="at">
+          <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+          <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="nl-filters-row">
+        <div class="fg" style="flex:1">
+          <div class="fl">Маркетплейс</div>
+          <select id="fMkt">
+            <option value="">Все</option>
+            <option value="US">US</option>
+            <option value="UK">UK</option>
+            <option value="DE">DE</option>
+            <option value="FR">FR</option>
+            <option value="IT">IT</option>
+            <option value="ES">ES</option>
+            <option value="CA">CA</option>
+            <option value="JP">JP</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:1">
+          <div class="fl">Тип</div>
+          <select id="fType">
+            <option value="all">Все</option>
+            <option value="AUTO">AUTO</option>
+            <option value="MANUAL">MANUAL</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Портфолио</div>
+        <select id="fPortfolio">
+          <option value="">Все</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Поиск</div>
+        <input type="text" id="fSearch" placeholder="Поиск по названию..." onkeydown="if(event.key==='Enter')go()">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);user-select:none">
+          <input type="checkbox" id="fActive" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Только активные
+        </label>
+        <button class="btn btn-p" style="margin-left:auto" onclick="go()">Применить</button>
+      </div>
+    </div>
+    <div class="nl-list-header">
+      <input type="checkbox" id="cbAll" class="nl-row-cb" onchange="selectAll(this.checked)" title="Выбрать все">
+      <span class="fl" id="selLabel">0 выбрано</span>
+    </div>
+    <div class="nl-list" id="campList">
+      <div class="nl-empty">Нажмите «Применить» для загрузки кампаний</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="nr-panel" id="nrPanel">
+    <div class="nr-placeholder" id="nrPlaceholder">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      <p>Выберите кампании для массового добавления минус слов или нажмите на кампанию для редактирования</p>
+    </div>
+    <div class="nr-content" id="nrContent" style="display:none">
+      <div class="nr-bulk-bar" id="nrBulkBar" style="display:none">
+        <span class="nr-bulk-title" id="nrBulkTitle">Выбрано 0 кампаний</span>
+        <button class="btn btn-p" onclick="openBulkModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить минус слова во все выбранные
+        </button>
+      </div>
+      <div class="nr-single" id="nrSingle" style="display:none">
+        <div class="nr-single-header">
+          <span class="nr-single-title" id="nrSingleTitle">Кампания</span>
+          <span id="nrSingleState"></span>
+          <button class="btn btn-p" onclick="openSingleModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Добавить минус слово
+          </button>
+        </div>
+        <div class="nr-kw-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Слово</th>
+                <th>Тип</th>
+                <th style="width:48px"></th>
+              </tr>
+            </thead>
+            <tbody id="kwBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalNegBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modalNegTitle">Добавить минус слова</div>
+    <div class="modal-row">
+      <div class="modal-label">Слова (одно на строку)</div>
+      <textarea class="modal-inp" id="modalNegText" placeholder="одно слово на строку" oninput="updatePreview()"></textarea>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Тип совпадения</div>
+      <div class="radio-row">
+        <label><input type="radio" name="matchType" id="mtExact" value="NEGATIVE_EXACT" checked onchange="updatePreview()"> NEGATIVE_EXACT</label>
+        <label><input type="radio" name="matchType" id="mtPhrase" value="NEGATIVE_PHRASE" onchange="updatePreview()"> NEGATIVE_PHRASE</label>
+      </div>
+    </div>
+    <div class="modal-row" id="previewRow" style="display:none">
+      <div class="modal-label">Предпросмотр (<span id="previewCount">0</span>)</div>
+      <div class="chips" id="previewChips"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" id="btnSubmitNeg" onclick="submitAddNeg()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastCont"></div>
+
+<script>
+const S = {
+  acct: 'MERCH',
+  selected: new Set(),
+  activeCamp: null,
+  camps: [],
+};
+
+// ── Init ──────────────────────────────────────────────────
+fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+loadPortfolios();
+
+function loadPortfolios(){
+  fetch('/negatives/portfolios?account_type='+S.acct).then(r=>r.json()).then(d=>{
+    const sel=document.getElementById('fPortfolio');
+    const cur=sel.value;
+    while(sel.options.length>1)sel.remove(1);
+    (d.portfolios||[]).forEach(p=>{
+      const o=document.createElement('option');
+      o.value=p.id; o.textContent=p.name;
+      sel.appendChild(o);
+    });
+    if(cur)sel.value=cur;
+  }).catch(()=>{});
+}
+
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('tbM').classList.toggle('on',a==='MERCH');
+  document.getElementById('tbK').classList.toggle('on',a==='KDP');
+  loadPortfolios();
+}
+
+// ── Fetch campaigns ───────────────────────────────────────
+function go(){
+  const mkt=document.getElementById('fMkt').value;
+  const type=document.getElementById('fType').value;
+  const port=document.getElementById('fPortfolio').value;
+  const active=document.getElementById('fActive').checked;
+  const search=document.getElementById('fSearch').value.trim();
+
+  const list=document.getElementById('campList');
+  list.innerHTML='<div class="nl-loading"><span class="sp"></span></div>';
+
+  const params=new URLSearchParams({account_type:S.acct});
+  if(mkt)params.set('marketplace',mkt);
+  if(type!=='all')params.set('targeting_type',type);
+  if(port)params.set('portfolio_ids',port);
+  if(active)params.set('active_only','1');
+  if(search)params.set('search',search);
+
+  fetch('/negatives/campaigns?'+params).then(r=>r.json()).then(d=>{
+    if(d.error){list.innerHTML='<div class="nl-empty" style="color:var(--red)">'+esc(d.error)+'</div>';return;}
+    S.camps=d.campaigns||[];
+    renderCampList();
+  }).catch(e=>{list.innerHTML='<div class="nl-empty" style="color:var(--red)">'+esc(String(e))+'</div>';});
+}
+
+function renderCampList(){
+  const list=document.getElementById('campList');
+  if(!S.camps.length){list.innerHTML='<div class="nl-empty">Нет кампаний</div>';updateSelLabel();return;}
+  list.innerHTML='';
+  S.camps.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='nl-row'+(S.activeCamp&&S.activeCamp.campaign_id===c.campaign_id?' active':'');
+    div.dataset.cid=c.campaign_id;
+    const typeBadge=c.targeting_type==='AUTO'
+      ?'<span class="b bu">AUTO</span>'
+      :'<span class="b bman">MAN</span>';
+    const stBadge=c.campaign_state==='ENABLED'
+      ?'<span class="b be">ON</span>'
+      :'<span class="b bp">PAUSE</span>';
+    const negBadge=c.neg_count>0
+      ?'<span class="b bm">'+c.neg_count+'</span>'
+      :'';
+    div.innerHTML=`
+      <input type="checkbox" class="nl-row-cb" ${S.selected.has(c.campaign_id)?'checked':''} onclick="event.stopPropagation();toggleSelect('${c.campaign_id}',this.checked)">
+      <div class="nl-row-info">
+        <div class="nl-row-name" title="${esc(c.campaign_name)}">${esc(c.campaign_name)}</div>
+        <div class="nl-row-meta">${typeBadge}${stBadge}</div>
+      </div>
+      <span class="nl-neg-count" id="negcount-${c.campaign_id}">${negBadge||'<span style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:10px">0</span>'}</span>
+    `;
+    div.addEventListener('click', ()=>campClick(c));
+    list.appendChild(div);
+  });
+  updateSelLabel();
+}
+
+// ── Selection ─────────────────────────────────────────────
+function toggleSelect(cid,checked){
+  if(checked) S.selected.add(cid); else S.selected.delete(cid);
+  updateSelLabel();
+  updateRightPanel();
+}
+
+function selectAll(checked){
+  S.camps.forEach(c=>{ if(checked) S.selected.add(c.campaign_id); else S.selected.delete(c.campaign_id); });
+  document.querySelectorAll('.nl-row-cb').forEach(cb=>cb.checked=checked);
+  updateSelLabel();
+  updateRightPanel();
+}
+
+function updateSelLabel(){
+  const n=S.selected.size;
+  document.getElementById('selLabel').textContent=n+' выбрано';
+  document.getElementById('cbAll').checked=S.camps.length>0&&n===S.camps.length;
+  document.getElementById('cbAll').indeterminate=n>0&&n<S.camps.length;
+}
+
+// ── Camp click ────────────────────────────────────────────
+function campClick(camp){
+  S.activeCamp=camp;
+  document.querySelectorAll('.nl-row').forEach(r=>{
+    r.classList.toggle('active', r.dataset.cid===camp.campaign_id);
+  });
+  updateRightPanel();
+  loadNegatives(camp.campaign_id);
+}
+
+function updateRightPanel(){
+  const hasSelected=S.selected.size>0;
+  const hasSingle=!!S.activeCamp;
+  const ph=document.getElementById('nrPlaceholder');
+  const ct=document.getElementById('nrContent');
+  const bulkBar=document.getElementById('nrBulkBar');
+  const single=document.getElementById('nrSingle');
+
+  if(!hasSelected&&!hasSingle){
+    ph.style.display=''; ct.style.display='none'; return;
+  }
+  ph.style.display='none'; ct.style.display='flex';
+
+  if(hasSelected){
+    bulkBar.style.display='flex';
+    document.getElementById('nrBulkTitle').textContent='Выбрано '+S.selected.size+' кампаний';
+  } else {
+    bulkBar.style.display='none';
+  }
+
+  if(hasSingle){
+    single.style.display='block';
+    document.getElementById('nrSingleTitle').textContent=S.activeCamp.campaign_name;
+    const st=S.activeCamp.campaign_state;
+    document.getElementById('nrSingleState').innerHTML=st==='ENABLED'
+      ?'<span class="b be">ENABLED</span>'
+      :'<span class="b bp">PAUSED</span>';
+  } else {
+    single.style.display='none';
+  }
+}
+
+// ── Load keywords ─────────────────────────────────────────
+function loadNegatives(campaign_id){
+  const body=document.getElementById('kwBody');
+  body.innerHTML='<tr><td colspan="3" class="nr-kw-loading"><span class="sp"></span></td></tr>';
+  fetch('/negatives/campaign/keywords?campaign_id='+encodeURIComponent(campaign_id)+'&account_type='+S.acct)
+    .then(r=>r.json()).then(d=>{
+      if(d.error){body.innerHTML='<tr><td colspan="3" class="nr-kw-empty" style="color:var(--red)">'+esc(d.error)+'</td></tr>';return;}
+      const kws=d.keywords||[];
+      if(!kws.length){body.innerHTML='<tr><td colspan="3" class="nr-kw-empty">Нет минус слов</td></tr>';return;}
+      body.innerHTML='';
+      kws.forEach(kw=>{
+        const tr=document.createElement('tr');
+        const mtBadge=kw.match_type==='NEGATIVE_EXACT'
+          ?'<span class="b bu">EXACT</span>'
+          :'<span class="b bman">PHRASE</span>';
+        tr.dataset.kwId=kw.keyword_id;
+        tr.innerHTML=`
+          <td style="font-family:'DM Mono',monospace;font-size:12px">${esc(kw.keyword_text)}</td>
+          <td>${mtBadge}</td>
+          <td><button class="del-btn" title="Удалить" onclick="deleteNeg('${esc(kw.keyword_id)}','${esc(S.activeCamp.marketplace)}','${esc(S.activeCamp.campaign_id)}',this)">×</button></td>
+        `;
+        body.appendChild(tr);
+      });
+    }).catch(e=>{body.innerHTML='<tr><td colspan="3" class="nr-kw-empty" style="color:var(--red)">'+esc(String(e))+'</td></tr>';});
+}
+
+// ── Modal ─────────────────────────────────────────────────
+function openBulkModal(){
+  document.getElementById('modalNegTitle').textContent='Добавить минус слова в '+S.selected.size+' кампаний';
+  document.getElementById('modalNegText').value='';
+  document.getElementById('mtExact').checked=true;
+  updatePreview();
+  document.getElementById('modalNegBg').classList.add('op');
+}
+
+function openSingleModal(){
+  if(!S.activeCamp)return;
+  document.getElementById('modalNegTitle').textContent='Добавить минус слова: '+S.activeCamp.campaign_name;
+  document.getElementById('modalNegText').value='';
+  document.getElementById('mtExact').checked=true;
+  updatePreview();
+  document.getElementById('modalNegBg').classList.add('op');
+}
+
+function closeModal(){
+  document.getElementById('modalNegBg').classList.remove('op');
+}
+
+function updatePreview(){
+  const words=parseWords(document.getElementById('modalNegText').value);
+  const row=document.getElementById('previewRow');
+  const chips=document.getElementById('previewChips');
+  const cnt=document.getElementById('previewCount');
+  if(!words.length){row.style.display='none';return;}
+  row.style.display='';
+  cnt.textContent=words.length;
+  chips.innerHTML=words.slice(0,30).map(w=>'<span class="chip">'+esc(w)+'</span>').join('');
+  if(words.length>30)chips.innerHTML+='<span class="chip" style="color:var(--muted)">+...'+(words.length-30)+'</span>';
+}
+
+function parseWords(text){
+  return [...new Set(text.split('\n').map(w=>w.trim().toLowerCase()).filter(w=>w.length>0))];
+}
+
+// ── Submit add neg ────────────────────────────────────────
+async function submitAddNeg(){
+  const words=parseWords(document.getElementById('modalNegText').value);
+  if(!words.length){toast('Введите хотя бы одно слово','err');return;}
+  const matchType=document.querySelector('input[name="matchType"]:checked').value;
+
+  // determine target campaigns
+  let campIds=[];
+  if(S.selected.size>0){
+    campIds=[...S.selected];
+  } else if(S.activeCamp){
+    campIds=[S.activeCamp.campaign_id];
+  } else {
+    toast('Не выбрана кампания','err');return;
+  }
+
+  // Build a map of campaign_id → marketplace
+  const campMktMap={};
+  S.camps.forEach(c=>{campMktMap[c.campaign_id]=c.marketplace;});
+
+  const btn=document.getElementById('btnSubmitNeg');
+  btn.disabled=true;
+
+  const payloads=[];
+  campIds.forEach(cid=>{
+    const mkt=campMktMap[cid]||'';
+    const profileId=getProfileId(mkt);
+    words.forEach(word=>{
+      payloads.push({
+        entity_type:'negative_add',
+        entity_id:cid,
+        marketplace:mkt,
+        profile_id:profileId,
+        field_name:'negative_keyword',
+        new_value:JSON.stringify({text:word,match_type:matchType,ad_group_id:'',campaign_id:cid}),
+      });
+    });
+  });
+
+  try{
+    const res=await ctrlAddBatch(payloads);
+    if(res.errors.length){
+      toast('Добавлено '+res.inserted+', ошибок: '+res.errors.length,'err');
+    } else {
+      toast('Добавлено в очередь: '+res.inserted,'ok');
+    }
+    closeModal();
+    // If single camp active, refresh its keywords
+    if(S.activeCamp&&campIds.includes(S.activeCamp.campaign_id)){
+      loadNegatives(S.activeCamp.campaign_id);
+    }
+    // Update neg_count badges (rough increment)
+    campIds.forEach(cid=>{
+      const el=document.getElementById('negcount-'+cid);
+      if(el){
+        const camp=S.camps.find(c=>c.campaign_id===cid);
+        if(camp){
+          camp.neg_count=(camp.neg_count||0)+words.length;
+          el.innerHTML='<span class="b bm">'+camp.neg_count+'</span>';
+        }
+      }
+    });
+  }catch(e){
+    toast(String(e),'err');
+  } finally {
+    btn.disabled=false;
+  }
+}
+
+// ── Delete neg ────────────────────────────────────────────
+async function deleteNeg(keyword_id,mkt,campaign_id,btnEl){
+  btnEl.disabled=true;
+  const profileId=getProfileId(mkt);
+  try{
+    const r=await ctrlAdd({
+      entity_type:'negative_delete',
+      entity_id:keyword_id,
+      marketplace:mkt,
+      profile_id:profileId,
+      field_name:'negative_keyword',
+      new_value:'delete',
+    });
+    if(r.id||r.ok){
+      // remove row
+      const tr=btnEl.closest('tr');
+      if(tr)tr.remove();
+      // update count badge
+      const el=document.getElementById('negcount-'+campaign_id);
+      if(el){
+        const camp=S.camps.find(c=>c.campaign_id===campaign_id);
+        if(camp){
+          camp.neg_count=Math.max(0,(camp.neg_count||1)-1);
+          if(camp.neg_count>0) el.innerHTML='<span class="b bm">'+camp.neg_count+'</span>';
+          else el.innerHTML='<span style="color:var(--dim);font-family:\'DM Mono\',monospace;font-size:10px">0</span>';
+        }
+      }
+      toast('Удалено из очереди','ok');
+    } else {
+      toast(r.error||'Ошибка','err');
+      btnEl.disabled=false;
+    }
+  }catch(e){
+    toast(String(e),'err');
+    btnEl.disabled=false;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function getProfileId(mkt){
+  return (window._pm||{})[S.acct+'_'+mkt]||'';
+}
+
+async function ctrlAdd(payload){
+  const r=await fetch('/control/queue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  return r.json();
+}
+
+async function ctrlAddBatch(payloads){
+  let inserted=0,errors=[];
+  await Promise.all(payloads.map(async p=>{
+    try{const r=await ctrlAdd(p);if(r.id||r.ok)inserted++;else errors.push(r);}
+    catch(e){errors.push(e);}
+  }));
+  return {inserted,errors};
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg,type){
+  const c=document.getElementById('toastCont');
+  const d=document.createElement('div');
+  d.className='toast-item'+(type?' '+type:'');
+  d.textContent=msg;
+  c.appendChild(d);
+  setTimeout(()=>d.remove(),3500);
+}
+</script>
+<script>
+// Close nav dropdowns on outside click
+document.addEventListener('click', function(e){
+  document.querySelectorAll('.nav-drop').forEach(function(d){
+    if(!d.contains(e.target))d.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

@@ -64,6 +64,7 @@ from targets_routes import targets_bp
 from search_terms_routes import search_terms_bp
 from sales_comparison_routes import sales_comparison_bp
 from asin_merge_routes import asin_merge_bp
+from negatives_routes import negatives_bp
 
 
 app.register_blueprint(catalog_bp)
@@ -80,6 +81,7 @@ app.register_blueprint(targets_bp)
 app.register_blueprint(search_terms_bp)
 app.register_blueprint(sales_comparison_bp)
 app.register_blueprint(asin_merge_bp)
+app.register_blueprint(negatives_bp)
 
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
