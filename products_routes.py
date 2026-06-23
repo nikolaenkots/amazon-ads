@@ -26,6 +26,7 @@ def analytics_products_data():
     marketplace   = request.args.get('marketplace', '')
     portfolio_ids = request.args.get('portfolio_ids', '')
     asin_filter   = request.args.get('asin', '').strip().upper()
+    active_only   = request.args.get('active_only', '') == '1'
     sort_by       = request.args.get('sort_by', 'clicks')
     sort_dir      = request.args.get('sort_dir', 'desc').upper()
     try:
@@ -82,7 +83,19 @@ def analytics_products_data():
         ids = [i.strip() for i in portfolio_ids.split(',') if i.strip()]
         safe_ids = ','.join(f"'{i}'" for i in ids)
         camp_conds.append(f"camp.portfolio_id IN ({safe_ids})")
+    if active_only:
+        camp_conds.append("camp.campaign_state = 'enabled'")
     camp_where = 'WHERE ' + ' AND '.join(camp_conds)
+
+    active_group_filter = ""
+    if active_only:
+        active_group_filter = f"""
+        AND EXISTS (
+            SELECT 1 FROM `{camp_table}` grp
+            WHERE grp.entity_type = 'ad_group'
+              AND grp.campaign_id = camp.campaign_id
+              AND grp.ad_group_state = 'enabled'
+        )"""
 
     asin_cond = ''
     if asin_filter:
@@ -95,6 +108,7 @@ def analytics_products_data():
         SELECT DISTINCT camp.campaign_id, camp.marketplace
         FROM `{camp_table}` camp
         {camp_where}
+        {active_group_filter}
     ),
     stats AS (
         SELECT
