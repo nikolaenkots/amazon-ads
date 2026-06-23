@@ -637,17 +637,18 @@ function buildTable(){
     const pub=row.status?`<span class="b ${row.status==='Live'||row.status==='PUBLISHED'?'be':'bp'}">${row.status}</span>`:'';
     const typ=row.product_type?`<span class="b btype">${row.product_type}</span>`:'';
     const pr=row.price?`<span class="b bm">$${row.price}</span>`:'';
+    const sk2=key.replace(/[|.]/g,'_');
     h+=`<tr class="dr${isE?' exp':''}" data-key="${key}" onclick="rowClick('${je(key)}','${je(row.asin)}','${je(row.marketplace)}')">
       <td><div class="ac">${img}${ph}<div><div class="ak">${row.asin}</div><div class="at2">${row.title||'—'}</div><div class="abs">${pub}${typ}${pr}</div></div></div></td>
       <td><span class="b ${mB}">${row.marketplace}</span></td>
       <td class="r"><span class="n bn">${row.campaign_count||0}</span></td>
-      <td class="r"><span class="n bn">${f(row.impressions)}</span></td>
-      <td class="r"><span class="n">${f(row.clicks)}</span></td>
-      <td class="r"><span class="n">${row.ctr!=null?row.ctr.toFixed(2)+'%':'<span class="dv">—</span>'}</span></td>
-      <td class="r"><span class="n an">${row.cost!=null?'$'+f(row.cost,2):'<span class="dv">—</span>'}</span></td>
-      <td class="r"><span class="n gn">${row.sales_14d!=null?'$'+f(row.sales_14d,2):'<span class="dv">—</span>'}</span></td>
-      <td class="r"><span class="n">${f(row.purchases_14d)}</span></td>
-      <td class="r"><span class="n ${acC}">${row.acos!=null?row.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_imp_${sk2}" class="n bn">${f(row.impressions)}</span></td>
+      <td class="r"><span id="rst_clk_${sk2}" class="n">${f(row.clicks)}</span></td>
+      <td class="r"><span id="rst_ctr_${sk2}" class="n">${row.ctr!=null?row.ctr.toFixed(2)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_cst_${sk2}" class="n an">${row.cost!=null?'$'+f(row.cost,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_sal_${sk2}" class="n gn">${row.sales_14d!=null?'$'+f(row.sales_14d,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_pur_${sk2}" class="n">${f(row.purchases_14d)}</span></td>
+      <td class="r"><span id="rst_acos_${sk2}" class="n ${acC}">${row.acos!=null?row.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
       <td style="text-align:center"><svg class="rchev${isE?' op':''}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></td>
     </tr>`;
   });
@@ -793,6 +794,10 @@ function updateCampStats(cid, structData, filterAsin){
     cst+=s.cost||0;        sal+=s.sales_14d||0;
     pur+=s.purchases_14d||0;
   });
+  // Сохраняем computed stats на элементе для последующей суммировки
+  const cidEl=document.getElementById('cc_'+cid);
+  if(cidEl){cidEl.dataset.impA=imp;cidEl.dataset.clkA=clk;cidEl.dataset.cstA=cst;cidEl.dataset.salA=sal;cidEl.dataset.purA=pur;}
+
   const acos=sal>0?Math.round(cst/sal*1000)/10:null;
   const acC=acos==null?'dv':acos<25?'ok':acos<50?'hi':'cr';
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -805,6 +810,37 @@ function updateCampStats(cid, structData, filterAsin){
   set('cst_pur_'+cid, f(Math.round(pur)));
   const ea=document.getElementById('cst_acos_'+cid);
   if(ea){ea.textContent=acos!=null?acos.toFixed(1)+'%':'—';ea.className='csv '+acC;}
+
+  // Обновляем строку продукта как сумму всех computed кампаний
+  const cc=document.getElementById('cc_'+cid);
+  const cpp=cc?.closest('.cpp');
+  const ei=cpp?.closest('[id^="ei_"]');
+  if(ei){
+    const rsk=ei.id.replace(/^ei_/,'');
+    let ri=0,rk=0,rc=0,rs=0,rp=0;
+    cpp.querySelectorAll('.cc').forEach(el=>{
+      if(el.dataset.impA!=null){
+        ri+=parseFloat(el.dataset.impA||0); rk+=parseFloat(el.dataset.clkA||0);
+        rc+=parseFloat(el.dataset.cstA||0); rs+=parseFloat(el.dataset.salA||0);
+        rp+=parseFloat(el.dataset.purA||0);
+      }
+    });
+    const racos=rs>0?Math.round(rc/rs*1000)/10:null;
+    const racC=racos==null?'dv':racos<25?'ok':racos<50?'hi':'cr';
+    const rset=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    rset('rst_imp_'+rsk, f(Math.round(ri)));
+    rset('rst_clk_'+rsk, f(Math.round(rk)));
+    const rctr=ri>0?Math.round(rk/ri*10000)/100:null;
+    const rctrEl=document.getElementById('rst_ctr_'+rsk);
+    if(rctrEl) rctrEl.innerHTML=rctr!=null?rctr.toFixed(2)+'%':'<span class="dv">—</span>';
+    const rcstEl=document.getElementById('rst_cst_'+rsk);
+    if(rcstEl) rcstEl.textContent='$'+f(Math.round(rc*100)/100,2);
+    const rsalEl=document.getElementById('rst_sal_'+rsk);
+    if(rsalEl) rsalEl.textContent='$'+f(Math.round(rs*100)/100,2);
+    rset('rst_pur_'+rsk, f(Math.round(rp)));
+    const racosEl=document.getElementById('rst_acos_'+rsk);
+    if(racosEl){racosEl.innerHTML=racos!=null?racos.toFixed(1)+'%':'<span class="dv">—</span>';racosEl.className='n '+racC;}
+  }
 }
 
 // ── Camp click ────────────────────────────────────────────
