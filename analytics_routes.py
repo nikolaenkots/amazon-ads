@@ -441,16 +441,30 @@ def analytics_campaign_structure():
           WHERE campaign_id = '{campaign_id}' AND entity_type = 'ad_group' AND ad_group_state = 'ENABLED'
       )
       AND (
-          keyword_id IS NULL
-          OR keyword_id IN (
-              SELECT keyword_id FROM `{camp_table}`
-              WHERE campaign_id = '{campaign_id}' AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
-          )
-          OR keyword_id IN (
-              SELECT target_id FROM `{camp_table}`
-              WHERE campaign_id = '{campaign_id}' AND entity_type = 'product_targeting' AND target_state = 'ENABLED'
-          )
-      )"""
+          -- manual keywords: фильтр по keyword_id
+          (keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+           AND (keyword_id IS NULL
+                OR keyword_id IN (
+                    SELECT keyword_id FROM `{camp_table}`
+                    WHERE campaign_id = '{campaign_id}' AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
+                )))
+          -- auto targets: keyword_id != target_id, маппинг через (ad_group_id + нормализованный targeting)
+          OR (keyword_type IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+              AND CONCAT(ad_group_id, '|', CASE targeting
+                  WHEN 'close-match'  THEN 'KEYWORDS_CLOSE_MATCH'
+                  WHEN 'loose-match'  THEN 'KEYWORDS_LOOSE_MATCH'
+                  WHEN 'substitutes'  THEN 'PRODUCT_SUBSTITUTES'
+                  WHEN 'complements'  THEN 'PRODUCT_COMPLEMENTS'
+                  WHEN 'same-as'      THEN 'PRODUCT_SUBSTITUTES'
+                  ELSE UPPER(targeting)
+              END) IN (
+                  SELECT CONCAT(ad_group_id, '|', targeting_expression)
+                  FROM `{camp_table}`
+                  WHERE campaign_id = '{campaign_id}'
+                    AND entity_type = 'product_targeting'
+                    AND target_state = 'ENABLED'
+              ))
+      )""""""
 
     stats_sql = f"""
     SELECT
