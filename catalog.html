@@ -4,27 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Импорт каталога · Amazon Ads</title>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #f5f2ed;
-  --surface: #ffffff;
-  --surface2: #f0ece5;
-  --border: #e4dfd7;
-  --border2: #d4cec5;
-  --text: #1c1a17;
-  --muted: #7a756d;
-  --dim: #b5b0a8;
-  --accent: #c8440a;
-  --accent-bg: rgba(200,68,10,0.07);
-  --accent-border: rgba(200,68,10,0.2);
-  --green: #2d7a4f;
-  --green-bg: rgba(45,122,79,0.07);
-  --green-border: rgba(45,122,79,0.2);
-  --amber: #9a6200;
-  --red: #c0392b;
-  --red-bg: rgba(192,57,43,0.07);
-  --red-border: rgba(192,57,43,0.2);
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22);
+  --accent-border:var(--accent-bd);--green-border:var(--green-bd);--red-border:var(--red-bd);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -91,7 +82,7 @@ main {
   gap: 28px;
 }
 .panel-title {
-  font-family: 'Instrument Serif', serif;
+  font-family:'DM Sans',sans-serif;font-weight:600;
   font-size: 26px;
   margin-bottom: 4px;
 }
@@ -126,7 +117,7 @@ main {
   background: var(--accent-bg);
 }
 .drop-title {
-  font-family: 'Instrument Serif', serif;
+  font-family:'DM Sans',sans-serif;font-weight:600;
   font-size: 18px;
   margin-bottom: 5px;
 }
@@ -271,7 +262,7 @@ input[type=file] { display: none; }
   margin-bottom: 6px;
 }
 .stat-val {
-  font-family: 'Instrument Serif', serif;
+  font-family:'DM Sans',sans-serif;font-weight:600;
   font-size: 28px;
   color: var(--text);
   line-height: 1;
@@ -381,6 +372,23 @@ input[type=file] { display: none; }
 .log-err  .log-msg { color: var(--red); }
 .log-info .log-msg { color: var(--accent); }
 .log-empty { color: var(--dim); font-size: 12px; padding: 20px 0; text-align: center; }
+
+/* Dropdown nav */
+.nav-dropdown{position:relative;display:inline-flex;align-items:center}
+.nav-btn{height:34px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-btn:hover{color:var(--text);background:var(--surface2)}
+.nav-btn svg{transition:transform .2s}
+.nav-dropdown.open .nav-btn svg{transform:rotate(180deg)}
+.nav-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:260px;padding:8px;z-index:500}
+.nav-dropdown.open .nav-menu{display:block}
+.nav-section{margin-bottom:4px}
+.nav-section:last-child{margin-bottom:0}
+.nav-sec-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);padding:6px 10px 4px}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.nav-divider{height:1px;background:var(--border);margin:4px 0}
 </style>
 </head>
 <body>
@@ -392,13 +400,40 @@ input[type=file] { display: none; }
     </div>
     Amazon Ads Automation
   </div>
-  <div class="header-nav">
-    <a href="/" class="header-back">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      Главная
-    </a>
-    <span class="header-tag">Каталог · Импорт</span>
+  <div class="nav-dropdown" id="navDrop">
+  <button class="nav-btn" onclick="document.getElementById('navDrop').classList.toggle('open')">
+    Навигация
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-menu">
+    <div class="nav-section">
+      <div class="nav-sec-label">Аналитика</div>
+      <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+      <a href="/analytics/products" class="nav-link">Продукты</a>
+      <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
+      <a href="/budget-analysis" class="nav-link">Бюджет</a>
+      <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+      <a href="/targets" class="nav-link">Таргеты</a>
+      <a href="/portfolios" class="nav-link">Портфолио</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-sec-label">Управление</div>
+      <a href="/control" class="nav-link">Контроль изменений</a>
+      <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+      <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-sec-label">Импорт данных</div>
+      <a href="/campaigns" class="nav-link">Кампании SP API</a>
+      <a href="/catalog" class="nav-link active">Каталог</a>
+      <a href="/earnings" class="nav-link">Продажи Merch</a>
+      <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+      <a href="/ads" class="nav-link">Ads отчёты</a>
+    </div>
   </div>
+</div>
 </header>
 
 <main>
@@ -671,6 +706,9 @@ async function startImport() {
 
   startPolling(jobId);
 }
+</script>
+<script>
+document.addEventListener('click',function(e){var nd=document.getElementById('navDrop');if(nd&&!nd.contains(e.target))nd.classList.remove('open');});
 </script>
 </body>
 </html>
