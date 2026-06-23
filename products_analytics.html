@@ -369,8 +369,8 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
       <div class="fg"><div class="fl">ASIN</div><input type="text" id="fasin" placeholder="B0H1..." style="width:148px" onkeydown="if(event.key==='Enter')go()"></div>
       <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none">
-          <input type="checkbox" id="activeOnly" onchange="go()" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
-          Только активные кампании и группы
+          <input type="checkbox" id="activeOnly" onchange="S.sc={};go()" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Только активные
         </label>
       </div>
       <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
@@ -700,8 +700,7 @@ async function loadCamps(asin, mkt){
     const p=params(); p.set('asin',asin); p.set('marketplace',mkt);
     const r=await fetch('/analytics/products/campaigns?'+p);
     const d=await r.json(); if(d.error)throw new Error(d.error);
-    const activeOnly=document.getElementById('activeOnly').checked;
-    const camps=(d.campaigns||[]).filter(c=>!activeOnly||(c.campaign_state||'').toUpperCase()==='ENABLED');
+    const camps=d.campaigns||[];
     if(!camps.length){el.innerHTML='<div class="stl" style="color:var(--muted)">Нет кампаний в выбранный период</div>';return;}
 
     let h=`<div class="cpp"><div class="cpt">Кампании · ${camps.length} шт</div><div class="cpc">`;
@@ -788,7 +787,8 @@ async function campClick(cid, asin, mkt='', tgtType=''){
       cs.innerHTML='<div class="stl"><div class="sp"></div> Загрузка структуры...</div>';
       const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
       try{
-        const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}`);
+        const ao=document.getElementById('activeOnly')?.checked?'&active_only=1':'';
+      const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}${ao}`);
         const d=await r.json(); if(d.error)throw new Error(d.error);
         S.sc[cid]=d;
         if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt, tgtType);
@@ -870,8 +870,7 @@ function tabSortClick(e, key, el){
 
   if(isKw){
     // Re-render kw+targets rows
-    const _ao=document.getElementById('activeOnly')?.checked;
-    const items = tabSortItems([...(g.keywords||[]),...(g.targets||[])].filter(it=>!_ao||(it.state||'ENABLED').toUpperCase()==='ENABLED'), newSort, it=>it.stats||{});
+    const items = tabSortItems([...(g.keywords||[]),...(g.targets||[])], newSort, it=>it.stats||{});
     // Remove existing rows (everything after .ih)
     const ih = panel.querySelector('.ih');
     if(!ih) return;
@@ -964,9 +963,8 @@ function tabSortClick(e, key, el){
 
 function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
   let groups=data.groups||[];
-  const activeOnly=document.getElementById('activeOnly').checked;
 
-  // Filter groups: only those containing this ASIN (must run first — uses anyHasAsin logic)
+  // Filter groups: only those containing this ASIN
   if(filterAsin){
     const fa=filterAsin.toUpperCase();
     // Check if any group has explicit ASIN in ads (MANUAL campaigns store ASIN)
@@ -984,9 +982,6 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
       return false;
     });
   }
-
-  // Filter by state AFTER ASIN filter (so anyHasAsin logic above isn't broken)
-  if(activeOnly) groups=groups.filter(g=>(g.state||'').toLowerCase()==='enabled');
 
   if(!groups.length) return '<div class="ge" style="padding:16px">Нет групп с активностью для данного ASIN</div>';
 
@@ -1064,8 +1059,7 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         ${kwH('impressions','Показы')}${kwH('clicks','Клики')}${kwH('purchases_14d','Заказы')}
         ${kwH('cost','Расходы')}${kwH('sales_14d','Продажи')}${kwH('acos','ACOS')}
       </div>`;
-      const kwRaw=[...(g.keywords||[]),...(g.targets||[])].filter(it=>!activeOnly||(it.state||'ENABLED').toUpperCase()==='ENABLED');
-      const kwItems=tabSortItems(kwRaw,kwS,s=>s.stats||{});
+      const kwItems=tabSortItems([...(g.keywords||[]),...(g.targets||[])],kwS,s=>s.stats||{});
       kwItems.forEach(it=>{
         const s=it.stats||{};
         const ac=s.acos==null?'dv':s.acos<25?'ok':s.acos<50?'hi':'cr';
