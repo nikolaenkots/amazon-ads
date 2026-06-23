@@ -624,14 +624,14 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
 
 def send_delete_targets(endpoint, headers, changes, dry_run=False):
     """Удалить минус слова"""
-    payloads = [{"targetId": c["entity_id"]} for c in changes]
+    target_ids = [c["entity_id"] for c in changes]
 
     if dry_run:
-        print(f"  [DRY RUN] delete/targets: {[c['entity_id'] for c in changes]}")
+        print(f"  [DRY RUN] delete/targets: {target_ids}")
         return {i: "SUCCESS" for i in range(len(changes))}
 
-    print(f"  [DEBUG] delete/targets payload: {json.dumps(payloads, ensure_ascii=False)}")
-    resp = amz_post(endpoint, "/adsApi/v1/delete/targets", headers, {"targets": payloads})
+    print(f"  [DEBUG] delete/targets payload: {json.dumps(target_ids, ensure_ascii=False)}")
+    resp = amz_post(endpoint, "/adsApi/v1/delete/targets", headers, {"targetIds": target_ids})
     print(f"  [DEBUG] delete/targets status={resp.status_code}")
     try:
         rj = resp.json()
