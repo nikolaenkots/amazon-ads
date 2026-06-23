@@ -966,10 +966,7 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
   let groups=data.groups||[];
   const activeOnly=document.getElementById('activeOnly').checked;
 
-  // Filter groups by state when activeOnly
-  if(activeOnly) groups=groups.filter(g=>(g.state||'').toLowerCase()==='enabled');
-
-  // Filter groups: only those containing this ASIN
+  // Filter groups: only those containing this ASIN (must run first — uses anyHasAsin logic)
   if(filterAsin){
     const fa=filterAsin.toUpperCase();
     // Check if any group has explicit ASIN in ads (MANUAL campaigns store ASIN)
@@ -987,6 +984,9 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
       return false;
     });
   }
+
+  // Filter by state AFTER ASIN filter (so anyHasAsin logic above isn't broken)
+  if(activeOnly) groups=groups.filter(g=>(g.state||'').toLowerCase()==='enabled');
 
   if(!groups.length) return '<div class="ge" style="padding:16px">Нет групп с активностью для данного ASIN</div>';
 
