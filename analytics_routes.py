@@ -464,7 +464,7 @@ def analytics_campaign_structure():
                     AND entity_type = 'product_targeting'
                     AND target_state = 'ENABLED'
               ))
-      )""""""
+      )"""
 
     stats_sql = f"""
     SELECT
