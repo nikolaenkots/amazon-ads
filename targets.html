@@ -228,22 +228,23 @@ body.bulk-active .toast-wrap{bottom:70px}
 .row-cb{width:14px;height:14px;accent-color:var(--accent);cursor:pointer}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 
-/* Dropdown nav */
-.nav-dropdown{position:relative;display:inline-flex;align-items:center}
-.nav-btn{height:34px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
-.nav-btn:hover{color:var(--text);background:var(--surface2)}
-.nav-btn svg{transition:transform .2s}
-.nav-dropdown.open .nav-btn svg{transform:rotate(180deg)}
-.nav-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:260px;padding:8px;z-index:500}
-.nav-dropdown.open .nav-menu{display:block}
-.nav-section{margin-bottom:4px}
-.nav-section:last-child{margin-bottom:0}
-.nav-sec-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);padding:6px 10px 4px}
+/* Nav */
+.nav-bar{display:flex;align-items:center;gap:2px}
+.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-home.active{color:var(--accent);background:var(--accent-bg)}
+.nav-drop{position:relative;display:inline-flex;align-items:center}
+.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop.open .nav-drop-btn{color:var(--text)}
+.nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
+.nav-drop.open .nav-drop-menu{display:block}
 .nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
 .nav-link:hover{background:var(--surface2)}
 .nav-link.active{background:var(--accent-bg);color:var(--accent)}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
-.nav-divider{height:1px;background:var(--border);margin:4px 0}
 </style>
 </head>
 <body>
@@ -253,39 +254,48 @@ body.bulk-active .toast-wrap{bottom:70px}
     <div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
     Amazon Ads Automation
   </div>
-  <div class="nav-dropdown" id="navDrop">
-  <button class="nav-btn" onclick="document.getElementById('navDrop').classList.toggle('open')">
-    Навигация
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  <div class="nav-bar">
+  <a href="/" class="nav-home">Главная</a>
+  <div class="nav-drop" id="navA">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navA');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Аналитика
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
   </button>
-  <div class="nav-menu">
-    <div class="nav-section">
-      <div class="nav-sec-label">Аналитика</div>
-      <a href="/analytics/campaigns" class="nav-link">Кампании</a>
-      <a href="/analytics/products" class="nav-link">Продукты</a>
-      <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
-      <a href="/budget-analysis" class="nav-link">Бюджет</a>
-      <a href="/search-terms" class="nav-link">Поисковые запросы</a>
-      <a href="/targets" class="nav-link active">Таргеты</a>
-      <a href="/portfolios" class="nav-link">Портфолио</a>
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-section">
-      <div class="nav-sec-label">Управление</div>
-      <a href="/control" class="nav-link">Контроль изменений</a>
-      <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
-      <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
-    </div>
-    <div class="nav-divider"></div>
-    <div class="nav-section">
-      <div class="nav-sec-label">Импорт данных</div>
-      <a href="/campaigns" class="nav-link">Кампании SP API</a>
-      <a href="/catalog" class="nav-link">Каталог</a>
-      <a href="/earnings" class="nav-link">Продажи Merch</a>
-      <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
-      <a href="/ads" class="nav-link">Ads отчёты</a>
-    </div>
+  <div class="nav-drop-menu">
+    <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+    <a href="/analytics/products" class="nav-link">Продукты</a>
+    <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
+    <a href="/budget-analysis" class="nav-link">Бюджет</a>
+    <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+    <a href="/targets" class="nav-link active">Таргеты</a>
+    <a href="/portfolios" class="nav-link">Портфолио</a>
   </div>
+</div>
+  <div class="nav-drop" id="navM">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navM');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Управление
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/control" class="nav-link">Контроль изменений</a>
+    <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+    <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navI">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navI');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Импорт
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/campaigns" class="nav-link">Кампании SP API</a>
+    <a href="/catalog" class="nav-link">Каталог</a>
+    <a href="/earnings" class="nav-link">Продажи Merch</a>
+    <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+    <a href="/ads" class="nav-link">Ads отчёты</a>
+  </div>
+</div>
+</div>
 </div>
 </header>
 
@@ -1375,7 +1385,11 @@ async function submitBulkBid(){
 </div>
 
 <script>
-document.addEventListener('click',function(e){var nd=document.getElementById('navDrop');if(nd&&!nd.contains(e.target))nd.classList.remove('open');});
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.nav-drop').forEach(function(d){
+    if(!d.contains(e.target))d.classList.remove('open');
+  });
+});
 </script>
 </body>
 </html>
