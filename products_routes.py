@@ -87,15 +87,22 @@ def analytics_products_data():
         camp_conds.append("camp.campaign_state = 'ENABLED'")
     camp_where = 'WHERE ' + ' AND '.join(camp_conds)
 
-    active_group_filter = ""
+    # CTE для фильтрации по активным группам (только при active_only)
+    group_filter_cte = ""
+    group_filter_join = ""
     if active_only:
-        active_group_filter = f"""
-        AND EXISTS (
-            SELECT 1 FROM `{camp_table}` grp
-            WHERE grp.entity_type = 'ad_group'
-              AND grp.campaign_id = camp.campaign_id
-              AND grp.ad_group_state = 'ENABLED'
-        )"""
+        group_filter_cte = f"""
+    group_filter AS (
+        SELECT DISTINCT grp.campaign_id, grp.ad_group_id
+        FROM `{camp_table}` grp
+        INNER JOIN camp_filter cf ON cf.campaign_id = grp.campaign_id
+        WHERE grp.entity_type = 'ad_group'
+          AND grp.ad_group_state = 'ENABLED'
+    ),"""
+        group_filter_join = """
+        INNER JOIN group_filter gf
+            ON gf.campaign_id = a.campaign_id
+            AND gf.ad_group_id = a.ad_group_id"""
 
     asin_cond = ''
     if asin_filter:
@@ -108,8 +115,8 @@ def analytics_products_data():
         SELECT DISTINCT camp.campaign_id, camp.marketplace
         FROM `{camp_table}` camp
         {camp_where}
-        {active_group_filter}
     ),
+    {group_filter_cte}
     stats AS (
         SELECT
             a.advertised_asin                   AS asin,
@@ -124,6 +131,7 @@ def analytics_products_data():
         INNER JOIN camp_filter cf
             ON cf.campaign_id = a.campaign_id
             AND cf.marketplace = a.marketplace
+        {group_filter_join}
         WHERE a.advertised_asin IS NOT NULL
           AND a.advertised_asin != ''
         {date_where}
