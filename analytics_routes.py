@@ -433,6 +433,25 @@ def analytics_campaign_structure():
     if date_to:   date_conds.append(f"date <= '{date_to}'")
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
 
+    stats_active_filter = ""
+    if active_only:
+        stats_active_filter = f"""
+      AND ad_group_id IN (
+          SELECT ad_group_id FROM `{camp_table}`
+          WHERE campaign_id = '{campaign_id}' AND entity_type = 'ad_group' AND ad_group_state = 'ENABLED'
+      )
+      AND (
+          keyword_id IS NULL
+          OR keyword_id IN (
+              SELECT keyword_id FROM `{camp_table}`
+              WHERE campaign_id = '{campaign_id}' AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
+          )
+          OR keyword_id IN (
+              SELECT target_id FROM `{camp_table}`
+              WHERE campaign_id = '{campaign_id}' AND entity_type = 'product_targeting' AND target_state = 'ENABLED'
+          )
+      )"""
+
     stats_sql = f"""
     SELECT
         ad_group_id,
@@ -450,6 +469,7 @@ def analytics_campaign_structure():
     FROM `{stat_table}`
     WHERE campaign_id = '{campaign_id}'
     {date_where}
+    {stats_active_filter}
     GROUP BY ad_group_id, keyword_id, keyword_type, targeting
     """
 
