@@ -649,7 +649,7 @@ async function submitModal() {
     const r = await fetch('/control/add_batch', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(items),
+      body: JSON.stringify({items}),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.statusText);
