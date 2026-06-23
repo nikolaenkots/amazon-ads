@@ -964,6 +964,11 @@ function tabSortClick(e, key, el){
 function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
   let groups=data.groups||[];
 
+  // Hide paused groups when active_only is checked
+  if(document.getElementById('activeOnly')?.checked){
+    groups=groups.filter(g=>(g.state||'').toUpperCase()==='ENABLED');
+  }
+
   // Filter groups: only those containing this ASIN
   if(filterAsin){
     const fa=filterAsin.toUpperCase();
