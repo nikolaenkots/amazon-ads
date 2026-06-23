@@ -767,9 +767,27 @@ async function loadCamps(asin, mkt){
     });
     h+='</div></div>';
     el.innerHTML=h;
+    // Если active_only — подгружаем структуру всех кампаний в фоне для пересчёта stats
+    if(document.getElementById('activeOnly')?.checked){
+      camps.forEach(c=>prefetchCampStruct(c.campaign_id, asin, c.marketplace||mkt, c.targeting_type||''));
+    }
   }catch(e){
     if(el)el.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
   }
+}
+
+async function prefetchCampStruct(cid, asin, mkt, tgtType){
+  if(S.sc[cid]){updateCampStats(cid, S.sc[cid], asin); return;}
+  const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
+  try{
+    const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}&active_only=1`);
+    const d=await r.json(); if(d.error) return;
+    S.sc[cid]=d;
+    updateCampStats(cid, d, asin);
+    // Если панель уже открыта — перерисовать
+    const cs=document.getElementById('cs_'+cid);
+    if(cs?.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt, tgtType);
+  }catch(e){}
 }
 
 // Пересчёт stats кампании из stats групп (для active_only)
