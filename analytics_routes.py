@@ -442,7 +442,6 @@ def analytics_campaign_structure():
       )
       AND (
           keyword_id IS NULL
-          OR keyword_type IN ('TARGETING_EXPRESSION_PREDEFINED', 'TARGETING_EXPRESSION')
           OR keyword_id IN (
               SELECT keyword_id FROM `{camp_table}`
               WHERE campaign_id = '{campaign_id}' AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
@@ -949,11 +948,33 @@ def debug_targeting():
                 WHERE asin IN ({asin_list}) LIMIT 10
             """).result()]
 
+        # targets_stats — что реально хранится (keyword_id, keyword_type, targeting)
+        tgt_stat_sample = [dict(r) for r in client.query(f"""
+            SELECT ad_group_id, keyword_id, keyword_type, targeting,
+                   SUM(clicks) as clicks
+            FROM `{stat_table}`
+            WHERE campaign_id = '{campaign_id}' {date_where}
+            GROUP BY ad_group_id, keyword_id, keyword_type, targeting
+            ORDER BY clicks DESC
+            LIMIT 20
+        """).result()]
+
+        # campaigns — product_targeting rows с target_id и target_state
+        camp_targets = [dict(r) for r in client.query(f"""
+            SELECT ad_group_id, target_id, targeting_expression, target_state
+            FROM `{camp_table}`
+            WHERE campaign_id = '{campaign_id}' AND entity_type = 'product_targeting'
+            ORDER BY targeting_expression
+            LIMIT 20
+        """).result()]
+
         return jsonify({
             'ads_in_campaigns': ads,
             'asin_stats': asin_stats,
             'neg_targets': neg_targets,
-            'catalog': catalog_rows
+            'catalog': catalog_rows,
+            'tgt_stat_sample': tgt_stat_sample,
+            'camp_targets': camp_targets,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
