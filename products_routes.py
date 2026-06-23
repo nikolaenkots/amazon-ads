@@ -223,6 +223,7 @@ def analytics_product_campaigns():
     account_type = request.args.get('account_type', 'MERCH').upper()
     date_from    = request.args.get('date_from', '')
     date_to      = request.args.get('date_to', '')
+    active_only  = request.args.get('active_only', '') == '1'
 
     if not asin or account_type not in ('MERCH', 'KDP'):
         return jsonify({"error": "Неверные параметры"}), 400
@@ -238,7 +239,25 @@ def analytics_product_campaigns():
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
     mkt_cond   = f"AND a.marketplace = '{marketplace}'" if marketplace else ''
 
+    active_camp_filter  = "AND camp.campaign_state = 'ENABLED'" if active_only else ''
+    active_group_cte    = f"""
+    , active_groups AS (
+        SELECT DISTINCT ad_group_id, campaign_id
+        FROM `{camp_table}`
+        WHERE entity_type = 'ad_group'
+          AND ad_group_state = 'ENABLED'
+    )""" if active_only else ''
+    active_group_join   = "INNER JOIN active_groups ag ON ag.campaign_id = a.campaign_id AND ag.ad_group_id = a.ad_group_id" if active_only else ''
+
     sql = f"""
+    WITH camp_data AS (
+        SELECT campaign_id, marketplace, campaign_name, campaign_state,
+               targeting_type, portfolio_id, daily_budget, end_date, portfolio_name
+        FROM `{camp_table}`
+        WHERE entity_type = 'campaign'
+          {active_camp_filter}
+    )
+    {active_group_cte}
     SELECT
         a.campaign_id,
         MAX(camp.campaign_name)    AS campaign_name,
@@ -255,14 +274,14 @@ def analytics_product_campaigns():
         ROUND(SUM(a.sales_14d), 2)   AS sales_14d,
         SUM(a.purchases_14d)         AS purchases_14d
     FROM `{asin_table}` a
-    LEFT JOIN `{camp_table}` camp
+    LEFT JOIN camp_data camp
         ON camp.campaign_id = a.campaign_id
         AND camp.marketplace = a.marketplace
-        AND camp.entity_type = 'campaign'
     LEFT JOIN `{pf_table}` pl
         ON pl.portfolio_id   = camp.portfolio_id
         AND pl.marketplace   = a.marketplace
         AND pl.account_type  = '{account_type}'
+    {active_group_join}
     WHERE a.advertised_asin = '{asin}'
     {mkt_cond}
     {date_where}

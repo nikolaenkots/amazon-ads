@@ -375,6 +375,7 @@ def analytics_campaign_structure():
     account_type = request.args.get('account_type', 'MERCH').upper()
     date_from    = request.args.get('date_from', '')
     date_to      = request.args.get('date_to', '')
+    active_only  = request.args.get('active_only', '') == '1'
 
     if not campaign_id or account_type not in ('MERCH', 'KDP'):
         return jsonify({"error": "Неверные параметры"}), 400
@@ -382,6 +383,29 @@ def analytics_campaign_structure():
     suffix     = account_type.lower()
     camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
     stat_table = f"{PROJECT_ID}.{DATASET}.targets_stats_{suffix}"
+
+    # При active_only фильтруем: только enabled группы (+ всё что в них), enabled keywords, enabled targets
+    active_filter = ""
+    if active_only:
+        active_filter = f"""
+      AND (
+        -- группы: только enabled
+        (entity_type = 'ad_group' AND ad_group_state = 'ENABLED')
+        -- ключевые слова: только enabled, только из enabled-групп
+        OR (entity_type = 'keyword' AND keyword_state = 'ENABLED'
+            AND ad_group_id IN (
+              SELECT ad_group_id FROM `{camp_table}`
+              WHERE campaign_id = '{campaign_id}' AND entity_type = 'ad_group' AND ad_group_state = 'ENABLED'
+            ))
+        -- таргеты: только enabled, только из enabled-групп
+        OR (entity_type = 'product_targeting' AND target_state = 'ENABLED'
+            AND ad_group_id IN (
+              SELECT ad_group_id FROM `{camp_table}`
+              WHERE campaign_id = '{campaign_id}' AND entity_type = 'ad_group' AND ad_group_state = 'ENABLED'
+            ))
+        -- негативы и размещения — всегда показываем (нет своего состояния)
+        OR entity_type IN ('negative_keyword','negative_product_targeting','bidding_adjustment','product_ad')
+      )"""
 
     # ── Запрос структуры ──────────────────────────────────
     struct_sql = f"""
@@ -399,6 +423,7 @@ def analytics_campaign_structure():
     FROM `{camp_table}`
     WHERE campaign_id = '{campaign_id}'
       AND entity_type IN ('ad_group','keyword','negative_keyword','negative_product_targeting','product_targeting','bidding_adjustment','product_ad')
+      {active_filter}
     ORDER BY entity_type, ad_group_id, keyword_text, targeting_expression
     """
 
