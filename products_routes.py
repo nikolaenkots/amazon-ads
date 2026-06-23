@@ -69,11 +69,17 @@ def analytics_products_data():
     asin_table = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
     camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
     cat_table  = f"{PROJECT_ID}.{DATASET}.catalog"
+    stat_table = f"{PROJECT_ID}.{DATASET}.targets_stats_{suffix}"
 
-    date_conds = []
-    if date_from: date_conds.append(f"a.date >= '{date_from}'")
-    if date_to:   date_conds.append(f"a.date <= '{date_to}'")
-    date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
+    date_conds_a = []
+    if date_from: date_conds_a.append(f"a.date >= '{date_from}'")
+    if date_to:   date_conds_a.append(f"a.date <= '{date_to}'")
+    date_where = ('AND ' + ' AND '.join(date_conds_a)) if date_conds_a else ''
+
+    date_conds_s = []
+    if date_from: date_conds_s.append(f"s.date >= '{date_from}'")
+    if date_to:   date_conds_s.append(f"s.date <= '{date_to}'")
+    date_where_s = ('AND ' + ' AND '.join(date_conds_s)) if date_conds_s else ''
 
     # Фильтры для CTE camp_filter — используем алиас camp (не c!)
     camp_conds = ["camp.entity_type = 'campaign'"]
@@ -87,36 +93,85 @@ def analytics_products_data():
         camp_conds.append("camp.campaign_state = 'ENABLED'")
     camp_where = 'WHERE ' + ' AND '.join(camp_conds)
 
-    # CTE для фильтрации по активным группам (только при active_only)
-    group_filter_cte = ""
-    group_filter_join = ""
-    if active_only:
-        group_filter_cte = f"""
-    group_filter AS (
-        SELECT DISTINCT grp.campaign_id, grp.ad_group_id
-        FROM `{camp_table}` grp
-        INNER JOIN camp_filter cf ON cf.campaign_id = grp.campaign_id
-        WHERE grp.entity_type = 'ad_group'
-          AND grp.ad_group_state = 'ENABLED'
-    ),"""
-        group_filter_join = """
-        INNER JOIN group_filter gf
-            ON gf.campaign_id = a.campaign_id
-            AND gf.ad_group_id = a.ad_group_id"""
-
     asin_cond = ''
     if asin_filter:
         safe_asin = asin_filter.replace("'", "''")
         asin_cond = f"AND a.advertised_asin LIKE '%{safe_asin}%'"
 
-    # Единый SQL: строки + total + summary через window functions (1 запрос вместо 3)
-    sql = f"""
-    WITH camp_filter AS (
-        SELECT DISTINCT camp.campaign_id, camp.marketplace
-        FROM `{camp_table}` camp
-        {camp_where}
+    if active_only:
+        # Когда active_only: stats строим из targets_stats (фильтр по активным таргетам)
+        # + asin_map из asin_stats как lookup (campaign_id, ad_group_id) → advertised_asin
+        stats_cte = f"""
+    enabled_groups AS (
+        SELECT DISTINCT grp.campaign_id, grp.ad_group_id
+        FROM `{camp_table}` grp
+        INNER JOIN camp_filter cf ON cf.campaign_id = grp.campaign_id
+        WHERE grp.entity_type = 'ad_group' AND grp.ad_group_state = 'ENABLED'
     ),
-    {group_filter_cte}
+    active_target_stats AS (
+        SELECT
+            s.campaign_id,
+            s.ad_group_id,
+            SUM(s.impressions)     AS impressions,
+            SUM(s.clicks)          AS clicks,
+            ROUND(SUM(s.cost), 2)  AS cost,
+            ROUND(SUM(s.sales_14d), 2) AS sales_14d,
+            SUM(s.purchases_14d)   AS purchases_14d
+        FROM `{stat_table}` s
+        INNER JOIN enabled_groups eg
+            ON eg.campaign_id = s.campaign_id AND eg.ad_group_id = s.ad_group_id
+        WHERE TRUE
+          {date_where_s}
+          AND (
+              (s.keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+               AND s.keyword_id IN (
+                   SELECT keyword_id FROM `{camp_table}`
+                   WHERE campaign_id = s.campaign_id AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
+               ))
+              OR (s.keyword_type IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+                  AND CONCAT(s.ad_group_id, '|', CASE s.targeting
+                      WHEN 'close-match' THEN 'KEYWORDS_CLOSE_MATCH'
+                      WHEN 'loose-match' THEN 'KEYWORDS_LOOSE_MATCH'
+                      WHEN 'substitutes' THEN 'PRODUCT_SUBSTITUTES'
+                      WHEN 'complements' THEN 'PRODUCT_COMPLEMENTS'
+                      WHEN 'same-as'     THEN 'PRODUCT_SUBSTITUTES'
+                      ELSE UPPER(s.targeting)
+                  END) IN (
+                      SELECT CONCAT(ad_group_id, '|', targeting_expression)
+                      FROM `{camp_table}`
+                      WHERE entity_type = 'product_targeting' AND target_state = 'ENABLED'
+                  ))
+          )
+        GROUP BY s.campaign_id, s.ad_group_id
+    ),
+    asin_map AS (
+        SELECT DISTINCT a.campaign_id, a.ad_group_id, a.advertised_asin, cf.marketplace
+        FROM `{asin_table}` a
+        INNER JOIN camp_filter cf ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
+        WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != ''
+        {date_where}
+        {asin_cond}
+    ),
+    stats AS (
+        SELECT
+            am.advertised_asin                  AS asin,
+            am.marketplace,
+            SUM(ats.impressions)                AS impressions,
+            SUM(ats.clicks)                     AS clicks,
+            ROUND(SUM(ats.cost), 2)             AS cost,
+            ROUND(SUM(ats.sales_14d), 2)        AS sales_14d,
+            SUM(ats.purchases_14d)              AS purchases_14d,
+            COUNT(DISTINCT ats.campaign_id)     AS campaign_count
+        FROM active_target_stats ats
+        INNER JOIN asin_map am
+            ON am.campaign_id = ats.campaign_id AND am.ad_group_id = ats.ad_group_id
+        GROUP BY am.advertised_asin, am.marketplace
+    ),"""
+    else:
+        # Обычный режим: stats из asin_stats с фильтром по группам
+        group_filter_cte = ""
+        group_filter_join = ""
+        stats_cte = f"""
     stats AS (
         SELECT
             a.advertised_asin                   AS asin,
@@ -131,13 +186,21 @@ def analytics_products_data():
         INNER JOIN camp_filter cf
             ON cf.campaign_id = a.campaign_id
             AND cf.marketplace = a.marketplace
-        {group_filter_join}
         WHERE a.advertised_asin IS NOT NULL
           AND a.advertised_asin != ''
         {date_where}
         {asin_cond}
         GROUP BY a.advertised_asin, a.marketplace
+    ),"""
+
+    # Единый SQL: строки + total + summary через window functions (1 запрос вместо 3)
+    sql = f"""
+    WITH camp_filter AS (
+        SELECT DISTINCT camp.campaign_id, camp.marketplace
+        FROM `{camp_table}` camp
+        {camp_where}
     ),
+    {stats_cte}
     with_metrics AS (
         SELECT *,
             CASE WHEN impressions > 0 THEN ROUND(clicks / impressions * 100, 3) ELSE NULL END AS ctr,
