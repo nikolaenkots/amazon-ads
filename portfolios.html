@@ -115,6 +115,23 @@ select.modal-inp{cursor:pointer}
 .modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .btn-amz{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
 .btn-amz:hover:not(:disabled){background:var(--amber-bd)}
+
+/* Dropdown nav */
+.nav-dropdown{position:relative;display:inline-flex;align-items:center}
+.nav-btn{height:34px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-btn:hover{color:var(--text);background:var(--surface2)}
+.nav-btn svg{transition:transform .2s}
+.nav-dropdown.open .nav-btn svg{transform:rotate(180deg)}
+.nav-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:260px;padding:8px;z-index:500}
+.nav-dropdown.open .nav-menu{display:block}
+.nav-section{margin-bottom:4px}
+.nav-section:last-child{margin-bottom:0}
+.nav-sec-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);padding:6px 10px 4px}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.nav-divider{height:1px;background:var(--border);margin:4px 0}
 </style>
 </head>
 <body>
@@ -126,14 +143,40 @@ select.modal-inp{cursor:pointer}
     </div>
     Amazon Ads Automation
   </div>
-  <nav>
-    <a href="/">Главная</a>
-    <a href="/analytics/campaigns">Кампании</a>
-    <a href="/analytics/products">Продукты</a>
-    <a href="/control">Контроль</a>
-    <a href="/targets">Таргеты</a>
-    <a href="/portfolios" class="active">Портфолио</a>
-  </nav>
+  <div class="nav-dropdown" id="navDrop">
+  <button class="nav-btn" onclick="document.getElementById('navDrop').classList.toggle('open')">
+    Навигация
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-menu">
+    <div class="nav-section">
+      <div class="nav-sec-label">Аналитика</div>
+      <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+      <a href="/analytics/products" class="nav-link">Продукты</a>
+      <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
+      <a href="/budget-analysis" class="nav-link">Бюджет</a>
+      <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+      <a href="/targets" class="nav-link">Таргеты</a>
+      <a href="/portfolios" class="nav-link active">Портфолио</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-sec-label">Управление</div>
+      <a href="/control" class="nav-link">Контроль изменений</a>
+      <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+      <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-sec-label">Импорт данных</div>
+      <a href="/campaigns" class="nav-link">Кампании SP API</a>
+      <a href="/catalog" class="nav-link">Каталог</a>
+      <a href="/earnings" class="nav-link">Продажи Merch</a>
+      <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+      <a href="/ads" class="nav-link">Ads отчёты</a>
+    </div>
+  </div>
+</div>
 </header>
 
 <main>
@@ -525,6 +568,9 @@ async function submitCreate(){
 }
 
 loadPortfolios();
+</script>
+<script>
+document.addEventListener('click',function(e){var nd=document.getElementById('navDrop');if(nd&&!nd.contains(e.target))nd.classList.remove('open');});
 </script>
 </body>
 </html>
