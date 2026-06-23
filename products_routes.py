@@ -84,7 +84,7 @@ def analytics_products_data():
         safe_ids = ','.join(f"'{i}'" for i in ids)
         camp_conds.append(f"camp.portfolio_id IN ({safe_ids})")
     if active_only:
-        camp_conds.append("camp.campaign_state = 'enabled'")
+        camp_conds.append("camp.campaign_state = 'ENABLED'")
     camp_where = 'WHERE ' + ' AND '.join(camp_conds)
 
     active_group_filter = ""
@@ -94,7 +94,7 @@ def analytics_products_data():
             SELECT 1 FROM `{camp_table}` grp
             WHERE grp.entity_type = 'ad_group'
               AND grp.campaign_id = camp.campaign_id
-              AND grp.ad_group_state = 'enabled'
+              AND grp.ad_group_state = 'ENABLED'
         )"""
 
     asin_cond = ''
