@@ -627,29 +627,49 @@ async function submitModal() {
   btn.disabled = true;
   btn.textContent = 'Добавление...';
 
-  let ok = 0, fail = 0;
-  for (const cid of modalCampaignIds) {
-    const camp = campaigns.find(c => c.campaign_id === cid);
-    if (!camp) continue;
-    for (const text of words) {
-      try {
-        await ctrlAdd(camp, text, matchType);
-        ok++;
-      } catch(e) { fail++; }
+  try {
+    const items = [];
+    for (const cid of modalCampaignIds) {
+      const camp = campaigns.find(c => c.campaign_id === cid);
+      if (!camp) continue;
+      for (const text of words) {
+        items.push({
+          account_type: acct,
+          marketplace: camp.marketplace,
+          profile_id: getProfileId(acct, camp.marketplace),
+          entity_type: 'negative_add',
+          entity_id: camp.campaign_id,
+          field_name: '—',
+          old_value: '',
+          new_value: JSON.stringify({ text, match_type: matchType, ad_group_id: '', campaign_id: camp.campaign_id }),
+        });
+      }
     }
+
+    const r = await fetch('/control/add_batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(items),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.statusText);
+
+    const ok = d.inserted || 0;
+    const failCount = (d.errors || []).length;
+    closeModal();
+    if (ok) toast(`Добавлено в очередь: ${ok}`, 'ok');
+    if (failCount) toast(`Ошибок: ${failCount} — ${(d.errors[0]||{}).error || ''}`, 'err');
+
+    modalCampaignIds.forEach(cid => {
+      const er = document.getElementById('er_' + cid);
+      if (er && er.style.display !== 'none') loadNegatives(cid);
+    });
+  } catch(e) {
+    toast('Ошибка: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Добавить в очередь';
   }
-
-  btn.disabled = false;
-  btn.textContent = 'Добавить в очередь';
-  closeModal();
-  if (ok) toast(`Добавлено в очередь: ${ok}`, 'ok');
-  if (fail) toast(`Ошибок: ${fail}`, 'err');
-
-  // Reload open campaigns
-  modalCampaignIds.forEach(cid => {
-    const er = document.getElementById('er_' + cid);
-    if (er && er.style.display !== 'none') loadNegatives(cid);
-  });
 }
 
 async function ctrlAdd(camp, text, matchType) {
@@ -684,7 +704,8 @@ async function deleteNeg(cid, keywordId, keywordText) {
       new_value: 'DELETED',
     };
     const r = await fetch('/control/queue', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || r.statusText); }
+    const rd = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(rd.error || r.statusText);
     toast('Добавлено в очередь на удаление', 'ok');
     const row = document.getElementById('negrow_' + keywordId);
     if (row) row.remove();
