@@ -484,16 +484,22 @@ def send_update_targets(endpoint, headers, changes, dry_run=False):
 
 def send_create_targets(endpoint, headers, changes, dry_run=False):
     """Создать новые ключевые слова или минус слова"""
-    payloads = []
-    for c in changes:
+    # Campaign-level negatives (ad_group_id empty) use a separate endpoint
+    campaign_neg_payloads = []   # → /create/campaignNegativeTargets
+    campaign_neg_indices  = []   # original indices
+
+    payloads = []           # → /create/targets
+    payload_indices = []    # original indices
+
+    for orig_i, c in enumerate(changes):
         et  = c["entity_type"]
         val = json.loads(c["new_value"])  # {text, match_type, bid?, ad_group_id, campaign_id}
-        ag_id = val.get("ad_group_id") or c["entity_id"]
-        camp_id = val.get("campaign_id", "")
+        ag_id   = val.get("ad_group_id") or ""
+        camp_id = val.get("campaign_id") or c["entity_id"]
 
         if et == "keyword_add":
             item = {
-                "adGroupId":   ag_id,
+                "adGroupId":   ag_id or c["entity_id"],
                 "campaignId":  camp_id,
                 "adProduct":   "SPONSORED_PRODUCTS",
                 "negative":    False,
@@ -515,27 +521,50 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
                 }
                 currency = MKT_CURRENCY.get(mkt_code, "USD")
                 item["bid"] = {"bid": float(val["bid"]), "currencyCode": currency}
+            payloads.append(item)
+            payload_indices.append(orig_i)
+
         elif et == "negative_add":
-            # matchType без префикса NEGATIVE_ (API принимает EXACT/PHRASE/BROAD)
             raw_mt = val.get("match_type", "NEGATIVE_EXACT")
             mt = raw_mt.replace("NEGATIVE_", "")  # NEGATIVE_EXACT → EXACT
-            item = {
-                "adGroupId":  ag_id,
-                "campaignId": camp_id,
-                "adProduct":  "SPONSORED_PRODUCTS",
-                "negative":   True,
-                "state":      "ENABLED",
-                "targetType": "KEYWORD",
-                "targetDetails": {
-                    "keywordTarget": {
-                        "matchType": mt,
-                        "keyword":   val["text"],
+            if ag_id:
+                # Ad-group level negative → /create/targets
+                item = {
+                    "adGroupId":  ag_id,
+                    "campaignId": camp_id,
+                    "adProduct":  "SPONSORED_PRODUCTS",
+                    "negative":   True,
+                    "state":      "ENABLED",
+                    "targetType": "KEYWORD",
+                    "targetDetails": {
+                        "keywordTarget": {
+                            "matchType": mt,
+                            "keyword":   val["text"],
+                        }
                     }
                 }
-            }
+                payloads.append(item)
+                payload_indices.append(orig_i)
+            else:
+                # Campaign-level negative → /create/campaignNegativeTargets
+                item = {
+                    "campaignId": camp_id,
+                    "adProduct":  "SPONSORED_PRODUCTS",
+                    "state":      "ENABLED",
+                    "targetType": "KEYWORD",
+                    "targetDetails": {
+                        "keywordTarget": {
+                            "matchType": mt,
+                            "keyword":   val["text"],
+                        }
+                    }
+                }
+                campaign_neg_payloads.append(item)
+                campaign_neg_indices.append(orig_i)
+
         elif et == "negative_product_add":
             item = {
-                "adGroupId":  ag_id,
+                "adGroupId":  ag_id or c["entity_id"],
                 "campaignId": camp_id,
                 "adProduct":  "SPONSORED_PRODUCTS",
                 "negative":   True,
@@ -552,22 +581,44 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
                     }
                 }
             }
-        else:
-            continue
-        payloads.append(item)
+            payloads.append(item)
+            payload_indices.append(orig_i)
+
+    results = {}
 
     if dry_run:
-        print(f"  [DRY RUN] create/targets: {json.dumps(payloads, ensure_ascii=False)[:200]}")
+        if payloads:
+            print(f"  [DRY RUN] create/targets: {json.dumps(payloads, ensure_ascii=False)[:200]}")
+        if campaign_neg_payloads:
+            print(f"  [DRY RUN] create/campaignNegativeTargets: {json.dumps(campaign_neg_payloads, ensure_ascii=False)[:200]}")
         return {i: "SUCCESS" for i in range(len(changes))}
 
-    resp = amz_post(endpoint, "/adsApi/v1/create/targets", headers, {"targets": payloads})
-    print(f"  [DEBUG] create/targets status={resp.status_code}")
-    try:
-        rj = resp.json()
-        print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:800]}")
-    except Exception:
-        print(f"  [DEBUG] raw: {resp.text[:400]}")
-    return parse_multi_response(resp, "targets", len(changes))
+    if payloads:
+        resp = amz_post(endpoint, "/adsApi/v1/create/targets", headers, {"targets": payloads})
+        print(f"  [DEBUG] create/targets status={resp.status_code}")
+        try:
+            rj = resp.json()
+            print(f"  [DEBUG] response: {json.dumps(rj, ensure_ascii=False)[:800]}")
+        except Exception:
+            print(f"  [DEBUG] raw: {resp.text[:400]}")
+        r = parse_multi_response(resp, "targets", len(payloads))
+        for batch_i, orig_i in enumerate(payload_indices):
+            results[orig_i] = r.get(batch_i, "SUCCESS")
+
+    if campaign_neg_payloads:
+        resp2 = amz_post(endpoint, "/adsApi/v1/create/campaignNegativeTargets",
+                         headers, {"targets": campaign_neg_payloads})
+        print(f"  [DEBUG] create/campaignNegativeTargets status={resp2.status_code}")
+        try:
+            rj2 = resp2.json()
+            print(f"  [DEBUG] response: {json.dumps(rj2, ensure_ascii=False)[:800]}")
+        except Exception:
+            print(f"  [DEBUG] raw: {resp2.text[:400]}")
+        r2 = parse_multi_response(resp2, "targets", len(campaign_neg_payloads))
+        for batch_i, orig_i in enumerate(campaign_neg_indices):
+            results[orig_i] = r2.get(batch_i, "SUCCESS")
+
+    return results
 
 
 def send_delete_targets(endpoint, headers, changes, dry_run=False):
