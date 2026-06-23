@@ -630,7 +630,14 @@ def send_delete_targets(endpoint, headers, changes, dry_run=False):
         print(f"  [DRY RUN] delete/targets: {[c['entity_id'] for c in changes]}")
         return {i: "SUCCESS" for i in range(len(changes))}
 
+    print(f"  [DEBUG] delete/targets payload: {json.dumps(payloads, ensure_ascii=False)}")
     resp = amz_post(endpoint, "/adsApi/v1/delete/targets", headers, {"targets": payloads})
+    print(f"  [DEBUG] delete/targets status={resp.status_code}")
+    try:
+        rj = resp.json()
+        print(f"  [DEBUG] delete/targets response: {json.dumps(rj, ensure_ascii=False)[:800]}")
+    except Exception:
+        print(f"  [DEBUG] raw: {resp.text[:400]}")
     return parse_multi_response(resp, "targets", len(changes))
 
 
