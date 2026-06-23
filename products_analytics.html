@@ -772,8 +772,20 @@ async function loadCamps(asin, mkt){
 }
 
 // Пересчёт stats кампании из stats групп (для active_only)
-function updateCampStats(cid, structData){
-  const groups=(structData.groups||[]).filter(g=>(g.state||'').toUpperCase()==='ENABLED');
+function updateCampStats(cid, structData, filterAsin){
+  let groups=(structData.groups||[]).filter(g=>(g.state||'').toUpperCase()==='ENABLED');
+  // Применяем тот же ASIN-фильтр что и buildStruct
+  if(filterAsin){
+    const fa=filterAsin.toUpperCase();
+    const anyHasAsin=groups.some(g=>(g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa));
+    groups=groups.filter(g=>{
+      const ads=g.ads||[];
+      if(ads.some(a=>(a.asin||'').toUpperCase()===fa)) return true;
+      if(!anyHasAsin&&(g.stats||{}).clicks>0) return true;
+      if(ads.length>0&&ads.every(a=>!a.asin)&&(g.stats||{}).clicks>0) return true;
+      return false;
+    });
+  }
   let imp=0,clk=0,cst=0,sal=0,pur=0;
   groups.forEach(g=>{
     const s=g.stats||{};
@@ -816,7 +828,7 @@ async function campClick(cid, asin, mkt='', tgtType=''){
         const d=await r.json(); if(d.error)throw new Error(d.error);
         S.sc[cid]=d;
         if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt, tgtType);
-        if(document.getElementById('activeOnly')?.checked) updateCampStats(cid, d);
+        if(document.getElementById('activeOnly')?.checked) updateCampStats(cid, d, asin);
       }catch(e){
         if(cs.classList.contains('op')) cs.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
       }
