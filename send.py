@@ -546,13 +546,19 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
                 payloads.append(item)
                 payload_indices.append(orig_i)
             else:
-                # Campaign-level negative → /create/negativeKeywords
+                # Campaign-level negative — send to /create/targets without adGroupId
                 item = {
                     "campaignId": camp_id,
                     "adProduct":  "SPONSORED_PRODUCTS",
+                    "negative":   True,
                     "state":      "ENABLED",
-                    "matchType":  mt,
-                    "keywordText": val["text"],
+                    "targetType": "KEYWORD",
+                    "targetDetails": {
+                        "keywordTarget": {
+                            "matchType": mt,
+                            "keyword":   val["text"],
+                        }
+                    }
                 }
                 campaign_neg_payloads.append(item)
                 campaign_neg_indices.append(orig_i)
@@ -585,7 +591,7 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
         if payloads:
             print(f"  [DRY RUN] create/targets: {json.dumps(payloads, ensure_ascii=False)[:200]}")
         if campaign_neg_payloads:
-            print(f"  [DRY RUN] create/negativeKeywords: {json.dumps(campaign_neg_payloads, ensure_ascii=False)[:200]}")
+            print(f"  [DRY RUN] create/targets (campaign-neg, no adGroupId): {json.dumps(campaign_neg_payloads, ensure_ascii=False)[:200]}")
         return {i: "SUCCESS" for i in range(len(changes))}
 
     if payloads:
@@ -601,15 +607,15 @@ def send_create_targets(endpoint, headers, changes, dry_run=False):
             results[orig_i] = r.get(batch_i, "SUCCESS")
 
     if campaign_neg_payloads:
-        resp2 = amz_post(endpoint, "/adsApi/v1/create/negativeKeywords",
-                         headers, {"negativeKeywords": campaign_neg_payloads})
-        print(f"  [DEBUG] create/negativeKeywords status={resp2.status_code}")
+        resp2 = amz_post(endpoint, "/adsApi/v1/create/targets",
+                         headers, {"targets": campaign_neg_payloads})
+        print(f"  [DEBUG] create/targets (campaign-neg) status={resp2.status_code}")
         try:
             rj2 = resp2.json()
             print(f"  [DEBUG] response: {json.dumps(rj2, ensure_ascii=False)[:800]}")
         except Exception:
             print(f"  [DEBUG] raw: {resp2.text[:400]}")
-        r2 = parse_multi_response(resp2, "negativeKeywords", len(campaign_neg_payloads))
+        r2 = parse_multi_response(resp2, "targets", len(campaign_neg_payloads))
         for batch_i, orig_i in enumerate(campaign_neg_indices):
             results[orig_i] = r2.get(batch_i, "SUCCESS")
 
