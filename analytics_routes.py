@@ -442,6 +442,7 @@ def analytics_campaign_structure():
       )
       AND (
           keyword_id IS NULL
+          OR keyword_type IN ('TARGETING_EXPRESSION_PREDEFINED', 'TARGETING_EXPRESSION')
           OR keyword_id IN (
               SELECT keyword_id FROM `{camp_table}`
               WHERE campaign_id = '{campaign_id}' AND entity_type = 'keyword' AND keyword_state = 'ENABLED'
