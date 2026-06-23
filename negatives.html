@@ -656,14 +656,16 @@ async function ctrlAdd(camp, text, matchType) {
   const body = {
     account_type: acct,
     marketplace: camp.marketplace,
+    profile_id: getProfileId(acct, camp.marketplace),
     entity_type: 'negative_add',
     entity_id: camp.campaign_id,
-    field_name: 'negative_keyword',
+    field_name: '—',
     old_value: '',
     new_value: JSON.stringify({ text, match_type: matchType, ad_group_id: '', campaign_id: camp.campaign_id }),
   };
   const r = await fetch('/control/queue', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || r.statusText); }
+  return r.json();
 }
 
 async function deleteNeg(cid, keywordId, keywordText) {
@@ -674,10 +676,11 @@ async function deleteNeg(cid, keywordId, keywordText) {
     const body = {
       account_type: acct,
       marketplace: camp.marketplace,
+      profile_id: getProfileId(acct, camp.marketplace),
       entity_type: 'negative_delete',
       entity_id: keywordId,
-      field_name: 'state',
-      old_value: 'ENABLED',
+      field_name: '—',
+      old_value: '',
       new_value: 'DELETED',
     };
     const r = await fetch('/control/queue', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
@@ -711,7 +714,13 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function getProfileId(at, mkt) {
+  const key = at + '_' + mkt;
+  return (window._pm && window._pm[key]) ? String(window._pm[key]) : '';
+}
+
 // Init
+fetch('/control/profiles').then(r => r.json()).then(d => { window._pm = d.profiles || {}; }).catch(() => { window._pm = {}; });
 loadPortfolios();
 go();
 </script>
