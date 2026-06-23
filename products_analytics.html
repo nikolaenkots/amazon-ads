@@ -367,6 +367,12 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
         </div>
       </div>
       <div class="fg"><div class="fl">ASIN</div><input type="text" id="fasin" placeholder="B0H1..." style="width:148px" onkeydown="if(event.key==='Enter')go()"></div>
+      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none">
+          <input type="checkbox" id="activeOnly" onchange="go()" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Только активные кампании и группы
+        </label>
+      </div>
       <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
         <button class="btn btn-p" id="btnGo" onclick="go()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -417,6 +423,7 @@ const S = {
   sc:{},        // struct cache {campId: data}
   ts:{},        // tab sort state {key: {field, dir}} — per group+tab
   nf:{},        // numeric filters {field: {op,v1,v2}}
+  activeOnly: false,
 };
 
 // ── Init ──────────────────────────────────────────────────
@@ -512,6 +519,7 @@ function params(page){
   if(mkt)p.set('marketplace',mkt); if(asin)p.set('asin',asin);
   if(S.sel.length===1)p.set('portfolio_ids',S.sel[0]);
   else if(S.sel.length>1)p.set('portfolio_ids',S.sel.join(','));
+  if(document.getElementById('activeOnly').checked) p.set('active_only','1');
   buildNumParams(p);
   return p;
 }
@@ -523,7 +531,9 @@ function rst(){
   document.getElementById('df').value=fr.toISOString().slice(0,10);
   document.getElementById('mkt').value='';
   document.getElementById('fasin').value='';
-  S.sel=[]; pfLabel(); pfRender(); S.page=1; fetchData();
+  S.sel=[]; pfLabel(); pfRender();
+  document.getElementById('activeOnly').checked=false;
+  S.page=1; fetchData();
 }
 
 async function fetchData(){
