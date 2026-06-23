@@ -239,7 +239,7 @@ def analytics_product_campaigns():
     date_where = ('AND ' + ' AND '.join(date_conds)) if date_conds else ''
     mkt_cond   = f"AND a.marketplace = '{marketplace}'" if marketplace else ''
 
-    active_camp_filter  = "AND camp.campaign_state = 'ENABLED'" if active_only else ''
+    active_camp_filter  = "AND campaign_state = 'ENABLED'" if active_only else ''
     active_group_cte    = f"""
     , active_groups AS (
         SELECT DISTINCT ad_group_id, campaign_id
