@@ -383,8 +383,7 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
           <input class="pds" placeholder="Поиск..." oninput="filterPd(this.value)">
           <div id="pdList"></div>
           <div style="display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border)">
-            <button class="act-btn pri" style="flex:1;height:26px;font-size:11px" onclick="applyPd()">Применить</button>
-            <button class="act-btn" style="height:26px;font-size:11px" onclick="clearPd()">Снять</button>
+            <button class="act-btn" style="flex:1;height:26px;font-size:11px" onclick="clearPd()">Снять все</button>
           </div>
         </div>
       </div>
@@ -645,6 +644,7 @@ function clearPd(){
   state.selectedPortfolios=[];
   document.querySelectorAll('input[name="pdcb"]').forEach(cb=>cb.checked=false);
   document.getElementById('pdtLabel').textContent='Все';
+  closePd(); state.page=1; fetchData();
 }
 
 async function loadPortfolios(){
@@ -688,6 +688,12 @@ function buildParams(page){
 
 function applyFilters(){
   Object.keys(_structureCache).forEach(k=>delete _structureCache[k]);
+  const checked=[...document.querySelectorAll('input[name="pdcb"]:checked')].map(el=>el.value);
+  if(checked.length||state.selectedPortfolios.length){
+    state.selectedPortfolios=checked;
+    const lbl=document.getElementById('pdtLabel');
+    if(lbl) lbl.textContent=checked.length?checked.length+' выбрано':'Все';
+  }
   state.page=1; fetchData();
 }
 function resetFilters(){
