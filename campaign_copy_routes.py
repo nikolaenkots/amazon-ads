@@ -239,6 +239,11 @@ def campaign_copy_asin_map():
     if not asin_list:
         return jsonify({'mapping': {}})
 
+    # Catalog uses 'GB' for UK marketplace
+    MKT_CATALOG = {'UK': 'GB'}
+    from_cat = MKT_CATALOG.get(from_mkt, from_mkt)
+    to_cat   = MKT_CATALOG.get(to_mkt,   to_mkt)
+
     client   = get_client()
     asin_sql = ', '.join(f"'{a}'" for a in asin_list)
 
@@ -249,7 +254,7 @@ def campaign_copy_asin_map():
 SELECT
   asin, ad_asin, design_id, product_type, title
 FROM `{PROJECT_ID}.{DATASET}.catalog`
-WHERE marketplace = '{from_mkt}'
+WHERE marketplace = '{from_cat}'
   AND (asin IN ({asin_sql}) OR ad_asin IN ({asin_sql}))
 LIMIT 50
 """
@@ -282,7 +287,7 @@ SELECT
   COALESCE(NULLIF(ad_asin, ''), asin) AS target_asin,
   design_id, product_type, title, image_url
 FROM `{PROJECT_ID}.{DATASET}.catalog`
-WHERE marketplace = '{to_mkt}'
+WHERE marketplace = '{to_cat}'
   AND (design_id, product_type) IN ({pairs_sql})
 """
     tgt_rows = list(client.query(tgt_q).result())
