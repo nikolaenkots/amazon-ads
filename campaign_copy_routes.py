@@ -13,6 +13,41 @@ def campaign_copy_page():
     return send_from_directory(BASE_DIR, 'campaign_copy.html')
 
 
+@campaign_copy_bp.route('/campaign-copy/debug')
+def campaign_copy_debug():
+    """Diagnostic: show raw entity counts and sample product_ad rows for a campaign."""
+    account_type = request.args.get('account_type', 'MERCH').upper()
+    marketplace  = request.args.get('marketplace', 'US').upper()
+    campaign_id  = request.args.get('campaign_id', '')
+    tbl = f"`{PROJECT_ID}.{DATASET}.{'campaigns_merch' if account_type=='MERCH' else 'campaigns_kdp'}`"
+    client = get_client()
+
+    counts_q = f"""
+SELECT entity_type, COUNT(*) as cnt
+FROM {tbl}
+WHERE campaign_id = '{campaign_id}' AND marketplace = '{marketplace}'
+GROUP BY entity_type
+"""
+    ads_q = f"""
+SELECT entity_type, campaign_id, ad_group_id, ad_id, asin, sku, ad_state
+FROM {tbl}
+WHERE entity_type = 'product_ad' AND marketplace = '{marketplace}'
+  AND campaign_id = '{campaign_id}'
+LIMIT 20
+"""
+    # also check if campaign_id exists at all
+    any_q = f"""
+SELECT entity_type, campaign_id, ad_group_id
+FROM {tbl}
+WHERE marketplace = '{marketplace}' AND campaign_id = '{campaign_id}'
+LIMIT 5
+"""
+    counts = [dict(r) for r in client.query(counts_q).result()]
+    ads    = [dict(r) for r in client.query(ads_q).result()]
+    any_   = [dict(r) for r in client.query(any_q).result()]
+    return jsonify({'counts': counts, 'product_ads': ads, 'sample': any_})
+
+
 @campaign_copy_bp.route('/campaign-copy/campaigns')
 def campaign_copy_list():
     account_type = request.args.get('account_type', 'MERCH').upper()
