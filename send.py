@@ -679,6 +679,8 @@ def send_create_campaigns(endpoint, headers, changes, dry_run=False):
         "SE":"SEK","PL":"PLN","TR":"TRY","BE":"EUR",
     }
     MKT_OFFSET = {"US":-5,"CA":-5,"UK":0,"GB":0,"DE":1,"FR":1,"IT":1,"ES":1,"AU":10,"JP":9}
+    # Amazon API uses GB not UK
+    MKT_API = {"UK": "GB"}
 
     results = {i: "SUCCESS" for i in range(len(changes))}
 
@@ -696,6 +698,7 @@ def send_create_campaigns(endpoint, headers, changes, dry_run=False):
         return results
 
     mkt      = camp_data[0]["_mkt"]
+    mkt_api  = MKT_API.get(mkt, mkt)   # GB instead of UK for API calls
     currency = MKT_CURRENCY.get(mkt, "USD")
     offset   = MKT_OFFSET.get(mkt, 0)
     sign     = "+" if offset >= 0 else "-"
@@ -706,6 +709,9 @@ def send_create_campaigns(endpoint, headers, changes, dry_run=False):
         budget = float(c.get("budget") or 0)
         start  = c.get("start", "")
         end    = c.get("end", "")
+        # startDateTime is required — default to today if not set
+        from datetime import date
+        start_dt = f"{start}T00:00:00Z" if start else f"{date.today().isoformat()}T00:00:00Z"
         BID_STRATEGY_MAP = {
             "Dynamic bids - down only":   "SALES_DOWN_ONLY",
             "Dynamic bids - up and down": "SALES_UP_AND_DOWN",
@@ -717,14 +723,14 @@ def send_create_campaigns(endpoint, headers, changes, dry_run=False):
             "name":      c["name"],
             "state":     "ENABLED",
             "marketplaceScope": "SINGLE_MARKETPLACE",
-            "marketplaces": [mkt],
+            "marketplaces": [mkt_api],
             "optimizations": {"bidSettings": {"bidStrategy": strategy}},
             "budgets": [{
                 "budgetType": "MONETARY",
                 "recurrenceTimePeriod": "DAILY",
                 "budgetValue": {"monetaryBudgetValue": {
                     "monetaryBudget": {"value": budget},
-                    "marketplaceSettings": [{"marketplace": mkt, "monetaryBudget": {"value": budget}}]
+                    "marketplaceSettings": [{"marketplace": mkt_api, "monetaryBudget": {"value": budget}}]
                 }}
             }],
         }
@@ -738,8 +744,7 @@ def send_create_campaigns(endpoint, headers, changes, dry_run=False):
                     {"placement": "TOP_OF_SEARCH", "percentage": bidadj}
                 ]
             }
-        if start:
-            payload["startDateTime"] = f"{start}T00:00:00Z"
+        payload["startDateTime"] = start_dt   # always required
         if end:
             payload["endDateTime"] = f"{end}T23:59:59{sign}{abs(offset):02d}:00"
         if c.get("portfolio"):
