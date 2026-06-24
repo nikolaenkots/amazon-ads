@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigQuery Ресурсы · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.08);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.nav-bar{display:flex;align-items:center;gap:2px}
+.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-drop{position:relative;display:inline-flex;align-items:center}
+.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop-btn svg{transition:transform .2s}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
+.nav-drop.open .nav-drop-menu{display:block}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+main{padding:18px 32px;max-width:1400px;margin:0 auto}
+
+/* Summary cards */
+.sr{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.sv{font-size:18px;font-weight:600}
+.sv.g{color:var(--green)}.sv.a{color:var(--accent)}.sv.b{color:var(--blue)}.sv.m{color:var(--amber)}
+.ss{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+
+/* Section */
+.sec{margin-bottom:20px}
+.sec-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-sub{font-size:12px;color:var(--muted);font-weight:400}
+
+/* Table */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+thead th.r{text-align:right}
+tr.dr{border-bottom:1px solid var(--border)}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+td{padding:8px 11px;vertical-align:middle}
+td.r{text-align:right}
+.n{font-family:'DM Mono',monospace;font-size:12px}
+.muted{color:var(--muted)}
+
+/* Bar chart */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:100px;overflow-x:auto;padding-bottom:4px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:28px;flex:1}
+.bar{width:100%;background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:3px 3px 0 0;position:relative;cursor:default;min-height:2px;transition:background .15s}
+.bar:hover{background:var(--blue);border-color:var(--blue)}
+.bar-lbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--dim);white-space:nowrap;transform:rotate(-45deg);transform-origin:top left;margin-top:4px;height:24px}
+
+/* Progress bar */
+.pb-wrap{display:flex;align-items:center;gap:8px}
+.pb{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px;background:var(--blue)}
+.pb-fill.g{background:var(--green)}.pb-fill.a{background:var(--accent)}
+
+/* Misc */
+.te{padding:60px;text-align:center;color:var(--muted);font-size:13px}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.eb{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px;display:none}
+.badge{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500}
+.badge-b{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.badge-g{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.query-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+    </div>
+    Amazon Ads Automation
+  </div>
+  <div class="nav-bar">
+    <a href="/" class="nav-home">Главная</a>
+    <div class="nav-drop" id="navA">
+      <button class="nav-drop-btn" onclick="toggleNav('navA')">Аналитика<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+        <a href="/analytics/products" class="nav-link">Продукты</a>
+        <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
+        <a href="/budget-analysis" class="nav-link">Бюджет</a>
+        <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+        <a href="/targets" class="nav-link">Таргеты</a>
+        <a href="/portfolios" class="nav-link">Портфолио</a>
+      </div>
+    </div>
+    <div class="nav-drop" id="navM">
+      <button class="nav-drop-btn" onclick="toggleNav('navM')">Управление<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/control" class="nav-link">Контроль изменений</a>
+        <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+        <a href="/negatives" class="nav-link">Минус слова</a>
+        <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+      </div>
+    </div>
+    <div class="nav-drop" id="navI">
+      <button class="nav-drop-btn" onclick="toggleNav('navI')">Импорт<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/campaigns" class="nav-link">Кампании SP API</a>
+        <a href="/catalog" class="nav-link">Каталог</a>
+        <a href="/earnings" class="nav-link">Продажи Merch</a>
+        <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+        <a href="/ads" class="nav-link">Ads отчёты</a>
+      </div>
+    </div>
+    <a href="/bq-stats" class="nav-home active">БД</a>
+  </div>
+</header>
+
+<main>
+
+<div class="eb" id="errBox"></div>
+
+<!-- Summary cards -->
+<div class="sr" id="summaryCards">
+  <div class="sc"><div class="sl">Хранилище (logical)</div><div class="sv b" id="sumStorage">…</div></div>
+  <div class="sc"><div class="sl">Хранилище (physical)</div><div class="sv" id="sumPhysical">…</div></div>
+  <div class="sc"><div class="sl">Запросов за 30 дней</div><div class="sv" id="sumQueries">…</div></div>
+  <div class="sc"><div class="sl">Обработано за 30 дней</div><div class="sv b" id="sumProc">…</div></div>
+  <div class="sc"><div class="sl">Стоимость запросов</div><div class="sv a" id="sumCost">…</div><div class="ss">$6.25/TB · 30 дней</div></div>
+</div>
+
+<!-- Query chart -->
+<div class="chart-wrap">
+  <div class="chart-title">Объём запросов по дням (GB обработано)</div>
+  <div class="bars" id="chartBars"><div style="color:var(--dim);font-size:12px;align-self:center"><span class="sp"></span></div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+<!-- Storage table -->
+<div class="sec">
+  <div class="tw">
+    <div class="thr"><span class="tt">Таблицы</span><span class="tc" id="storageCount"></span></div>
+    <div class="tsx">
+      <table>
+        <thead><tr>
+          <th>Таблица</th>
+          <th class="r">Строк</th>
+          <th class="r">Logical</th>
+          <th class="r">Physical</th>
+          <th style="width:120px">Доля</th>
+        </tr></thead>
+        <tbody id="storageBody"><tr><td colspan="5" class="te"><span class="sp"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Daily jobs table -->
+<div class="sec">
+  <div class="tw">
+    <div class="thr"><span class="tt">Запросы по дням</span><span class="tc">последние 30 дней</span></div>
+    <div class="tsx">
+      <table>
+        <thead><tr>
+          <th>День</th>
+          <th class="r">Запросов</th>
+          <th class="r">Обработано</th>
+          <th class="r">Стоимость</th>
+        </tr></thead>
+        <tbody id="jobsBody"><tr><td colspan="4" class="te"><span class="sp"></span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Top queries -->
+<div class="tw">
+  <div class="thr"><span class="tt">Топ запросов по стоимости</span><span class="tc">последние 7 дней</span></div>
+  <div class="tsx">
+    <table>
+      <thead><tr>
+        <th>День</th>
+        <th>Запрос</th>
+        <th class="r">Обработано</th>
+        <th class="r">Стоимость</th>
+        <th class="r">Время</th>
+      </tr></thead>
+      <tbody id="topBody"><tr><td colspan="5" class="te"><span class="sp"></span></td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<script>
+function toggleNav(id) {
+  const d = document.getElementById(id);
+  document.querySelectorAll('.nav-drop').forEach(x => { if(x !== d) x.classList.remove('open'); });
+  d.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.nav-drop')) document.querySelectorAll('.nav-drop').forEach(x => x.classList.remove('open'));
+});
+
+function fmtBytes(b) {
+  if (b == null) return '—';
+  if (b >= 1e12) return (b / 1e12).toFixed(2) + ' TB';
+  if (b >= 1e9)  return (b / 1e9).toFixed(2) + ' GB';
+  if (b >= 1e6)  return (b / 1e6).toFixed(1) + ' MB';
+  return (b / 1e3).toFixed(0) + ' KB';
+}
+function fmtNum(n) {
+  if (n == null) return '—';
+  return n.toLocaleString('ru-RU');
+}
+function fmtMs(ms) {
+  if (!ms) return '—';
+  if (ms >= 60000) return (ms/60000).toFixed(1) + ' мин';
+  if (ms >= 1000)  return (ms/1000).toFixed(1) + ' с';
+  return ms + ' мс';
+}
+function fmtCost(usd) {
+  if (!usd) return '$0.00';
+  if (usd < 0.01) return '<$0.01';
+  return '$' + usd.toFixed(usd < 1 ? 4 : 2);
+}
+
+async function loadStorage() {
+  try {
+    const r = await fetch('/bq-stats/storage');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    document.getElementById('sumStorage').textContent  = fmtBytes(d.total_logical_bytes);
+    document.getElementById('sumPhysical').textContent = fmtBytes(d.total_physical_bytes);
+    document.getElementById('storageCount').textContent = d.tables.length + ' таблиц';
+
+    const maxBytes = Math.max(...d.tables.map(t => t.logical_bytes), 1);
+    const body = document.getElementById('storageBody');
+    body.innerHTML = d.tables.map(t => {
+      const pct = Math.round(t.logical_bytes / maxBytes * 100);
+      return `<tr class="dr">
+        <td><span class="n" style="font-size:11px">${t.name}</span></td>
+        <td class="r n muted">${fmtNum(t.rows)}</td>
+        <td class="r n">${fmtBytes(t.logical_bytes)}</td>
+        <td class="r n muted">${fmtBytes(t.physical_bytes)}</td>
+        <td>
+          <div class="pb-wrap">
+            <div class="pb"><div class="pb-fill" style="width:${pct}%"></div></div>
+            <span class="n" style="font-size:10px;color:var(--dim);width:34px;text-align:right">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    showErr('Хранилище: ' + e.message);
+  }
+}
+
+async function loadJobs() {
+  try {
+    const r = await fetch('/bq-stats/jobs');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    document.getElementById('sumQueries').textContent = fmtNum(d.totals.query_count);
+    document.getElementById('sumProc').textContent    = fmtBytes(d.totals.bytes_processed);
+    document.getElementById('sumCost').textContent    = fmtCost(d.totals.cost_usd);
+
+    // Chart
+    renderChart(d.daily);
+
+    // Daily table
+    const jb = document.getElementById('jobsBody');
+    jb.innerHTML = d.daily.map(row => `<tr class="dr">
+      <td class="n" style="font-size:11px">${row.day}</td>
+      <td class="r n">${fmtNum(row.query_count)}</td>
+      <td class="r n">${fmtBytes(row.bytes_proc)}</td>
+      <td class="r n ${row.cost_usd > 0.01 ? 'a' : 'muted'}">${fmtCost(row.cost_usd)}</td>
+    </tr>`).join('');
+
+    // Top queries
+    const tb = document.getElementById('topBody');
+    if (!d.top_queries.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="te">Нет данных</td></tr>';
+    } else {
+      tb.innerHTML = d.top_queries.map(q => `<tr class="dr">
+        <td class="n muted" style="font-size:11px;white-space:nowrap">${q.day}</td>
+        <td><div class="query-text" title="${esc(q.query)}">${esc(q.query)}</div></td>
+        <td class="r n">${fmtBytes(q.bytes_billed)}</td>
+        <td class="r n a">${fmtCost(q.cost_usd)}</td>
+        <td class="r n muted">${fmtMs(q.duration_ms)}</td>
+      </tr>`).join('');
+    }
+  } catch(e) {
+    showErr('Запросы: ' + e.message);
+  }
+}
+
+function renderChart(daily) {
+  if (!daily.length) return;
+  const maxBytes = Math.max(...daily.map(d => d.bytes_proc), 1);
+  const wrap = document.getElementById('chartBars');
+  const sorted = [...daily].reverse();
+  wrap.innerHTML = sorted.map(d => {
+    const h = Math.max(Math.round(d.bytes_proc / maxBytes * 96), 2);
+    const tip = `${d.day}: ${fmtBytes(d.bytes_proc)}, ${fmtNum(d.query_count)} запросов, ${fmtCost(d.cost_usd)}`;
+    return `<div class="bar-col">
+      <div class="bar" style="height:${h}px" title="${tip}"></div>
+      <div class="bar-lbl">${d.day.slice(5)}</div>
+    </div>`;
+  }).join('');
+}
+
+function showErr(msg) {
+  const el = document.getElementById('errBox');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+loadStorage();
+loadJobs();
+</script>
+</body>
+</html>
