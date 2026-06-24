@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Копировать кампанию · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.08);
+  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* ── Header ── */
+header{display:flex;align-items:center;gap:10px;padding:0 28px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.hdr-title{font-size:14px;font-weight:600}
+.hdr-sep{flex:1}
+.nav-bar{display:flex;align-items:center;gap:2px}
+.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-drop{position:relative;display:inline-flex;align-items:center}
+.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
+.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop-btn svg{transition:transform .2s}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
+.nav-drop.open .nav-drop-menu{display:block}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+
+/* ── Layout ── */
+main{padding:24px 28px;max-width:1100px;margin:0 auto}
+
+/* ── Stepper ── */
+.stepper{display:flex;align-items:center;gap:0;margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px}
+.step{display:flex;align-items:center;gap:10px;flex:1;position:relative}
+.step:not(:last-child)::after{content:'';flex:1;height:1px;background:var(--border2);margin:0 8px}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:background .2s,color .2s,border .2s;border:2px solid var(--border2);color:var(--dim)}
+.step-lbl{font-size:12px;font-weight:500;color:var(--dim);white-space:nowrap;transition:color .2s}
+.step.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.step.active .step-lbl{color:var(--text);font-weight:600}
+.step.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
+.step.done .step-lbl{color:var(--muted)}
+
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title svg{opacity:.5}
+
+/* ── Form controls ── */
+.row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:120px}
+.fld label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+select,input[type=text],input[type=number]{height:36px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);outline:none;transition:border .15s}
+select:focus,input:focus{border-color:var(--accent)}
+input[type=number]{width:100px}
+.fld.wide{flex:1;min-width:200px}
+
+/* ── Campaign list ── */
+.camp-list{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow-y:auto;margin-top:6px}
+.camp-row{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .12s,border .12s;user-select:none}
+.camp-row:hover{background:var(--surface2)}
+.camp-row.selected{background:var(--accent-bg);border-color:var(--accent-bd)}
+.camp-name{font-size:13px;font-weight:500;flex:1}
+.camp-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.04em}
+.badge.auto{background:var(--blue-bg);color:var(--blue)}
+.badge.manual{background:var(--green-bg);color:var(--green)}
+.badge.paused{background:var(--amber-bg);color:var(--amber)}
+.badge.enabled{background:var(--green-bg);color:var(--green)}
+.search-box{width:100%;height:34px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:8px}
+.search-box:focus{border-color:var(--accent)}
+
+/* ── ASIN map table ── */
+.asin-table{width:100%;border-collapse:collapse;font-size:13px}
+.asin-table th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border)}
+.asin-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.asin-table tr:last-child td{border-bottom:none}
+.asin-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border)}
+.asin-thumb-ph{width:36px;height:36px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10px}
+.asin-inp{width:130px;height:30px;padding:0 8px;border:1px solid var(--border2);border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;letter-spacing:.04em}
+.asin-inp:focus{border-color:var(--accent);outline:none}
+.asin-inp.ok{border-color:var(--green)}
+.asin-inp.miss{border-color:var(--amber)}
+.arrow-cell{color:var(--dim);font-size:18px;padding:0 6px}
+.tag-grp{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--muted)}
+
+/* ── Preview tree ── */
+.tree{display:flex;flex-direction:column;gap:6px}
+.tree-camp{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.tree-camp-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);cursor:pointer;user-select:none}
+.tree-camp-hdr:hover{background:#e8e8ec}
+.tree-camp-name{font-size:13px;font-weight:600;flex:1}
+.tree-grp{padding:0 14px}
+.tree-grp-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.tree-grp-row:last-child{border-bottom:none}
+.tree-grp-name{font-size:12px;font-weight:600;min-width:160px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-kws{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.tree-kw{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:11px;background:var(--surface2);border:1px solid var(--border)}
+.tree-kw .mt{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.tree-asin{font-size:11px;font-family:'DM Mono',monospace;background:var(--blue-bg);color:var(--blue);padding:2px 6px;border-radius:4px;border:1px solid var(--blue-bd)}
+.tree-more{font-size:11px;color:var(--muted)}
+
+/* ── Bid/budget row ── */
+.adj-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.adj-card{border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.adj-card-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.radio-group{display:flex;gap:8px;margin-bottom:8px}
+.radio-group label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer}
+.num-row{display:flex;align-items:center;gap:6px;font-size:12px}
+.num-row input{width:90px}
+.unit{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+
+/* ── Buttons ── */
+.btn{height:36px;padding:0 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#b33e0e}
+.btn-primary:disabled{opacity:.45;pointer-events:none}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.btn-secondary:hover{background:var(--border)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#157a4e}
+.btn-green:disabled{opacity:.45;pointer-events:none}
+.foot{display:flex;align-items:center;gap:10px;margin-top:22px}
+.foot-back{color:var(--muted);font-size:13px;cursor:pointer;padding:6px 10px;border-radius:8px;transition:background .12s}
+.foot-back:hover{background:var(--surface2)}
+.err-inline{font-size:12px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;padding:8px 12px;margin-top:10px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 0}
+.success-box{background:var(--green-bg);border:1px solid var(--green-bd);border-radius:10px;padding:20px 24px;text-align:center}
+.success-box h3{font-size:16px;font-weight:600;color:var(--green);margin-bottom:6px}
+.success-box p{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L13 4V10L7 13L1 10V4L7 1Z" fill="white" opacity=".9"/></svg>
+    </div>
+    Amazon Ads
+  </div>
+  <span class="hdr-sep"></span>
+  <div class="hdr-title">Копировать кампанию</div>
+  <span class="hdr-sep"></span>
+  <nav class="nav-bar">
+    <a href="/" class="nav-home">Главная</a>
+    <div class="nav-drop" id="navDropAnalytics">
+      <button class="nav-drop-btn" onclick="toggleDrop('navDropAnalytics')">Аналитика<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/analytics"       class="nav-link">Аналитика рекламы</a>
+        <a href="/targets"         class="nav-link">Таргеты</a>
+        <a href="/search-terms"    class="nav-link">Поисковые запросы</a>
+        <a href="/sales-comparison"class="nav-link">Сравнение продаж</a>
+        <a href="/bq-stats"        class="nav-link">BigQuery ресурсы</a>
+      </div>
+    </div>
+    <div class="nav-drop" id="navDropMgmt">
+      <button class="nav-drop-btn" onclick="toggleDrop('navDropMgmt')">Управление<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/campaigns"         class="nav-link">Кампании</a>
+        <a href="/control"           class="nav-link">Очередь изменений</a>
+        <a href="/campaign-builder"  class="nav-link">Создать кампанию</a>
+        <a href="/campaign-copy"     class="nav-link active">Копировать кампанию</a>
+        <a href="/negatives"         class="nav-link">Минус слова</a>
+      </div>
+    </div>
+    <div class="nav-drop" id="navDropImport">
+      <button class="nav-drop-btn" onclick="toggleDrop('navDropImport')">Импорт<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/catalog"      class="nav-link">Каталог товаров</a>
+        <a href="/asin-merge"   class="nav-link">Объединить ASINы</a>
+        <a href="/earnings"     class="nav-link">Доходы Merch</a>
+        <a href="/earnings-kdp" class="nav-link">Доходы KDP</a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main>
+
+<!-- Stepper -->
+<div class="stepper">
+  <div class="step active" id="st1"><div class="step-num">1</div><div class="step-lbl">Источник</div><div style="flex:1;height:1px;background:var(--border2);margin:0 12px"></div></div>
+  <div class="step" id="st2"><div class="step-num">2</div><div class="step-lbl">Настройки</div><div style="flex:1;height:1px;background:var(--border2);margin:0 12px"></div></div>
+  <div class="step" id="st3"><div class="step-num">3</div><div class="step-lbl">ASINы</div><div style="flex:1;height:1px;background:var(--border2);margin:0 12px"></div></div>
+  <div class="step" id="st4"><div class="step-num">4</div><div class="step-lbl">Предпросмотр</div></div>
+</div>
+
+<!-- ───── Step 1: Source ───── -->
+<div id="page1">
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h6M5 9.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Выберите кампанию-источник
+    </div>
+    <div class="row">
+      <div class="fld">
+        <label>Тип аккаунта</label>
+        <select id="srcAcct" onchange="onSrcChange()">
+          <option value="MERCH">Merch</option>
+          <option value="KDP">KDP</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Маркетплейс</label>
+        <select id="srcMkt" onchange="onSrcChange()">
+          <option>US</option><option>UK</option><option>DE</option>
+          <option>FR</option><option>IT</option><option>ES</option>
+          <option>CA</option><option>AU</option><option>JP</option>
+        </select>
+      </div>
+    </div>
+    <input type="text" id="campSearch" class="search-box" placeholder="Поиск по названию..." oninput="filterCamps()">
+    <div class="camp-list" id="campList"><div class="empty">Загрузка...</div></div>
+    <div id="err1" style="display:none" class="err-inline"></div>
+  </div>
+  <div class="foot">
+    <button class="btn btn-primary" id="btn1next" onclick="goStep2()" disabled>Далее →</button>
+  </div>
+</div>
+
+<!-- ───── Step 2: Settings ───── -->
+<div id="page2" style="display:none">
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8h5M8 5.5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Целевой маркетплейс
+    </div>
+    <div class="row">
+      <div class="fld">
+        <label>Скопировать в</label>
+        <select id="dstMkt">
+          <option>US</option><option>UK</option><option>DE</option>
+          <option>FR</option><option>IT</option><option>ES</option>
+          <option>CA</option><option>AU</option><option>JP</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Название кампании
+    </div>
+    <div class="row">
+      <div class="fld wide">
+        <label>Префикс</label>
+        <input type="text" id="namePrefix" placeholder="напр. UK_">
+      </div>
+      <div class="fld wide">
+        <label>Суффикс</label>
+        <input type="text" id="nameSuffix" placeholder="напр. _copy">
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">Предпросмотр: <span id="namePreview" style="font-weight:600;color:var(--text)"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M4 6l4-4 4 4M4 10l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Корректировка бюджета и ставок
+    </div>
+    <div class="adj-row">
+      <div class="adj-card">
+        <div class="adj-card-title">Дневной бюджет</div>
+        <div class="radio-group">
+          <label><input type="radio" name="budgetMode" value="x" checked onchange="updateBudgetPreview()"> ×</label>
+          <label><input type="radio" name="budgetMode" value="fixed" onchange="updateBudgetPreview()"> Фикс.</label>
+        </div>
+        <div class="num-row">
+          <input type="number" id="budgetVal" value="1" min="0.01" step="0.1" oninput="updateBudgetPreview()">
+          <span class="unit" id="budgetUnit">× бюджет</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="budgetPrev"></div>
+      </div>
+      <div class="adj-card">
+        <div class="adj-card-title">Ставки ключевых слов</div>
+        <div class="radio-group">
+          <label><input type="radio" name="bidMode" value="x" checked onchange="updateBidPreview()"> ×</label>
+          <label><input type="radio" name="bidMode" value="fixed" onchange="updateBidPreview()"> Фикс.</label>
+        </div>
+        <div class="num-row">
+          <input type="number" id="bidVal" value="1" min="0.01" step="0.1" oninput="updateBidPreview()">
+          <span class="unit" id="bidUnit">× ставка</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="bidPrev"></div>
+      </div>
+      <div class="adj-card">
+        <div class="adj-card-title">Ставка по умолчанию (группы)</div>
+        <div class="radio-group">
+          <label><input type="radio" name="grpBidMode" value="x" checked onchange="updateGrpBidPreview()"> ×</label>
+          <label><input type="radio" name="grpBidMode" value="fixed" onchange="updateGrpBidPreview()"> Фикс.</label>
+        </div>
+        <div class="num-row">
+          <input type="number" id="grpBidVal" value="1" min="0.01" step="0.1" oninput="updateGrpBidPreview()">
+          <span class="unit" id="grpBidUnit">× ставка</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="grpBidPrev"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="foot-back" onclick="goStep(1)">← Назад</span>
+    <button class="btn btn-primary" onclick="goStep3()">Далее →</button>
+  </div>
+</div>
+
+<!-- ───── Step 3: ASIN mapping ───── -->
+<div id="page3" style="display:none">
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="5" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="4" width="5" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 8h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 6.5L9.5 8 8 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Маппинг ASINов
+    </div>
+    <div id="asinNote" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+    <div id="asinMapWrap">
+      <div class="empty">Загрузка...</div>
+    </div>
+    <div id="err3" style="display:none" class="err-inline"></div>
+  </div>
+  <div class="foot">
+    <span class="foot-back" onclick="goStep(2)">← Назад</span>
+    <button class="btn btn-primary" onclick="goStep4()">Предпросмотр →</button>
+  </div>
+</div>
+
+<!-- ───── Step 4: Preview + Submit ───── -->
+<div id="page4" style="display:none">
+  <div class="card">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3C4.5 3 2 8 2 8s2.5 5 6 5 6-5 6-5-2.5-5-6-5z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4"/></svg>
+      Предпросмотр кампании
+    </div>
+    <div id="previewWrap"></div>
+  </div>
+  <div class="foot" id="submitFoot">
+    <span class="foot-back" onclick="goStep(3)">← Назад</span>
+    <button class="btn btn-green" id="btnSubmit" onclick="submitCopy()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Отправить в очередь
+    </button>
+    <div id="errSubmit" style="display:none" class="err-inline"></div>
+  </div>
+  <div id="successBox" style="display:none" class="success-box">
+    <h3>✓ Кампания добавлена в очередь</h3>
+    <p id="successMsg"></p>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center">
+      <a href="/control" class="btn btn-secondary">Открыть очередь</a>
+      <button class="btn btn-primary" onclick="resetAll()">Скопировать ещё</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ── State ────────────────────────────────────────────────
+let allCampaigns = [];
+let selectedCamp = null;   // {id, name, targeting_type, budget, bid_strategy, ...}
+let structure    = null;   // {campaign, groups}
+let asinMap      = {};     // source_asin → target_asin (user-edited)
+let profileMap   = {};
+
+// ── Nav ──────────────────────────────────────────────────
+function toggleDrop(id) {
+  const el = document.getElementById(id);
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.nav-drop').forEach(d => d.classList.remove('open'));
+  if (!open) el.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.nav-drop')) document.querySelectorAll('.nav-drop').forEach(d => d.classList.remove('open'));
+});
+
+// ── Profiles ─────────────────────────────────────────────
+fetch('/control/profiles').then(r => r.json()).then(d => { profileMap = d.profiles || {}; }).catch(() => {});
+
+function getProfileId(at, mkt) {
+  return String((profileMap[at + '_' + mkt]) || '');
+}
+
+// ── Step management ─────────────────────────────────────
+function goStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('page'+i).style.display = i===n ? '' : 'none';
+    const st = document.getElementById('st'+i);
+    st.className = 'step' + (i===n ? ' active' : i<n ? ' done' : '');
+  });
+}
+
+// ── Step 1 ───────────────────────────────────────────────
+async function onSrcChange() {
+  const at  = document.getElementById('srcAcct').value;
+  const mkt = document.getElementById('srcMkt').value;
+  selectedCamp = null;
+  document.getElementById('btn1next').disabled = true;
+  document.getElementById('campList').innerHTML = '<div class="empty">Загрузка...</div>';
+  document.getElementById('err1').style.display = 'none';
+  try {
+    const r = await fetch(`/campaign-copy/campaigns?account_type=${at}&marketplace=${mkt}`);
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    allCampaigns = d.campaigns || [];
+    filterCamps();
+  } catch(e) {
+    document.getElementById('campList').innerHTML = '';
+    showErr('err1', e.message);
+  }
+}
+
+function filterCamps() {
+  const q = document.getElementById('campSearch').value.toLowerCase();
+  const list = q ? allCampaigns.filter(c => c.name.toLowerCase().includes(q)) : allCampaigns;
+  const el = document.getElementById('campList');
+  if (!list.length) { el.innerHTML = '<div class="empty">Нет кампаний</div>'; return; }
+  el.innerHTML = list.map(c => `
+    <div class="camp-row ${selectedCamp && selectedCamp.id===c.id?'selected':''}"
+         onclick="selectCamp('${esc(c.id)}')">
+      <span class="badge ${c.targeting_type==='AUTO'?'auto':'manual'}">${c.targeting_type==='AUTO'?'AUTO':'MANUAL'}</span>
+      <span class="badge ${c.state==='ENABLED'?'enabled':'paused'}">${c.state==='ENABLED'?'ON':'PAUSE'}</span>
+      <span class="camp-name">${esc(c.name)}</span>
+      <span class="camp-meta">$${c.budget}/д</span>
+      ${c.portfolio_name ? `<span class="camp-meta" style="color:var(--blue)">${esc(c.portfolio_name)}</span>` : ''}
+    </div>`).join('');
+}
+
+function selectCamp(id) {
+  selectedCamp = allCampaigns.find(c => c.id === id);
+  filterCamps();
+  document.getElementById('btn1next').disabled = !selectedCamp;
+}
+
+async function goStep2() {
+  if (!selectedCamp) return;
+  goStep(2);
+  // Set default dst marketplace
+  const srcMkt = document.getElementById('srcMkt').value;
+  const dstSel = document.getElementById('dstMkt');
+  // Pick a different default
+  const opts = Array.from(dstSel.options).map(o => o.value);
+  const diff = opts.find(o => o !== srcMkt) || opts[0];
+  dstSel.value = diff;
+  // Update name preview
+  document.getElementById('namePrefix').value = diff + '_';
+  document.getElementById('nameSuffix').value = '';
+  updateNamePreview();
+  updateBudgetPreview();
+  updateBidPreview();
+  updateGrpBidPreview();
+  // Add listeners
+  document.getElementById('namePrefix').oninput = updateNamePreview;
+  document.getElementById('nameSuffix').oninput = updateNamePreview;
+  document.getElementById('dstMkt').onchange = updateNamePreview;
+}
+
+function updateNamePreview() {
+  const p = document.getElementById('namePrefix').value;
+  const s = document.getElementById('nameSuffix').value;
+  document.getElementById('namePreview').textContent = p + selectedCamp.name + s;
+}
+
+function getBudgetMode() { return document.querySelector('[name=budgetMode]:checked').value; }
+function getBidMode()    { return document.querySelector('[name=bidMode]:checked').value; }
+function getGrpBidMode() { return document.querySelector('[name=grpBidMode]:checked').value; }
+
+function updateBudgetPreview() {
+  const mode = getBudgetMode();
+  const val  = parseFloat(document.getElementById('budgetVal').value) || 1;
+  document.getElementById('budgetUnit').textContent = mode === 'x' ? '× бюджет' : 'фиксированно';
+  if (selectedCamp) {
+    const res = mode === 'x' ? (selectedCamp.budget * val).toFixed(2) : val.toFixed(2);
+    document.getElementById('budgetPrev').textContent = `→ $${res}`;
+  }
+}
+function updateBidPreview() {
+  const mode = getBidMode();
+  document.getElementById('bidUnit').textContent = mode === 'x' ? '× ставка' : 'фиксированно';
+  document.getElementById('bidPrev').textContent = '';
+}
+function updateGrpBidPreview() {
+  const mode = getGrpBidMode();
+  document.getElementById('grpBidUnit').textContent = mode === 'x' ? '× ставка' : 'фиксированно';
+  document.getElementById('grpBidPrev').textContent = '';
+}
+
+// ── Step 3 ───────────────────────────────────────────────
+async function goStep3() {
+  goStep(3);
+  const at  = document.getElementById('srcAcct').value;
+  const mkt = document.getElementById('srcMkt').value;
+  const dstMkt = document.getElementById('dstMkt').value;
+  document.getElementById('asinMapWrap').innerHTML = '<div class="empty">Загрузка структуры...</div>';
+  document.getElementById('err3').style.display = 'none';
+
+  // Load structure
+  try {
+    const r = await fetch(`/campaign-copy/structure?account_type=${at}&marketplace=${mkt}&campaign_id=${encodeURIComponent(selectedCamp.id)}`);
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    structure = d;
+  } catch(e) {
+    showErr('err3', 'Ошибка загрузки структуры: ' + e.message);
+    return;
+  }
+
+  const isKdp = at === 'KDP';
+  // Collect all unique ASINs
+  const allAsins = [];
+  for (const g of (structure.groups || [])) {
+    for (const a of (g.asins || [])) {
+      if (!allAsins.includes(a.asin)) allAsins.push(a.asin);
+    }
+  }
+
+  if (isKdp || !allAsins.length) {
+    // KDP: same ASINs, show note and skip mapping
+    asinMap = {};
+    allAsins.forEach(a => { asinMap[a] = a; });
+    const note = isKdp
+      ? `KDP: ASINы одинаковы для всех маркетплейсов. ${allAsins.length} ASIN(ов) будут скопированы без изменений.`
+      : 'В кампании нет объявлений с ASINами.';
+    document.getElementById('asinNote').textContent = note;
+    document.getElementById('asinMapWrap').innerHTML = allAsins.length
+      ? `<table class="asin-table"><thead><tr><th>ASIN</th><th>Используется в группах</th></tr></thead><tbody>` +
+        allAsins.map(a => {
+          const grps = structure.groups.filter(g => g.asins.some(x => x.asin===a)).map(g=>g.name);
+          return `<tr><td><span class="tree-asin">${esc(a)}</span></td><td style="font-size:11px;color:var(--muted)">${grps.map(esc).join(', ')}</td></tr>`;
+        }).join('') + '</tbody></table>'
+      : '<div class="empty">Нет ASINов</div>';
+    return;
+  }
+
+  // MERCH: fetch auto-mapping from catalog
+  document.getElementById('asinNote').textContent = `${allAsins.length} ASIN(ов) из ${mkt} → автоматически находим аналоги для ${dstMkt}`;
+  try {
+    const r2 = await fetch(`/campaign-copy/asin-map?asins=${allAsins.join(',')}&from_mkt=${mkt}&to_mkt=${dstMkt}`);
+    const d2 = await r2.json();
+    if (d2.error) throw new Error(d2.error);
+    const autoMap = d2.mapping || {};
+    // Init asinMap with auto values
+    asinMap = {};
+    allAsins.forEach(a => { asinMap[a] = (autoMap[a] ? autoMap[a].target_asin : ''); });
+    renderAsinTable(allAsins, autoMap);
+  } catch(e) {
+    asinMap = {};
+    allAsins.forEach(a => { asinMap[a] = ''; });
+    renderAsinTable(allAsins, {});
+    showErr('err3', 'Авто-маппинг не удался: ' + e.message + '. Введите ASINы вручную.');
+  }
+}
+
+function renderAsinTable(allAsins, autoMap) {
+  const rows = allAsins.map(src => {
+    const info = autoMap[src];
+    const img  = info && info.image_url
+      ? `<img src="${esc(info.image_url)}" class="asin-thumb" onerror="this.style.display='none'">`
+      : `<div class="asin-thumb-ph">?</div>`;
+    const title = info ? `<div style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(info.title||'')}</div>` : '';
+    const grps  = structure.groups.filter(g => g.asins.some(x => x.asin===src)).map(g=>g.name);
+    const grpTags = grps.map(g => `<span class="tag-grp">${esc(g)}</span>`).join(' ');
+    return `<tr>
+      <td><span class="tree-asin">${esc(src)}</span><div style="font-size:10px;color:var(--muted);margin-top:3px">${grpTags}</div></td>
+      <td class="arrow-cell">→</td>
+      <td style="display:flex;align-items:center;gap:8px;padding:7px 10px">${img}<div>${title}<input type="text" class="asin-inp ${info?'ok':'miss'}" data-src="${esc(src)}" value="${esc(info?info.target_asin:'')}" placeholder="ASIN для ${esc(document.getElementById('dstMkt').value)}" oninput="onAsinEdit(this)"></div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('asinMapWrap').innerHTML =
+    `<table class="asin-table"><thead><tr><th>Источник (${document.getElementById('srcMkt').value})</th><th></th><th>Цель (${document.getElementById('dstMkt').value})</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function onAsinEdit(inp) {
+  const src = inp.dataset.src;
+  const val = inp.value.trim();
+  asinMap[src] = val;
+  inp.className = 'asin-inp ' + (val ? 'ok' : 'miss');
+}
+
+// ── Step 4 ───────────────────────────────────────────────
+function goStep4() {
+  // Update asinMap from inputs (in case not triggered)
+  document.querySelectorAll('.asin-inp').forEach(inp => {
+    asinMap[inp.dataset.src] = inp.value.trim();
+  });
+  goStep(4);
+  renderPreview();
+  document.getElementById('successBox').style.display = 'none';
+  document.getElementById('submitFoot').style.display = '';
+}
+
+function applyBid(orig, mode, val) {
+  if (mode === 'x') return Math.round(orig * val * 100) / 100;
+  return val;
+}
+
+function buildCampaignPayload() {
+  const at      = document.getElementById('srcAcct').value;
+  const dstMkt  = document.getElementById('dstMkt').value;
+  const prefix  = document.getElementById('namePrefix').value;
+  const suffix  = document.getElementById('nameSuffix').value;
+  const budgetMode  = getBudgetMode();
+  const budgetVal   = parseFloat(document.getElementById('budgetVal').value) || 1;
+  const bidMode     = getBidMode();
+  const bidVal      = parseFloat(document.getElementById('bidVal').value) || 1;
+  const grpBidMode  = getGrpBidMode();
+  const grpBidVal   = parseFloat(document.getElementById('grpBidVal').value) || 1;
+
+  const c = structure.campaign;
+  const BID_STRATEGY_DISPLAY = {
+    'SALES_DOWN_ONLY':   'Dynamic bids - down only',
+    'SALES_UP_AND_DOWN': 'Dynamic bids - up and down',
+    'MANUAL':            'Fixed bid',
+  };
+
+  const groups = (structure.groups || []).map(g => {
+    // Resolve target ASIN
+    const srcAsin = g.asins[0] ? g.asins[0].asin : '';
+    const dstAsin = at === 'KDP' ? srcAsin : (asinMap[srcAsin] || srcAsin);
+
+    const keywords = (g.keywords || []).filter(kw => kw.state !== 'ARCHIVED').map(kw => ({
+      text: kw.text,
+      mt:   (kw.match_type || 'BROAD').toUpperCase(),
+      bid:  applyBid(kw.bid || g.bid, bidMode, bidVal),
+    }));
+
+    const negatives = (g.negatives || []).filter(kw => kw.state !== 'ARCHIVED').map(kw => kw.text);
+
+    return {
+      name:      g.name,
+      asin:      dstAsin,
+      bid:       applyBid(g.bid, grpBidMode, grpBidVal),
+      keywords,
+      negatives,
+      // pass extra data for preview
+      _srcAsin:  srcAsin,
+      _targets:  g.targets,
+    };
+  });
+
+  const budget = applyBid(c.budget, budgetMode, budgetVal);
+
+  return {
+    type:        c.targeting_type === 'AUTO' ? 'auto' : 'manual',
+    name:        prefix + c.name + suffix,
+    budget:      budget,
+    bidStrategy: BID_STRATEGY_DISPLAY[c.bid_strategy] || 'Dynamic bids - down only',
+    bidadj:      0,
+    portfolio:   '',
+    start:       '',
+    end:         '',
+    groups,
+  };
+}
+
+function renderPreview() {
+  const payload = buildCampaignPayload();
+  const c = structure.campaign;
+  const dstMkt = document.getElementById('dstMkt').value;
+
+  let html = `<div class="tree"><div class="tree-camp">
+    <div class="tree-camp-hdr" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+      <span class="badge ${payload.type==='auto'?'auto':'manual'}">${payload.type.toUpperCase()}</span>
+      <span class="tree-camp-name">${esc(payload.name)}</span>
+      <span class="camp-meta">$${payload.budget}/д · ${esc(payload.bidStrategy)}</span>
+      <span class="camp-meta" style="color:var(--blue)">${esc(dstMkt)}</span>
+    </div>
+    <div class="tree-grp">`;
+
+  for (const g of payload.groups) {
+    const kwCount  = g.keywords.length;
+    const negCount = g.negatives.length;
+    const shown    = g.keywords.slice(0,8);
+    const more     = kwCount - shown.length;
+    html += `<div class="tree-grp-row">
+      <div>
+        <div class="tree-grp-name">${esc(g.name)}</div>
+        <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+          ${g.asin ? `<span class="tree-asin">${esc(g.asin)}</span>` : '<span style="color:var(--dim);font-size:11px">нет ASIN</span>'}
+          ${g._srcAsin && g._srcAsin!==g.asin ? `<span style="font-size:10px;color:var(--muted)">← ${esc(g._srcAsin)}</span>` : ''}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Ставка группы: $${g.bid.toFixed(2)} · ${kwCount} кл · ${negCount} минус</div>
+      </div>
+      <div class="tree-kws">
+        ${shown.map(kw => `<span class="tree-kw"><span class="mt">${esc(kw.mt)}</span>${esc(kw.text)}<span style="color:var(--muted);font-size:10px;margin-left:2px">$${kw.bid.toFixed(2)}</span></span>`).join('')}
+        ${more>0 ? `<span class="tree-more">+${more} ещё</span>` : ''}
+        ${kwCount===0 && payload.type==='auto' ? '<span style="font-size:11px;color:var(--muted)">AUTO таргетинг</span>' : ''}
+        ${kwCount===0 && payload.type!=='auto' ? '<span style="font-size:11px;color:var(--amber)">нет ключевых слов</span>' : ''}
+      </div>
+    </div>`;
+  }
+
+  html += '</div></div></div>';
+  document.getElementById('previewWrap').innerHTML = html;
+}
+
+// ── Submit ────────────────────────────────────────────────
+async function submitCopy() {
+  const at     = document.getElementById('srcAcct').value;
+  const dstMkt = document.getElementById('dstMkt').value;
+  const payload = buildCampaignPayload();
+  // Strip internal preview fields
+  payload.groups = payload.groups.map(g => {
+    const { _srcAsin, _targets, ...clean } = g;
+    return clean;
+  });
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div> Отправка...';
+  document.getElementById('errSubmit').style.display = 'none';
+
+  try {
+    const r = await fetch('/campaign-builder/queue', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ account_type: at, marketplace: dstMkt, campaigns: [payload] }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    document.getElementById('submitFoot').style.display = 'none';
+    document.getElementById('successBox').style.display = '';
+    document.getElementById('successMsg').textContent =
+      `Кампания «${payload.name}» добавлена в очередь для ${dstMkt}. Групп: ${payload.groups.length}.`;
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Отправить в очередь';
+    showErr('errSubmit', e.message);
+  }
+}
+
+function resetAll() {
+  selectedCamp = null;
+  structure    = null;
+  asinMap      = {};
+  document.getElementById('campSearch').value = '';
+  filterCamps();
+  goStep(1);
+}
+
+// ── Utils ─────────────────────────────────────────────────
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = 'Ошибка: ' + msg;
+  el.style.display = '';
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────
+onSrcChange();
+</script>
+</body>
+</html>
