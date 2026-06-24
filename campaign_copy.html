@@ -156,38 +156,60 @@ input[type=number]{width:100px}
   <span class="hdr-sep"></span>
   <div class="hdr-title">Копировать кампанию</div>
   <span class="hdr-sep"></span>
-  <nav class="nav-bar">
-    <a href="/" class="nav-home">Главная</a>
-    <div class="nav-drop" id="navDropAnalytics">
-      <button class="nav-drop-btn" onclick="toggleDrop('navDropAnalytics')">Аналитика<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-      <div class="nav-drop-menu">
-        <a href="/analytics"       class="nav-link">Аналитика рекламы</a>
-        <a href="/targets"         class="nav-link">Таргеты</a>
-        <a href="/search-terms"    class="nav-link">Поисковые запросы</a>
-        <a href="/sales-comparison"class="nav-link">Сравнение продаж</a>
-        <a href="/bq-stats"        class="nav-link">BigQuery ресурсы</a>
-      </div>
-    </div>
-    <div class="nav-drop" id="navDropMgmt">
-      <button class="nav-drop-btn" onclick="toggleDrop('navDropMgmt')">Управление<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-      <div class="nav-drop-menu">
-        <a href="/campaigns"         class="nav-link">Кампании</a>
-        <a href="/control"           class="nav-link">Очередь изменений</a>
-        <a href="/campaign-builder"  class="nav-link">Создать кампанию</a>
-        <a href="/campaign-copy"     class="nav-link active">Копировать кампанию</a>
-        <a href="/negatives"         class="nav-link">Минус слова</a>
-      </div>
-    </div>
-    <div class="nav-drop" id="navDropImport">
-      <button class="nav-drop-btn" onclick="toggleDrop('navDropImport')">Импорт<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-      <div class="nav-drop-menu">
-        <a href="/catalog"      class="nav-link">Каталог товаров</a>
-        <a href="/asin-merge"   class="nav-link">Объединить ASINы</a>
-        <a href="/earnings"     class="nav-link">Доходы Merch</a>
-        <a href="/earnings-kdp" class="nav-link">Доходы KDP</a>
-      </div>
-    </div>
-  </nav>
+  <div class="nav-bar">
+  <a href="/" class="nav-home">Главная</a>
+  <div class="nav-drop" id="navA">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navA');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Аналитика
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+    <a href="/analytics/products" class="nav-link">Продукты</a>
+    <a href="/targets" class="nav-link">Таргеты</a>
+    <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+    <a href="/sales-comparison" class="nav-link">Сравнение продаж</a>
+    <a href="/budget-analysis" class="nav-link">Бюджет</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navM">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navM');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Управление
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/control" class="nav-link">Очередь изменений</a>
+    <a href="/portfolios" class="nav-link">Портфолио</a>
+    <a href="/asin-merge" class="nav-link">Слияние ASIN</a>
+    <a href="/campaign-builder" class="nav-link">Campaign Builder</a>
+    <a href="/campaign-copy" class="nav-link active">Копирование кампаний</a>
+    <a href="/negatives" class="nav-link">Минус слова</a>
+    <a href="/campaigns-deleting" class="nav-link">Удаление кампаний</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navI">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navI');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Импорт
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/catalog" class="nav-link">Каталог Merch</a>
+    <a href="/ads" class="nav-link">Импорт рекламы</a>
+    <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+    <a href="/earnings" class="nav-link">Продажи Merch</a>
+    <a href="/campaigns" class="nav-link">Кампании SP API</a>
+  </div>
+</div>
+  <div class="nav-drop" id="navR">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navR');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Ресурсы
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/bq-stats" class="nav-link">BQ Stats</a>
+  </div>
+</div>
+</div>
 </header>
 
 <main>
