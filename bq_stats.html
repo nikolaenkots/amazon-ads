@@ -169,8 +169,7 @@ td.r{text-align:right}
         <thead><tr>
           <th>Таблица</th>
           <th class="r">Строк</th>
-          <th class="r">Logical</th>
-          <th class="r">Physical</th>
+          <th class="r">Размер</th>
           <th style="width:120px">Доля</th>
         </tr></thead>
         <tbody id="storageBody"><tr><td colspan="5" class="te"><span class="sp"></span></td></tr></tbody>
@@ -258,7 +257,7 @@ async function loadStorage() {
     if (d.error) throw new Error(d.error);
 
     document.getElementById('sumStorage').textContent  = fmtBytes(d.total_logical_bytes);
-    document.getElementById('sumPhysical').textContent = fmtBytes(d.total_physical_bytes);
+    document.getElementById('sumPhysical').textContent = d.total_logical_bytes ? '—' : '—';
     document.getElementById('storageCount').textContent = d.tables.length + ' таблиц';
 
     const maxBytes = Math.max(...d.tables.map(t => t.logical_bytes), 1);
@@ -269,7 +268,6 @@ async function loadStorage() {
         <td><span class="n" style="font-size:11px">${t.name}</span></td>
         <td class="r n muted">${fmtNum(t.rows)}</td>
         <td class="r n">${fmtBytes(t.logical_bytes)}</td>
-        <td class="r n muted">${fmtBytes(t.physical_bytes)}</td>
         <td>
           <div class="pb-wrap">
             <div class="pb"><div class="pb-fill" style="width:${pct}%"></div></div>
@@ -279,7 +277,8 @@ async function loadStorage() {
       </tr>`;
     }).join('');
   } catch(e) {
-    showErr('Хранилище: ' + e.message);
+    document.getElementById('storageBody').innerHTML = `<tr><td colspan="4" style="padding:16px;color:var(--red);font-size:12px">Ошибка: ${esc(e.message)}</td></tr>`;
+    document.getElementById('sumStorage').textContent = 'Ошибка';
   }
 }
 
@@ -319,7 +318,13 @@ async function loadJobs() {
       </tr>`).join('');
     }
   } catch(e) {
-    showErr('Запросы: ' + e.message);
+    const msg = `<td colspan="4" style="padding:16px;color:var(--red);font-size:12px">Ошибка: ${esc(e.message)}</td>`;
+    document.getElementById('jobsBody').innerHTML = `<tr>${msg}</tr>`;
+    document.getElementById('topBody').innerHTML  = `<tr><td colspan="5" style="padding:16px;color:var(--red);font-size:12px">Ошибка: ${esc(e.message)}</td></tr>`;
+    document.getElementById('chartBars').innerHTML = `<div style="color:var(--red);font-size:12px;align-self:center">Ошибка: ${esc(e.message)}</div>`;
+    document.getElementById('sumQueries').textContent = 'Ошибка';
+    document.getElementById('sumProc').textContent = '—';
+    document.getElementById('sumCost').textContent = '—';
   }
 }
 
