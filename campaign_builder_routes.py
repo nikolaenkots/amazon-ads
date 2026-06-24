@@ -30,8 +30,11 @@ def _get_profile_id(account_type, marketplace):
     with open(secrets_path) as f:
         amz = json.load(f)
     mkt = marketplace.upper()
+    # UK is stored as GB in some configs
+    mkt_alts = [mkt, 'GB' if mkt == 'UK' else ('UK' if mkt == 'GB' else None)]
+    mkt_alts = [m for m in mkt_alts if m]
     for p in amz.get('profiles', []):
-        if p['type'] == account_type and p['marketplace'] == mkt:
+        if p['type'] == account_type and p['marketplace'] in mkt_alts:
             return str(p['id'])
     return ''
 
@@ -136,13 +139,25 @@ def campaign_builder_queue():
             mt = (g.get('matchType') or 'broad').lower()
             if mt not in VALID_MT:
                 mt = 'broad'
+            # keywords can be strings or dicts {text, mt, bid}
+            raw_kws = g.get('keywords') or []
+            clean_kws = []
+            for k in raw_kws:
+                if isinstance(k, dict):
+                    text = (k.get('text') or '').strip()
+                    if text:
+                        clean_kws.append({'text': text, 'mt': (k.get('mt') or mt).upper(), 'bid': k.get('bid')})
+                else:
+                    text = str(k).strip()
+                    if text:
+                        clean_kws.append(text)
             clean_groups.append({
                 "name":      (g.get('name') or asin).strip(),
                 "asin":      asin,
                 "bid":       float(g.get('bid') or 0),
                 "matchType": mt,
-                "keywords":  [k.strip() for k in (g.get('keywords') or []) if k.strip()],
-                "negatives": [n.strip() for n in (g.get('negatives') or []) if n.strip()],
+                "keywords":  clean_kws,
+                "negatives": [n.strip() for n in (g.get('negatives') or []) if str(n).strip()],
             })
 
         if not clean_groups:

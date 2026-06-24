@@ -740,11 +740,15 @@ async function submitCopy() {
   document.getElementById('errSubmit').style.display = 'none';
 
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
     const r = await fetch('/campaign-builder/queue', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ account_type: at, marketplace: dstMkt, campaigns: [payload] }),
+      signal: ctrl.signal,
     });
+    clearTimeout(timer);
     const d = await r.json();
     if (d.error) throw new Error(d.error);
     document.getElementById('submitFoot').style.display = 'none';
@@ -754,7 +758,8 @@ async function submitCopy() {
   } catch(e) {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Отправить в очередь';
-    showErr('errSubmit', e.message);
+    const msg = e.name === 'AbortError' ? 'Таймаут 30с — сервер не ответил. Проверь профиль KDP/UK и логи.' : e.message;
+    showErr('errSubmit', msg);
   }
 }
 
