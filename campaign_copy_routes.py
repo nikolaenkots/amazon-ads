@@ -258,13 +258,21 @@ LIMIT 50
     for r in src_rows:
         print(f"    asin={r['asin']} ad_asin={r['ad_asin']} design_id={r['design_id']} product_type={r['product_type']}")
 
+    debug = {
+        'src_count': len(src_rows),
+        'src_sample': [{'asin': r['asin'], 'ad_asin': r['ad_asin'], 'design_id': r['design_id'], 'product_type': r['product_type']} for r in src_rows[:3]],
+    }
     if not src_rows:
-        return jsonify({'mapping': {}, 'debug': f'ASINs not found in catalog for {from_mkt}. Import catalog first.'})
+        debug['error'] = f'ASINs not found in catalog for {from_mkt}'
+        return jsonify({'mapping': {}, 'debug': debug})
 
     # Build design_id+product_type list
     design_pairs = list({(str(r['design_id']), str(r['product_type'])) for r in src_rows if r['design_id'] and r['product_type']})
+    # Also try without product_type (design_id only) as fallback
+    design_ids = list({str(r['design_id']) for r in src_rows if r['design_id']})
     if not design_pairs:
-        return jsonify({'mapping': {}, 'debug': 'design_id or product_type missing in catalog entries'})
+        debug['error'] = 'design_id or product_type missing in catalog entries'
+        return jsonify({'mapping': {}, 'debug': debug})
 
     pairs_sql = ', '.join(f"('{d}', '{pt}')" for d, pt in design_pairs)
 
@@ -279,6 +287,20 @@ WHERE marketplace = '{to_mkt}'
 """
     tgt_rows = list(client.query(tgt_q).result())
     print(f"  [DEBUG] asin-map tgt found: {len(tgt_rows)} rows for {to_mkt}")
+    debug['tgt_count'] = len(tgt_rows)
+    debug['design_pairs_count'] = len(design_pairs)
+    if not tgt_rows:
+        # Try without product_type to diagnose
+        if design_ids:
+            did_sql = ', '.join(f"'{d}'" for d in design_ids[:5])
+            probe_q = f"""
+SELECT asin, ad_asin, design_id, product_type, marketplace
+FROM `{PROJECT_ID}.{DATASET}.catalog`
+WHERE design_id IN ({did_sql})
+LIMIT 10
+"""
+            probe = [dict(r) for r in client.query(probe_q).result()]
+            debug['probe'] = probe
 
     # Build lookup: (design_id, product_type) → target
     tgt_map = {}
@@ -301,4 +323,5 @@ WHERE marketplace = '{to_mkt}'
         if key in tgt_map:
             mapping[matched] = tgt_map[key]
 
-    return jsonify({'mapping': mapping})
+    debug['mapped_count'] = len(mapping)
+    return jsonify({'mapping': mapping, 'debug': debug})
