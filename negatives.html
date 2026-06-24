@@ -261,8 +261,7 @@ tr.er td{padding:0}
           <input class="pds" placeholder="Поиск..." oninput="filterPdList(this.value)">
           <div id="pdList"></div>
           <div style="display:flex;gap:6px;padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
-            <button class="act-btn pri sm" style="flex:1" onclick="applyPd()">Применить</button>
-            <button class="act-btn sm" onclick="clearPd()">Снять</button>
+            <button class="act-btn sm" style="flex:1" onclick="clearPd()">Снять все</button>
           </div>
         </div>
       </div>
@@ -380,7 +379,6 @@ function togglePd() {
   const btn = document.getElementById('pdtBtn');
   const isOn = pdd.classList.contains('on');
   if (isOn) { closePd(); return; }
-  pendingPortfolios = [...selectedPortfolios];
   renderPdList('');
   pdd.classList.add('on');
   btn.classList.add('on');
@@ -400,23 +398,18 @@ function renderPdList(q) {
   const el = document.getElementById('pdList');
   el.innerHTML = items.map(p => `
     <label class="pdi">
-      <input type="checkbox" value="${p.id}" ${pendingPortfolios.includes(p.id) ? 'checked' : ''}
+      <input type="checkbox" value="${p.id}" ${selectedPortfolios.includes(p.id) ? 'checked' : ''}
         onchange="pdToggle(this)">
       ${esc(p.name)}
     </label>`).join('');
 }
 function pdToggle(cb) {
-  if (cb.checked) { if (!pendingPortfolios.includes(cb.value)) pendingPortfolios.push(cb.value); }
-  else { pendingPortfolios = pendingPortfolios.filter(x => x !== cb.value); }
-}
-function applyPd() {
-  selectedPortfolios = [...pendingPortfolios];
+  if (cb.checked) { if (!selectedPortfolios.includes(cb.value)) selectedPortfolios.push(cb.value); }
+  else { selectedPortfolios = selectedPortfolios.filter(x => x !== cb.value); }
   updatePdLabel();
-  closePd();
   go();
 }
 function clearPd() {
-  pendingPortfolios = [];
   selectedPortfolios = [];
   updatePdLabel();
   closePd();
