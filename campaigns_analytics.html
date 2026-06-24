@@ -787,7 +787,6 @@ function renderTable(d){
           <input class="fp-search" id="fp_pf_search" placeholder="Поиск..." oninput="renderPfListPopup(this.value)">
           <div class="fp-list" id="fp_pf_list"></div>
           <div class="fp-actions">
-            <button class="fp-apply" onclick="applyPortfolioFilter()">Применить</button>
             <button class="fp-clear" onclick="clearPortfolioFilter()">Снять все</button>
           </div>
         </div>
@@ -1311,10 +1310,10 @@ function renderPfListPopup(q){
   const sel=state.selectedPortfolios||[];
   const filtered=q?_allPortfoliosForFilter.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())):_allPortfoliosForFilter;
   if(!filtered.length){list.innerHTML='<div style="font-size:12px;color:var(--dim);padding:4px 6px">Нет данных</div>';return;}
-  list.innerHTML=filtered.map(p=>`<label><input type="checkbox" name="fp_pf" value="${p.id}" ${sel.includes(p.id)?'checked':''}><span>${p.name}</span></label>`).join('');
+  list.innerHTML=filtered.map(p=>`<label><input type="checkbox" name="fp_pf" value="${p.id}" ${sel.includes(p.id)?'checked':''} onchange="applyPortfolioFilter()"><span>${p.name}</span></label>`).join('');
 }
-function applyPortfolioFilter(){state.selectedPortfolios=[...document.querySelectorAll('input[name="fp_pf"]:checked')].map(el=>el.value);closeAllPopups();state.page=1;fetchData();}
-function clearPortfolioFilter(){state.selectedPortfolios=[];renderPfListPopup('');}
+function applyPortfolioFilter(){state.selectedPortfolios=[...document.querySelectorAll('input[name="fp_pf"]:checked')].map(el=>el.value);state.page=1;fetchData();}
+function clearPortfolioFilter(){state.selectedPortfolios=[];renderPfListPopup('');state.page=1;fetchData();}
 function buildNumParams(p){
   const MAP={impr:'impressions',clicks:'clicks',cost:'cost',ctr:'ctr',sales:'sales_14d',orders:'purchases_14d',acos:'acos'};
   Object.entries(window._nfState||{}).forEach(([id,s])=>{if(!s)return;const field=MAP[id];if(!field)return;if(s.op==='range'){if(s.v1!=='')p.set(field+'_min',s.v1);if(s.v2!=='')p.set(field+'_max',s.v2);}else{p.set(field+'_op',s.op);p.set(field+'_val',s.v1);}});
