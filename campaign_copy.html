@@ -553,9 +553,24 @@ async function goStep3() {
     const d2 = await r2.json();
     if (d2.error) throw new Error(d2.error);
     const autoMap = d2.mapping || {};
+    const dbg = d2.debug || {};
+    const found = Object.keys(autoMap).length;
+    const srcCount = dbg.src_count || 0;
+
     // Init asinMap with auto values
     asinMap = {};
     allAsins.forEach(a => { asinMap[a] = (autoMap[a] ? autoMap[a].target_asin : ''); });
+
+    let note = `${allAsins.length} ASIN(ов) из ${mkt} → найдено ${found} соответствий для ${dstMkt}`;
+    if (srcCount === 0) {
+      note += `. Каталог ${mkt} не загружен — перейди в <a href="/catalog" target="_blank">Каталог</a> и загрузи CSV.`;
+      document.getElementById('asinNote').innerHTML = note;
+    } else if (found === 0) {
+      note += `. Каталог ${dstMkt} не загружен — перейди в <a href="/catalog" target="_blank">Каталог</a> и загрузи CSV для ${dstMkt}.`;
+      document.getElementById('asinNote').innerHTML = note;
+    } else {
+      document.getElementById('asinNote').textContent = note;
+    }
     renderAsinTable(allAsins, autoMap);
   } catch(e) {
     asinMap = {};
