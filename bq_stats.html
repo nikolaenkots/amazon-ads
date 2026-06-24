@@ -288,6 +288,17 @@ async function loadJobs() {
     const d = await r.json();
     if (d.error) throw new Error(d.error);
 
+    if (d.no_permission) {
+      const noPerms = '<tr><td colspan="4" class="te" style="color:var(--muted)">Нет доступа к INFORMATION_SCHEMA.JOBS — требуется роль roles/bigquery.resourceViewer</td></tr>';
+      document.getElementById('jobsBody').innerHTML = noPerms;
+      document.getElementById('topBody').innerHTML  = '<tr><td colspan="5" class="te" style="color:var(--muted)">Нет данных о запросах</td></tr>';
+      document.getElementById('chartBars').innerHTML = '<div style="color:var(--muted);font-size:12px;align-self:center">Нет доступа к истории запросов</div>';
+      document.getElementById('sumQueries').textContent = '—';
+      document.getElementById('sumProc').textContent = '—';
+      document.getElementById('sumCost').textContent = '—';
+      return;
+    }
+
     document.getElementById('sumQueries').textContent = fmtNum(d.totals.query_count);
     document.getElementById('sumProc').textContent    = fmtBytes(d.totals.bytes_processed);
     document.getElementById('sumCost').textContent    = fmtCost(d.totals.cost_usd);
