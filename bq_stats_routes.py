@@ -52,12 +52,24 @@ ORDER BY size_bytes DESC
 
 @bq_stats_bp.route('/bq-stats/jobs')
 def bq_jobs():
-    """История запросов из INFORMATION_SCHEMA.JOBS (регион us)"""
-    try:
-        client = get_client()
+    """История запросов — пробуем несколько источников."""
+    client = get_client()
 
-        # Пробуем region-us (multi-region), если ошибка — вернём пустой результат
-        daily_query = f"""
+    def try_query(q):
+        return list(client.query(q).result())
+
+    # Candidates: JOBS_BY_PROJECT (needs jobUser or viewer), then JOBS_BY_USER, then JOBS
+    regions = ['region-us', 'region-eu', 'US', 'EU']
+    views   = ['JOBS_BY_PROJECT', 'JOBS_BY_USER', 'JOBS']
+
+    daily_rows = None
+    top_rows   = None
+    used_src   = None
+
+    for region in regions:
+        for view in views:
+            src = f'`{PROJECT_ID}.{region}.INFORMATION_SCHEMA.{view}`'
+            daily_q = f"""
 SELECT
   DATE(creation_time) AS day,
   COUNT(*)                             AS query_count,
@@ -65,22 +77,39 @@ SELECT
   SUM(total_bytes_processed)           AS bytes_processed,
   SUM(total_bytes_billed)              AS bytes_billed,
   SUM(total_slot_ms)                   AS slot_ms
-FROM `{PROJECT_ID}.region-us.INFORMATION_SCHEMA.JOBS`
+FROM {src}
 WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
   AND job_type = 'QUERY'
 GROUP BY 1
 ORDER BY 1 DESC
 """
-        daily_rows = list(client.query(daily_query).result())
+            try:
+                daily_rows = try_query(daily_q)
+                used_src = f'{region}/{view}'
+                break
+            except Exception:
+                continue
+        if daily_rows is not None:
+            break
 
-        top_query = f"""
+    if daily_rows is None:
+        return jsonify({
+            'daily': [], 'top_queries': [],
+            'totals': {'query_count': 0, 'bytes_processed': 0, 'bytes_billed': 0, 'cost_usd': 0},
+            'no_permission': True,
+        })
+
+    region_used = used_src.split('/')[0]
+    view_used   = used_src.split('/')[1]
+    src2 = f'`{PROJECT_ID}.{region_used}.INFORMATION_SCHEMA.{view_used}`'
+    top_q = f"""
 SELECT
   DATE(creation_time) AS day,
   LEFT(query, 150)    AS query_preview,
   total_bytes_billed,
   total_bytes_processed,
   TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) AS duration_ms
-FROM `{PROJECT_ID}.region-us.INFORMATION_SCHEMA.JOBS`
+FROM {src2}
 WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
   AND job_type = 'QUERY'
   AND error_result IS NULL
@@ -88,46 +117,48 @@ WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
 ORDER BY total_bytes_billed DESC
 LIMIT 20
 """
-        top_rows = list(client.query(top_query).result())
+    try:
+        top_rows = try_query(top_q)
+    except Exception:
+        top_rows = []
 
-        total_billed  = sum(int(r['bytes_billed']    or 0) for r in daily_rows)
-        total_proc    = sum(int(r['bytes_processed']  or 0) for r in daily_rows)
-        total_queries = sum(int(r['query_count']      or 0) for r in daily_rows)
-        cost_usd = round(total_billed / 1e12 * 6.25, 4)
+    total_billed  = sum(int(r['bytes_billed']   or 0) for r in daily_rows)
+    total_proc    = sum(int(r['bytes_processed'] or 0) for r in daily_rows)
+    total_queries = sum(int(r['query_count']     or 0) for r in daily_rows)
+    cost_usd = round(total_billed / 1e12 * 6.25, 4)
 
-        daily = []
-        for r in daily_rows:
-            bb = int(r['bytes_billed'] or 0)
-            daily.append({
-                'day':         str(r['day']),
-                'query_count': int(r['query_count'] or 0),
-                'error_count': int(r['error_count'] or 0),
-                'bytes_proc':  int(r['bytes_processed'] or 0),
-                'bytes_billed': bb,
-                'cost_usd':    round(bb / 1e12 * 6.25, 5),
-            })
-
-        top = []
-        for r in top_rows:
-            bb = int(r['total_bytes_billed'] or 0)
-            top.append({
-                'day':         str(r['day']),
-                'query':       r['query_preview'] or '',
-                'bytes_billed': bb,
-                'bytes_proc':  int(r['total_bytes_processed'] or 0),
-                'cost_usd':    round(bb / 1e12 * 6.25, 5),
-                'duration_ms': int(r['duration_ms'] or 0),
-            })
-
-        return jsonify({
-            'daily': daily,
-            'top_queries': top,
-            'totals': {
-                'query_count':     total_queries,
-                'bytes_processed': total_proc,
-                'bytes_billed':    total_billed,
-                'cost_usd':        cost_usd,
-            }
+    daily = []
+    for r in daily_rows:
+        bb = int(r['bytes_billed'] or 0)
+        daily.append({
+            'day':         str(r['day']),
+            'query_count': int(r['query_count'] or 0),
+            'error_count': int(r['error_count'] or 0),
+            'bytes_proc':  int(r['bytes_processed'] or 0),
+            'bytes_billed': bb,
+            'cost_usd':    round(bb / 1e12 * 6.25, 5),
         })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
+    top = []
+    for r in (top_rows or []):
+        bb = int(r['total_bytes_billed'] or 0)
+        top.append({
+            'day':          str(r['day']),
+            'query':        r['query_preview'] or '',
+            'bytes_billed': bb,
+            'bytes_proc':   int(r['total_bytes_processed'] or 0),
+            'cost_usd':     round(bb / 1e12 * 6.25, 5),
+            'duration_ms':  int(r['duration_ms'] or 0),
+        })
+
+    return jsonify({
+        'daily': daily,
+        'top_queries': top,
+        'totals': {
+            'query_count':     total_queries,
+            'bytes_processed': total_proc,
+            'bytes_billed':    total_billed,
+            'cost_usd':        cost_usd,
+        },
+        'source': used_src,
+    })
