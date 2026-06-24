@@ -70,8 +70,15 @@ ORDER BY entity_type, ad_group_id
 """
     rows = list(client.query(q).result())
 
-    campaign = None
-    groups   = {}
+    # Debug: count entity types
+    from collections import Counter
+    counts = Counter(r['entity_type'] for r in rows)
+    print(f"  [DEBUG] structure entity counts: {dict(counts)}")
+
+    campaign   = None
+    groups     = {}
+    # asin_by_ag: ad_group_id → [asin, ...] collected from product_ad rows
+    asin_by_ag = {}
 
     for r in rows:
         et = r['entity_type']
@@ -89,7 +96,7 @@ ORDER BY entity_type, ad_group_id
                 'end_date':       str(r['end_date'])   if r['end_date']   else None,
             }
         elif et == 'ad_group':
-            gid = r['ad_group_id']
+            gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid and gid not in groups:
                 groups[gid] = {
                     'id':       gid,
@@ -103,7 +110,7 @@ ORDER BY entity_type, ad_group_id
                     'asins':    [],
                 }
         elif et == 'keyword':
-            gid = r['ad_group_id']
+            gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid in groups:
                 groups[gid]['keywords'].append({
                     'text':       r['keyword_text'],
@@ -112,14 +119,14 @@ ORDER BY entity_type, ad_group_id
                     'state':      r['keyword_state'],
                 })
         elif et == 'negative_keyword':
-            gid = r['ad_group_id']
+            gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid in groups:
                 groups[gid]['negatives'].append({
                     'text':       r['keyword_text'],
                     'match_type': r['match_type'],
                 })
         elif et == 'product_targeting':
-            gid = r['ad_group_id']
+            gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid in groups:
                 groups[gid]['targets'].append({
                     'expression': r['targeting_expression'],
@@ -127,17 +134,35 @@ ORDER BY entity_type, ad_group_id
                     'state':      r['target_state'],
                 })
         elif et == 'negative_product_targeting':
-            gid = r['ad_group_id']
+            gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid in groups:
                 groups[gid]['neg_targets'].append({
                     'expression': r['targeting_expression'],
                 })
         elif et == 'product_ad':
-            gid = r['ad_group_id']
-            if gid in groups and r['asin']:
-                seen = [a['asin'] for a in groups[gid]['asins']]
-                if r['asin'] not in seen:
-                    groups[gid]['asins'].append({'asin': r['asin'], 'sku': r['sku']})
+            gid  = str(r['ad_group_id']) if r['ad_group_id'] else None
+            asin = r['asin']
+            if asin:
+                if gid:
+                    if gid not in asin_by_ag:
+                        asin_by_ag[gid] = []
+                    if asin not in asin_by_ag[gid]:
+                        asin_by_ag[gid].append(asin)
+                print(f"  [DEBUG] product_ad asin={asin} ag_id={gid}")
+
+    # Attach ASINs to groups; also ensure groups exist for orphan product_ads
+    for gid, asins in asin_by_ag.items():
+        if gid not in groups:
+            # group entity might be missing — create placeholder
+            groups[gid] = {
+                'id': gid, 'name': gid, 'bid': 0, 'state': 'ENABLED',
+                'keywords': [], 'negatives': [], 'targets': [], 'neg_targets': [], 'asins': [],
+            }
+        for asin in asins:
+            if asin not in [a['asin'] for a in groups[gid]['asins']]:
+                groups[gid]['asins'].append({'asin': asin, 'sku': None})
+
+    print(f"  [DEBUG] groups: {[{'id':g['id'],'name':g['name'],'asins':g['asins']} for g in groups.values()]}")
 
     return jsonify({'campaign': campaign, 'groups': list(groups.values())})
 
