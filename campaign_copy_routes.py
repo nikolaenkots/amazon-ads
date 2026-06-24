@@ -35,17 +35,25 @@ WHERE entity_type = 'product_ad' AND marketplace = '{marketplace}'
   AND campaign_id = '{campaign_id}'
 LIMIT 20
 """
-    # also check if campaign_id exists at all
-    any_q = f"""
-SELECT entity_type, campaign_id, ad_group_id
+    tgt_q = f"""
+SELECT ad_group_id, targeting_expression, target_bid, target_state
 FROM {tbl}
-WHERE marketplace = '{marketplace}' AND campaign_id = '{campaign_id}'
-LIMIT 5
+WHERE entity_type = 'product_targeting' AND marketplace = '{marketplace}'
+  AND campaign_id = '{campaign_id}'
+LIMIT 30
 """
-    counts = [dict(r) for r in client.query(counts_q).result()]
-    ads    = [dict(r) for r in client.query(ads_q).result()]
-    any_   = [dict(r) for r in client.query(any_q).result()]
-    return jsonify({'counts': counts, 'product_ads': ads, 'sample': any_})
+    ag_q = f"""
+SELECT ad_group_id, ad_group_name, ad_group_default_bid, ad_group_state
+FROM {tbl}
+WHERE entity_type = 'ad_group' AND marketplace = '{marketplace}'
+  AND campaign_id = '{campaign_id}'
+LIMIT 30
+"""
+    counts   = [dict(r) for r in client.query(counts_q).result()]
+    ads      = [dict(r) for r in client.query(ads_q).result()]
+    targets  = [dict(r) for r in client.query(tgt_q).result()]
+    adgroups = [dict(r) for r in client.query(ag_q).result()]
+    return jsonify({'counts': counts, 'product_ads': ads, 'targeting': targets, 'ad_groups': adgroups})
 
 
 @campaign_copy_bp.route('/campaign-copy/campaigns')
