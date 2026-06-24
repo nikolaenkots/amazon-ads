@@ -1,6 +1,6 @@
 from bq_client import get_client
 import os
-from flask import Blueprint, jsonify, send_from_directory
+from flask import Blueprint, jsonify, send_from_directory, request, Response
 
 bq_stats_bp = Blueprint('bq_stats', __name__)
 
@@ -12,6 +12,33 @@ DATASET    = "amazon_ads"
 @bq_stats_bp.route('/bq-stats')
 def bq_stats_page():
     return send_from_directory(BASE_DIR, 'bq_stats.html')
+
+
+@bq_stats_bp.route('/bq-stats/sql')
+def bq_sql():
+    """Run a read-only SELECT query and return results as JSON."""
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify({'error': 'q param required'}), 400
+    q_upper = q.upper()
+    if any(kw in q_upper for kw in ('INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'MERGE', 'CREATE')):
+        return jsonify({'error': 'Only SELECT queries allowed'}), 400
+    try:
+        client = get_client()
+        rows = list(client.query(q).result())
+        if not rows:
+            return jsonify({'columns': [], 'rows': [], 'count': 0})
+        columns = list(rows[0].keys())
+        data = []
+        for r in rows:
+            row = {}
+            for k in columns:
+                v = r[k]
+                row[k] = str(v) if v is not None else None
+            data.append(row)
+        return jsonify({'columns': columns, 'rows': data, 'count': len(data)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @bq_stats_bp.route('/bq-stats/storage')
