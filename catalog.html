@@ -401,7 +401,7 @@ input[type=file] { display: none; }
     </div>
     Amazon Ads Automation
   </div>
-  <div class="nav-bar">
+    <div class="nav-bar">
   <a href="/" class="nav-home">Главная</a>
   <div class="nav-drop" id="navA">
   <button class="nav-drop-btn" onclick="var d=document.getElementById('navA');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
@@ -411,11 +411,10 @@ input[type=file] { display: none; }
   <div class="nav-drop-menu">
     <a href="/analytics/campaigns" class="nav-link">Кампании</a>
     <a href="/analytics/products" class="nav-link">Продукты</a>
-    <a href="/analytics/sales-comparison" class="nav-link">Сравнение продаж</a>
-    <a href="/budget-analysis" class="nav-link">Бюджет</a>
-    <a href="/search-terms" class="nav-link">Поисковые запросы</a>
     <a href="/targets" class="nav-link">Таргеты</a>
-    <a href="/portfolios" class="nav-link">Портфолио</a>
+    <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+    <a href="/sales-comparison" class="nav-link">Сравнение продаж</a>
+    <a href="/budget-analysis" class="nav-link">Бюджет</a>
   </div>
 </div>
   <div class="nav-drop" id="navM">
@@ -424,10 +423,13 @@ input[type=file] { display: none; }
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
   </button>
   <div class="nav-drop-menu">
-    <a href="/control" class="nav-link">Контроль изменений</a>
-    <a href="/campaign-builder" class="nav-link">Конструктор кампаний</a>
+    <a href="/control" class="nav-link">Очередь изменений</a>
+    <a href="/portfolios" class="nav-link">Портфолио</a>
+    <a href="/asin-merge" class="nav-link">Слияние ASIN</a>
+    <a href="/campaign-builder" class="nav-link">Campaign Builder</a>
+    <a href="/campaign-copy" class="nav-link">Копирование кампаний</a>
     <a href="/negatives" class="nav-link">Минус слова</a>
-    <a href="/campaigns-deleting" class="nav-link disabled">Удаление кампаний</a>
+    <a href="/campaigns-deleting" class="nav-link">Удаление кампаний</a>
   </div>
 </div>
   <div class="nav-drop" id="navI">
@@ -436,13 +438,21 @@ input[type=file] { display: none; }
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
   </button>
   <div class="nav-drop-menu">
-    <a href="/campaigns" class="nav-link">Кампании SP API</a>
-    <a href="/catalog" class="nav-link active">Каталог</a>
-    <a href="/earnings" class="nav-link">Продажи Merch</a>
+    <a href="/catalog" class="nav-link active">Каталог Merch</a>
+    <a href="/ads" class="nav-link">Импорт рекламы</a>
     <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
-    <a href="/ads" class="nav-link">Ads отчёты</a>
+    <a href="/earnings" class="nav-link">Продажи Merch</a>
+    <a href="/campaigns" class="nav-link">Кампании SP API</a>
   </div>
 </div>
+  <div class="nav-drop" id="navR">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navR');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Ресурсы
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/bq-stats" class="nav-link">BQ Stats</a>
+  </div>
 </div>
 </div>
 </header>
