@@ -260,7 +260,18 @@ select.cell-in{
   </div>
 </div>
 </div>
-<div class="gap"></div>
+<div class="sep"></div>
+  <span class="lbl">Аккаунт:</span>
+  <select id="acct" onchange="onCtxChange()">
+    <option value="MERCH">Merch</option>
+    <option value="KDP">KDP</option>
+  </select>
+  <select id="mkt" onchange="onCtxChange()">
+    <option value="US">US</option><option value="UK">UK</option><option value="DE">DE</option>
+    <option value="FR">FR</option><option value="IT">IT</option><option value="ES">ES</option>
+    <option value="CA">CA</option><option value="AU">AU</option>
+  </select>
+  <span class="lbl" id="pf-label" style="color:var(--dim);">портфолио…</span>
     </div>
 
     <div id="draft-section" style="padding:10px 16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -283,6 +294,15 @@ select.cell-in{
       </div>
     </div>
 
+    <div class="card-head">
+      <span class="card-title">Кампании</span>
+      <div class="counts">
+        <span class="cnt">Кампаний: <b id="cnt-camp">0</b></span>
+        <span class="cnt">Групп: <b id="cnt-grp">0</b></span>
+        <span class="cnt">Строк: <b id="cnt-rows">0</b></span>
+      </div>
+      <div class="gap"></div>
+    </div>
     <div class="ctl">
       <button class="btn" onclick="addRow('camp')">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
