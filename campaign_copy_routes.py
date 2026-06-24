@@ -244,45 +244,61 @@ def campaign_copy_asin_map():
 
     # Match source ASIN against both catalog.asin and catalog.ad_asin,
     # then join to target marketplace by design_id + product_type.
-    q = f"""
-WITH src AS (
-  SELECT
-    CASE WHEN asin IN ({asin_sql}) THEN asin ELSE ad_asin END AS source_asin,
-    design_id,
-    product_type
-  FROM `{PROJECT_ID}.{DATASET}.catalog`
-  WHERE marketplace = '{from_mkt}'
-    AND design_id IS NOT NULL
-    AND (asin IN ({asin_sql}) OR ad_asin IN ({asin_sql}))
-),
-tgt AS (
-  SELECT
-    COALESCE(NULLIF(ad_asin, ''), asin) AS target_asin,
-    design_id,
-    product_type,
-    title,
-    image_url
-  FROM `{PROJECT_ID}.{DATASET}.catalog`
-  WHERE marketplace = '{to_mkt}'
-    AND design_id IS NOT NULL
-    AND status NOT IN ('REMOVED', 'INACTIVE')
-)
+    # Step 1: find source entries in catalog
+    src_q = f"""
 SELECT
-  src.source_asin,
-  tgt.target_asin,
-  tgt.title,
-  tgt.image_url
-FROM src
-JOIN tgt ON src.design_id = tgt.design_id
-       AND src.product_type = tgt.product_type
+  asin, ad_asin, design_id, product_type, title
+FROM `{PROJECT_ID}.{DATASET}.catalog`
+WHERE marketplace = '{from_mkt}'
+  AND (asin IN ({asin_sql}) OR ad_asin IN ({asin_sql}))
+LIMIT 50
 """
-    rows    = list(client.query(q).result())
+    src_rows = list(client.query(src_q).result())
+    print(f"  [DEBUG] asin-map src found: {len(src_rows)} rows for {len(asin_list)} ASINs")
+    for r in src_rows:
+        print(f"    asin={r['asin']} ad_asin={r['ad_asin']} design_id={r['design_id']} product_type={r['product_type']}")
+
+    if not src_rows:
+        return jsonify({'mapping': {}, 'debug': f'ASINs not found in catalog for {from_mkt}. Import catalog first.'})
+
+    # Build design_id+product_type list
+    design_pairs = list({(str(r['design_id']), str(r['product_type'])) for r in src_rows if r['design_id'] and r['product_type']})
+    if not design_pairs:
+        return jsonify({'mapping': {}, 'debug': 'design_id or product_type missing in catalog entries'})
+
+    pairs_sql = ', '.join(f"('{d}', '{pt}')" for d, pt in design_pairs)
+
+    # Step 2: find target ASINs by design_id + product_type
+    tgt_q = f"""
+SELECT
+  COALESCE(NULLIF(ad_asin, ''), asin) AS target_asin,
+  design_id, product_type, title, image_url
+FROM `{PROJECT_ID}.{DATASET}.catalog`
+WHERE marketplace = '{to_mkt}'
+  AND (design_id, product_type) IN ({pairs_sql})
+"""
+    tgt_rows = list(client.query(tgt_q).result())
+    print(f"  [DEBUG] asin-map tgt found: {len(tgt_rows)} rows for {to_mkt}")
+
+    # Build lookup: (design_id, product_type) → target
+    tgt_map = {}
+    for r in tgt_rows:
+        key = (str(r['design_id']), str(r['product_type']))
+        if key not in tgt_map:
+            tgt_map[key] = {'target_asin': r['target_asin'], 'title': r['title'], 'image_url': r['image_url']}
+
     mapping = {}
-    for r in rows:
-        if r['source_asin'] and r['source_asin'] not in mapping:
-            mapping[r['source_asin']] = {
-                'target_asin': r['target_asin'],
-                'title':       r['title'],
-                'image_url':   r['image_url'],
-            }
+    for r in src_rows:
+        # figure out which input ASIN this row matched
+        matched = None
+        if r['asin'] in asin_list:
+            matched = r['asin']
+        elif r['ad_asin'] and r['ad_asin'] in asin_list:
+            matched = r['ad_asin']
+        if not matched or matched in mapping:
+            continue
+        key = (str(r['design_id']), str(r['product_type']))
+        if key in tgt_map:
+            mapping[matched] = tgt_map[key]
+
     return jsonify({'mapping': mapping})
