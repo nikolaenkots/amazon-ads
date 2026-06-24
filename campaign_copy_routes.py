@@ -105,15 +105,24 @@ ORDER BY entity_type, ad_group_id
 """
     rows = list(client.query(q).result())
 
-    # Debug: count entity types
+    import re
     from collections import Counter
     counts = Counter(r['entity_type'] for r in rows)
     print(f"  [DEBUG] structure entity counts: {dict(counts)}")
 
+    # ASIN pattern: 10 chars starting with B
+    ASIN_RE = re.compile(r'\bB[0-9A-Z]{9}\b')
+
+    def extract_asin(text):
+        if not text:
+            return None
+        m = ASIN_RE.search(str(text).upper())
+        return m.group(0) if m else None
+
     campaign   = None
     groups     = {}
-    # asin_by_ag: ad_group_id → [asin, ...] collected from product_ad rows
-    asin_by_ag = {}
+    # ad_group_id → [asin, ...] from product_ad rows (even if asin is null — track gid)
+    ad_ids_by_ag = {}   # gid → [ad_id, ...]
 
     for r in rows:
         et = r['entity_type']
@@ -134,15 +143,15 @@ ORDER BY entity_type, ad_group_id
             gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid and gid not in groups:
                 groups[gid] = {
-                    'id':       gid,
-                    'name':     r['ad_group_name'],
-                    'bid':      float(r['ad_group_default_bid'] or 0),
-                    'state':    r['ad_group_state'],
-                    'keywords': [],
+                    'id':        gid,
+                    'name':      r['ad_group_name'],
+                    'bid':       float(r['ad_group_default_bid'] or 0),
+                    'state':     r['ad_group_state'],
+                    'keywords':  [],
                     'negatives': [],
-                    'targets':  [],
+                    'targets':   [],
                     'neg_targets': [],
-                    'asins':    [],
+                    'asins':     [],
                 }
         elif et == 'keyword':
             gid = str(r['ad_group_id']) if r['ad_group_id'] else None
@@ -168,6 +177,12 @@ ORDER BY entity_type, ad_group_id
                     'bid':        float(r['target_bid'] or 0),
                     'state':      r['target_state'],
                 })
+                # Fallback: extract ASIN from targeting expression (e.g. asin="B0XXXXXX")
+                asin_from_expr = extract_asin(r['targeting_expression'])
+                if asin_from_expr:
+                    seen = [a['asin'] for a in groups[gid]['asins']]
+                    if asin_from_expr not in seen:
+                        groups[gid]['asins'].append({'asin': asin_from_expr, 'sku': None, 'src': 'targeting'})
         elif et == 'negative_product_targeting':
             gid = str(r['ad_group_id']) if r['ad_group_id'] else None
             if gid in groups:
@@ -177,27 +192,31 @@ ORDER BY entity_type, ad_group_id
         elif et == 'product_ad':
             gid  = str(r['ad_group_id']) if r['ad_group_id'] else None
             asin = r['asin']
-            if asin:
-                if gid:
-                    if gid not in asin_by_ag:
-                        asin_by_ag[gid] = []
-                    if asin not in asin_by_ag[gid]:
-                        asin_by_ag[gid].append(asin)
-                print(f"  [DEBUG] product_ad asin={asin} ag_id={gid}")
+            if gid:
+                if asin:
+                    # Primary source: product_ad.asin
+                    if gid not in groups:
+                        groups[gid] = {
+                            'id': gid, 'name': gid, 'bid': 0, 'state': 'ENABLED',
+                            'keywords': [], 'negatives': [], 'targets': [], 'neg_targets': [], 'asins': [],
+                        }
+                    seen = [a['asin'] for a in groups[gid]['asins']]
+                    if asin not in seen:
+                        groups[gid]['asins'].append({'asin': asin, 'sku': r['sku'], 'src': 'product_ad'})
+                else:
+                    # Track that this group HAS an ad — we'll try name fallback later
+                    if gid not in ad_ids_by_ag:
+                        ad_ids_by_ag[gid] = True
 
-    # Attach ASINs to groups; also ensure groups exist for orphan product_ads
-    for gid, asins in asin_by_ag.items():
-        if gid not in groups:
-            # group entity might be missing — create placeholder
-            groups[gid] = {
-                'id': gid, 'name': gid, 'bid': 0, 'state': 'ENABLED',
-                'keywords': [], 'negatives': [], 'targets': [], 'neg_targets': [], 'asins': [],
-            }
-        for asin in asins:
-            if asin not in [a['asin'] for a in groups[gid]['asins']]:
-                groups[gid]['asins'].append({'asin': asin, 'sku': None})
+    # Fallback: extract ASIN from ad_group name for groups that still have no ASIN
+    for gid, g in groups.items():
+        if not g['asins']:
+            asin_from_name = extract_asin(g['name'])
+            if asin_from_name:
+                g['asins'].append({'asin': asin_from_name, 'sku': None, 'src': 'group_name'})
+                print(f"  [DEBUG] ASIN from group name: {g['name']} → {asin_from_name}")
 
-    print(f"  [DEBUG] groups: {[{'id':g['id'],'name':g['name'],'asins':g['asins']} for g in groups.values()]}")
+    print(f"  [DEBUG] groups asin summary: { {g['name']: [a['asin'] for a in g['asins']] for g in groups.values()} }")
 
     return jsonify({'campaign': campaign, 'groups': list(groups.values())})
 

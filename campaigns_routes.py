@@ -282,6 +282,18 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
 
     for a in ads:
         adv = (a.get("advertisedProducts") or [{}])[0]
+        # ASIN may live in several places depending on API version
+        creative      = a.get("creative") or {}
+        prod_creative = creative.get("productCreative") or {}
+        settings      = prod_creative.get("productCreativeSettings") or {}
+        adv_product   = settings.get("advertisedProduct") or {}
+        asin = (
+            adv.get("resolvedProductId")
+            or adv.get("productId")
+            or adv_product.get("productId")
+            or a.get("asin")
+        )
+        sku = adv.get("sku") or adv_product.get("sku") or a.get("sku")
         rows.append({
             "entity_type": "product_ad",
             "profile_id": str(profile_id), "marketplace": marketplace,
@@ -296,9 +308,9 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
             "keyword_bid": None, "keyword_state": None,
             "target_id": None, "targeting_expression": None,
             "target_bid": None, "target_state": None,
-            "ad_id":  a.get("adId"),
-            "sku":    adv.get("sku"),
-            "asin":   adv.get("resolvedProductId") or adv.get("productId"),
+            "ad_id":   a.get("adId"),
+            "sku":     sku,
+            "asin":    asin,
             "ad_state": a.get("state"),
             "synced_at": synced_at,
         })
