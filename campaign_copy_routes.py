@@ -241,30 +241,48 @@ def campaign_copy_asin_map():
 
     client   = get_client()
     asin_sql = ', '.join(f"'{a}'" for a in asin_list)
+
+    # Match source ASIN against both catalog.asin and catalog.ad_asin,
+    # then join to target marketplace by design_id + product_type.
     q = f"""
 WITH src AS (
-  SELECT asin, design_id
+  SELECT
+    CASE WHEN asin IN ({asin_sql}) THEN asin ELSE ad_asin END AS source_asin,
+    design_id,
+    product_type
   FROM `{PROJECT_ID}.{DATASET}.catalog`
   WHERE marketplace = '{from_mkt}'
-    AND asin IN ({asin_sql})
     AND design_id IS NOT NULL
+    AND (asin IN ({asin_sql}) OR ad_asin IN ({asin_sql}))
 ),
 tgt AS (
-  SELECT asin AS target_asin, design_id, title, image_url
+  SELECT
+    COALESCE(NULLIF(ad_asin, ''), asin) AS target_asin,
+    design_id,
+    product_type,
+    title,
+    image_url
   FROM `{PROJECT_ID}.{DATASET}.catalog`
   WHERE marketplace = '{to_mkt}'
     AND design_id IS NOT NULL
+    AND status NOT IN ('REMOVED', 'INACTIVE')
 )
-SELECT src.asin AS source_asin, tgt.target_asin, tgt.title, tgt.image_url
+SELECT
+  src.source_asin,
+  tgt.target_asin,
+  tgt.title,
+  tgt.image_url
 FROM src
 JOIN tgt ON src.design_id = tgt.design_id
+       AND src.product_type = tgt.product_type
 """
     rows    = list(client.query(q).result())
     mapping = {}
     for r in rows:
-        mapping[r['source_asin']] = {
-            'target_asin': r['target_asin'],
-            'title':       r['title'],
-            'image_url':   r['image_url'],
-        }
+        if r['source_asin'] and r['source_asin'] not in mapping:
+            mapping[r['source_asin']] = {
+                'target_asin': r['target_asin'],
+                'title':       r['title'],
+                'image_url':   r['image_url'],
+            }
     return jsonify({'mapping': mapping})
