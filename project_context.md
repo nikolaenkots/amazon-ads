@@ -2526,3 +2526,278 @@ ORDER BY cnt DESC;
 - `entity_type: 'keyword_add'`, payload `{keyword, match_type, bid, campaign_id, ad_group_id}`
 - Включает `account_type: S.acct`
 
+---
+
+## Страница "Копирование кампании" (/campaign-copy) — июнь 2026
+
+### Назначение
+4-шаговый мастер для копирования структуры кампании из одного маркетплейса в другой с автоматическим
+ремаппингом ASIN (через `design_id + product_type` в каталоге). Поддерживает MERCH и KDP.
+Для KDP ASIN не перемаппируются (одинаковы во всех гео).
+
+### Файлы
+| Файл | Описание |
+|---|---|
+| `campaign_copy_routes.py` | Blueprint `campaign_copy_bp`, 5 endpoints |
+| `campaign_copy.html` | Фронтенд — 4-шаговый мастер |
+| `app.py` | `from campaign_copy_routes import campaign_copy_bp` + `app.register_blueprint(campaign_copy_bp)` |
+
+### Шаги мастера
+1. **Источник** — выбор аккаунта (MERCH/KDP), маркетплейса-источника, кампании из списка
+2. **Настройки** — маркетплейс-назначение, бюджет, ставки (множитель), bid strategy
+3. **ASINы** — MERCH: автоматический поиск соответствий через `/campaign-copy/asin-map`; KDP: те же ASINы
+4. **Превью + Отправка** — финальный просмотр структуры, отправка через `/campaign-builder/queue`
+
+### API Endpoints
+
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/campaign-copy` | HTML страница |
+| `GET` | `/campaign-copy/campaigns` | Список кампаний из `campaigns_merch/kdp` |
+| `GET` | `/campaign-copy/structure` | Структура кампании (группы, таргеты, ASINы) |
+| `GET` | `/campaign-copy/asin-map` | Маппинг ASINов между маркетплейсами через каталог |
+| `GET` | `/campaign-copy/debug` | Диагностика: подсчёт entity_type, образцы rows |
+
+### /campaign-copy/structure
+Читает всю кампанию из `campaigns_merch/kdp`, строит словарь групп по `ad_group_id`.
+
+**Извлечение ASIN (приоритет источников):**
+1. `product_ad.asin` — основной источник (работает после исправления sync, см. ниже)
+2. Regex `\bB[0-9A-Z]{9}\b` из `targeting_expression` — fallback для авто-кампаний
+3. Regex из `ad_group_name` — третий fallback
+
+**Важно:** `ad_group_id` нормализуется через `str(r['ad_group_id']) if r['ad_group_id'] else None`
+(тип INTEGER в BQ не равен строковому ключу словаря без приведения).
+
+### /campaign-copy/asin-map
+Двухшаговый поиск в каталоге:
+
+**Шаг 1** — найти source ASIN в catalog (оба поля: `catalog.asin` и `catalog.ad_asin`):
+```python
+src_q = f"""
+SELECT asin, ad_asin, design_id, product_type, title
+FROM `{PROJECT_ID}.{DATASET}.catalog`
+WHERE marketplace = '{from_cat}'
+  AND (asin IN ({asin_sql}) OR ad_asin IN ({asin_sql}))
+LIMIT 50"""
+```
+
+**Шаг 2** — найти target ASIN по `design_id + product_type`:
+```python
+tgt_q = f"""
+SELECT COALESCE(NULLIF(ad_asin, ''), asin) AS target_asin,
+       design_id, product_type, title, image_url
+FROM `{PROJECT_ID}.{DATASET}.catalog`
+WHERE marketplace = '{to_cat}'
+  AND (design_id, product_type) IN ({pairs_sql})"""
+```
+
+**Маппинг маркетплейсов для каталога:**
+```python
+MKT_CATALOG = {'UK': 'GB'}   # каталог хранит UK как 'GB'
+from_cat = MKT_CATALOG.get(from_mkt, from_mkt)
+to_cat   = MKT_CATALOG.get(to_mkt,   to_mkt)
+```
+
+Возвращает: `{mapping: {src_asin: {target_asin, title, image_url}}, debug: {...}}`
+
+### campaign_copy.html — ключевые детали
+
+**Ремаппинг ASINов:**
+- MERCH: вызывает `/campaign-copy/asin-map?asins=...&from_mkt=...&to_mkt=...`
+- KDP: `asinMap[a] = a` (те же ASINы, пропускает API-вызов)
+- Пользователь может вручную скорректировать ASIN в шаге 3
+
+**Формирование payload (buildCampaignPayload):**
+Ключевые слова передаются как объекты `{text, mt, bid}` (не строки):
+```js
+keywords: kws.map(k => ({text: k.text, mt: k.mt, bid: k.bid}))
+```
+Это отличается от Campaign Builder (где ключи — строки). `campaign_builder_routes.py` поддерживает оба формата.
+
+**Отправка через `/campaign-builder/queue`:**
+```js
+const ctrl = new AbortController();
+const timer = setTimeout(() => ctrl.abort(), 30000);  // 30-секундный таймаут
+const r = await fetch('/campaign-builder/queue', {
+  method: 'POST', headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({ account_type: at, marketplace: dstMkt, campaigns: [payload] }),
+  signal: ctrl.signal,
+});
+clearTimeout(timer);
+```
+При `AbortError` показывается сообщение "Запрос завис (>30 сек) — проверьте /control".
+
+---
+
+## Исправления campaign_builder_routes.py (июнь 2026)
+
+### Профили UK/GB (alias lookup)
+Amazon хранит UK профиль с кодом 'UK' или 'GB' в зависимости от конфига.
+`_get_profile_id()` теперь пробует оба варианта:
+```python
+mkt_alts = [mkt, 'GB' if mkt == 'UK' else ('UK' if mkt == 'GB' else None)]
+mkt_alts = [m for m in mkt_alts if m]
+for p in amz.get('profiles', []):
+    if p['type'] == account_type and p['marketplace'] in mkt_alts:
+        return str(p['id'])
+```
+
+### Keywords: поддержка dict и string
+Campaign Copy присылает ключи как `{text, mt, bid}`, Campaign Builder UI — как строки.
+Обработчик `/campaign-builder/queue` поддерживает оба формата:
+```python
+for k in raw_kws:
+    if isinstance(k, dict):
+        text = (k.get('text') or '').strip()
+        if text:
+            clean_kws.append({'text': text, 'mt': (k.get('mt') or mt).upper(), 'bid': k.get('bid')})
+    else:
+        text = str(k).strip()
+        if text:
+            clean_kws.append(text)
+```
+**Проблема до фикса:** `k.strip()` на dict → `AttributeError` → HTML 500 → "Unexpected token '<'" на фронте.
+
+---
+
+## Исправления send.py — create_campaigns (июнь 2026)
+
+### Маркетплейс UK → GB для Amazon API
+Amazon SP API принимает 'GB', не 'UK'. Внутренняя система использует 'UK':
+```python
+MKT_API = {"UK": "GB"}
+mkt_api = MKT_API.get(mkt, mkt)
+# Используется во всех местах: marketplaces, marketplaceSettings, endDateTime offset
+```
+
+### startDateTime — всегда обязателен
+Amazon SP API v1 требует `startDateTime` даже если кампания уже началась:
+```python
+from datetime import date
+start_dt = f"{start}T00:00:00Z" if start else f"{date.today().isoformat()}T00:00:00Z"
+payload["startDateTime"] = start_dt   # всегда, не через if
+```
+**До фикса:** `if start: payload["startDateTime"] = start_dt` → при пустой дате поле отсутствовало → Amazon возвращал "missing required properties".
+
+---
+
+## Исправления campaigns_routes.py — синхронизация ASIN (июнь 2026)
+
+### product_ad ASIN из creative
+Amazon SP API v1 возвращает ASIN рекламируемого продукта во вложенной структуре `creative`:
+```python
+creative      = a.get("creative") or {}
+prod_creative = creative.get("productCreative") or {}
+settings      = prod_creative.get("productCreativeSettings") or {}
+adv_product   = settings.get("advertisedProduct") or {}
+
+asin = (
+    adv.get("resolvedProductId")    # resolvedProductId если есть
+    or adv.get("productId")          # productId из рекламируемого продукта (старый путь)
+    or adv_product.get("productId")  # из creative.productCreative...
+    or a.get("asin")                 # крайний fallback
+)
+```
+**Проблема до фикса:** поле `a.get("asin")` всегда `None` для SP API v1. Значение лежит в `creative`.
+После исправления: при повторной синхронизации кампаний `product_ad.asin` заполняется корректно.
+
+---
+
+## BQ Stats (/bq-stats) — обновления (июнь 2026)
+
+### Новый endpoint /bq-stats/sql
+Ad-hoc SQL executor — выполняет любой SELECT-запрос и возвращает результат как JSON-таблицу:
+```python
+@bq_stats_bp.route('/bq-stats/sql')
+def bq_sql():
+    q = request.args.get('q', '').strip()
+    if not q: return jsonify({'error': 'q param required'}), 400
+    q_upper = q.upper()
+    if any(kw in q_upper for kw in ('INSERT','UPDATE','DELETE','DROP','TRUNCATE','MERGE','CREATE')):
+        return jsonify({'error': 'Only SELECT queries allowed'}), 400
+    rows = list(client.query(q).result())
+    columns = list(rows[0].keys()) if rows else []
+    data = [{ k: str(r[k]) if r[k] is not None else None for k in columns } for r in rows]
+    return jsonify({'columns': columns, 'rows': data, 'count': len(data)})
+```
+Блокирует DML-операции через keywords-проверку.
+
+### /bq-stats/jobs — множественные fallback
+`INFORMATION_SCHEMA.JOBS` требует специальных IAM прав. Endpoint перебирает несколько вариантов:
+```python
+regions = ['region-us', 'region-eu', 'US', 'EU']
+views   = ['JOBS_BY_PROJECT', 'JOBS_BY_USER', 'JOBS']
+# Пробуем все комбинации, берём первую успешную
+```
+Если ни одна не работает — возвращает `{'no_permission': True}`.
+UI в `bq_stats.html` отображает понятное сообщение вместо ошибки при `no_permission: true`.
+
+---
+
+## Обновление файловой структуры (июнь 2026)
+
+### Новые файлы Flask
+
+| Файл | Blueprint | Описание |
+|---|---|---|
+| `campaign_builder_routes.py` | `campaign_builder_bp` | `/campaign-builder` — массовое создание кампаний |
+| `campaign_copy_routes.py` | `campaign_copy_bp` | `/campaign-copy` — копирование кампаний между гео |
+| `bq_stats_routes.py` | `bq_stats_bp` | `/bq-stats` — статистика BigQuery, ad-hoc SQL |
+| `search_terms_routes.py` | `search_terms_bp` | `/search-terms` — анализ поисковых запросов |
+
+### Новые HTML страницы
+
+| Файл | URL | Описание |
+|---|---|---|
+| `campaign_builder.html` | `/campaign-builder` | Массовое создание SP кампаний (Google Sheets-like) |
+| `campaign_copy.html` | `/campaign-copy` | Копирование кампании в другой маркетплейс с ASIN-маппингом |
+| `bq_stats.html` | `/bq-stats` | Статистика хранилища и запросов BigQuery, SQL explorer |
+| `search_terms.html` | `/search-terms` | Анализ поисковых запросов, массовое добавление минусов |
+| `campaigns_deleting.html` | `/campaigns-deleting` | Архивация и удаление кампаний |
+| `budget_analysis.html` | `/budget-analysis` | Анализ утилизации бюджетов |
+| `targets.html` | `/targets` | Управление таргетами и группами |
+
+### Архитектура Flask (обновлено)
+
+```
+app.py
+├── catalog_routes.py          → catalog_bp
+├── earnings_routes.py         → earnings_bp
+├── kdp_earnings_routes.py     → kdp_earnings_bp
+├── ads_routes.py              → ads_bp
+├── campaigns_routes.py        → campaigns_bp
+├── portfolios.py              → portfolios_bp
+├── analytics_routes.py        → analytics_bp
+├── products_routes.py         → products_bp
+├── targets_routes.py          → targets_bp
+├── search_terms_routes.py     → search_terms_bp
+├── sales_comparison_routes.py → sales_comparison_bp
+├── asin_merge_routes.py       → asin_merge_bp
+├── control_routes.py          → control_bp
+├── campaign_builder_routes.py → campaign_builder_bp
+├── campaign_copy_routes.py    → campaign_copy_bp
+└── bq_stats_routes.py         → bq_stats_bp
+```
+
+---
+
+## Каталог: коды маркетплейсов
+
+| Внутренний код | Amazon Ads API | Каталог (BQ) |
+|---|---|---|
+| US | US | US |
+| UK | GB | GB |
+| DE | DE | DE |
+| FR | FR | FR |
+| IT | IT | IT |
+| ES | ES | ES |
+| CA | CA | CA |
+| AU | AU | AU |
+| JP | JP | JP |
+
+**Правило:** внутри системы используется 'UK', в Amazon API — 'GB', в таблице `catalog` — тоже 'GB'.
+Маппинг в `send.py`: `MKT_API = {"UK": "GB"}`.
+Маппинг в `campaign_copy_routes.py`: `MKT_CATALOG = {'UK': 'GB'}`.
+Маппинг в `_get_profile_id`: пробует оба варианта UK и GB.
+
