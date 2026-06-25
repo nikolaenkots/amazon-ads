@@ -23,6 +23,58 @@ def search_terms_optimizer_page():
     return send_from_directory(BASE_DIR, 'search_terms_optimizer.html')
 
 
+def _date_where(args, alias='s'):
+    """Возвращает SQL-условие диапазона дат.
+    Если переданы date_from и date_to — используется явный период,
+    иначе — последние N дней (days)."""
+    date_from = args.get('date_from', '').strip()
+    date_to   = args.get('date_to', '').strip()
+    if date_from and date_to:
+        df = date_from.replace("'", "''")
+        dt = date_to.replace("'", "''")
+        return f"{alias}.date >= '{df}' AND {alias}.date <= '{dt}'"
+    days = max(1, int(args.get('days', 30)))
+    return f"{alias}.date >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)"
+
+
+@st_optimizer_bp.route('/automation/search-terms/portfolios')
+def st_portfolios():
+    """Уникальные портфолио с актуальными именами из portfolio_labels."""
+    account_type = request.args.get('account_type', 'MERCH').upper()
+    marketplace  = request.args.get('marketplace', '').upper()
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({'portfolios': []})
+
+    suffix     = _suffix(account_type)
+    camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    pf_table   = f"`{PROJECT_ID}.{DATASET}.portfolio_labels`"
+
+    conds = ["c.entity_type = 'campaign'", "c.portfolio_id IS NOT NULL", "c.portfolio_id != ''"]
+    if marketplace:
+        conds.append(f"c.marketplace = '{marketplace.replace(chr(39), chr(39)*2)}'")
+    where = 'WHERE ' + ' AND '.join(conds)
+
+    sql = f"""
+    SELECT DISTINCT
+        c.portfolio_id,
+        COALESCE(pl.portfolio_name, c.portfolio_name, c.portfolio_id) AS portfolio_name
+    FROM {camp_table} c
+    LEFT JOIN {pf_table} pl
+        ON  pl.portfolio_id  = c.portfolio_id
+        AND pl.marketplace   = c.marketplace
+        AND pl.account_type  = '{account_type}'
+    {where}
+    ORDER BY portfolio_name
+    """
+    try:
+        client = get_client()
+        rows = [{'id': r['portfolio_id'], 'name': r['portfolio_name']}
+                for r in client.query(sql).result()]
+        return jsonify({'portfolios': rows})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @st_optimizer_bp.route('/automation/search-terms/negatives-candidates')
 def negatives_candidates():
     args         = request.args
@@ -30,14 +82,14 @@ def negatives_candidates():
     suffix       = _suffix(account_type)
     marketplace  = args.get('marketplace', 'US').upper()
     portfolio_ids_raw = args.get('portfolio_ids', '')
-    days         = max(1, int(args.get('days', 30)))
     min_clicks   = max(0, int(args.get('min_clicks', 10)))
 
     st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
     pf_table   = f"`{PROJECT_ID}.{DATASET}.portfolio_labels`"
 
-    safe_mkt = marketplace.replace("'", "''")
+    safe_mkt   = marketplace.replace("'", "''")
+    date_where = _date_where(args, 's')
 
     portfolio_cond = ''
     if portfolio_ids_raw:
@@ -57,7 +109,7 @@ def negatives_candidates():
             SUM(s.purchases_14d)      AS purchases_14d
         FROM {st_table} s
         WHERE s.marketplace = '{safe_mkt}'
-          AND s.date >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)
+          AND {date_where}
         GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type
         HAVING SUM(s.clicks) >= {min_clicks} AND SUM(s.purchases_14d) = 0
     ),
@@ -127,14 +179,14 @@ def existing_negatives():
             )"""
 
     sql = f"""
-    SELECT keyword_text, match_type, campaign_id, ad_group_id
+    SELECT DISTINCT keyword_text, match_type, campaign_id, ad_group_id
     FROM {camp_table}
-    WHERE entity_type IN ('negative_keyword', 'negative_keyword_group')
+    WHERE entity_type = 'negative_keyword'
       AND marketplace = '{safe_mkt}'
       AND keyword_text IS NOT NULL
+      AND (keyword_state IS NULL OR keyword_state != 'ARCHIVED')
     {portfolio_cond}
-    ORDER BY keyword_text
-    LIMIT 5000
+    LIMIT 200000
     """
 
     try:
@@ -153,14 +205,14 @@ def keywords_candidates():
     suffix       = _suffix(account_type)
     marketplace  = args.get('marketplace', 'US').upper()
     portfolio_ids_raw = args.get('portfolio_ids', '')
-    days         = max(1, int(args.get('days', 30)))
     min_orders   = max(0, int(args.get('min_orders', 1)))
 
     st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
     pf_table   = f"`{PROJECT_ID}.{DATASET}.portfolio_labels`"
 
-    safe_mkt = marketplace.replace("'", "''")
+    safe_mkt   = marketplace.replace("'", "''")
+    date_where = _date_where(args, 's')
 
     portfolio_cond = ''
     if portfolio_ids_raw:
@@ -181,7 +233,7 @@ def keywords_candidates():
             ROUND(SUM(s.sales_14d), 2) AS sales
         FROM {st_table} s
         WHERE s.marketplace = '{safe_mkt}'
-          AND s.date >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)
+          AND {date_where}
         GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type
         HAVING SUM(s.purchases_14d) >= {min_orders}
     ),
