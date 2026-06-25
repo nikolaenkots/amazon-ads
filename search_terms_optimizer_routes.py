@@ -322,7 +322,7 @@ def groups_for_asin():
     WITH source_asins AS (
         SELECT DISTINCT advertised_asin
         FROM {asin_table}
-        WHERE CAST(ad_group_id AS STRING) = '{safe_agid}' AND marketplace = '{safe_mkt}'
+        WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}'
         LIMIT 5
     ),
     ag_ids AS (
@@ -330,24 +330,31 @@ def groups_for_asin():
         FROM {asin_table} s
         JOIN source_asins sa ON sa.advertised_asin = s.advertised_asin
         WHERE s.marketplace = '{safe_mkt}'
+        LIMIT 500
     ),
     g_raw AS (
         SELECT ad_group_id, ad_group_name, campaign_id, ad_group_state, marketplace,
                ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table} WHERE entity_type = 'ad_group'
+        FROM {camp_table}
+        WHERE entity_type = 'ad_group'
+          AND marketplace = '{safe_mkt}'
+          AND ad_group_id IN (SELECT ad_group_id FROM ag_ids)
     ),
+    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c_raw AS (
         SELECT campaign_id, campaign_name, campaign_state, targeting_type, marketplace,
                ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table} WHERE entity_type = 'campaign'
+        FROM {camp_table}
+        WHERE entity_type = 'campaign'
+          AND marketplace = '{safe_mkt}'
+          AND campaign_id IN (SELECT campaign_id FROM g)
     ),
-    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c AS (SELECT * FROM c_raw WHERE rn = 1)
     SELECT g.ad_group_id, g.ad_group_name, g.ad_group_state,
            c.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
            g.marketplace,
            (SELECT STRING_AGG(DISTINCT advertised_asin ORDER BY advertised_asin LIMIT 3)
-            FROM {asin_table} WHERE CAST(ad_group_id AS STRING) = '{safe_agid}' AND marketplace = '{safe_mkt}') AS source_asins
+            FROM {asin_table} WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}') AS source_asins
     FROM ag_ids
     JOIN g ON g.ad_group_id = ag_ids.ad_group_id AND g.marketplace = '{safe_mkt}'
     LEFT JOIN c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
@@ -394,7 +401,7 @@ def group_keywords():
                ROW_NUMBER() OVER (PARTITION BY keyword_id ORDER BY synced_at DESC) rn
         FROM {camp_table}
         WHERE entity_type = 'keyword'
-          AND CAST(ad_group_id AS STRING) = '{safe_agid}'
+          AND ad_group_id = '{safe_agid}'
           AND marketplace = '{safe_mkt}'
     ),
     stats AS (
@@ -405,7 +412,7 @@ def group_keywords():
                SUM(purchases_14d)  AS orders,
                ROUND(SUM(sales_14d), 2) AS sales
         FROM {st_table} s
-        WHERE CAST(s.ad_group_id AS STRING) = '{safe_agid}'
+        WHERE s.ad_group_id = '{safe_agid}'
           AND s.marketplace = '{safe_mkt}'
           AND {date_where}
           AND s.keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
