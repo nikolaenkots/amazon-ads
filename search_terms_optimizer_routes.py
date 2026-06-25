@@ -102,7 +102,7 @@ def negatives_candidates():
     WITH st AS (
         SELECT
             s.search_term, s.campaign_id, s.ad_group_id,
-            s.keyword_type, s.match_type,
+            s.keyword_type, s.match_type, s.keyword, s.targeting,
             SUM(s.impressions)        AS impressions,
             SUM(s.clicks)             AS clicks,
             ROUND(SUM(s.cost), 2)     AS cost,
@@ -110,7 +110,7 @@ def negatives_candidates():
         FROM {st_table} s
         WHERE s.marketplace = '{safe_mkt}'
           AND {date_where}
-        GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type
+        GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type, s.keyword, s.targeting
         HAVING SUM(s.clicks) >= {min_clicks} AND SUM(s.purchases_14d) = 0
     ),
     c_raw AS (
@@ -131,7 +131,7 @@ def negatives_candidates():
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
-        st.keyword_type, st.match_type
+        st.keyword_type, st.match_type, st.keyword, st.targeting
     FROM st
     LEFT JOIN c ON c.campaign_id = st.campaign_id
     LEFT JOIN g ON g.ad_group_id = st.ad_group_id
@@ -240,7 +240,7 @@ def keywords_candidates():
     WITH st AS (
         SELECT
             s.search_term, s.campaign_id, s.ad_group_id,
-            s.keyword_type, s.match_type,
+            s.keyword_type, s.match_type, s.keyword, s.targeting,
             SUM(s.impressions)         AS impressions,
             SUM(s.clicks)              AS clicks,
             ROUND(SUM(s.cost), 2)      AS cost,
@@ -249,7 +249,7 @@ def keywords_candidates():
         FROM {st_table} s
         WHERE s.marketplace = '{safe_mkt}'
           AND {date_where}
-        GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type
+        GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type, s.keyword, s.targeting
         HAVING SUM(s.purchases_14d) >= {min_orders}
     ),
     c_raw AS (
@@ -272,7 +272,7 @@ def keywords_candidates():
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
-        st.keyword_type, st.match_type
+        st.keyword_type, st.match_type, st.keyword, st.targeting
     FROM st
     LEFT JOIN c ON c.campaign_id = st.campaign_id
     LEFT JOIN g ON g.ad_group_id = st.ad_group_id

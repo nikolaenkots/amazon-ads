@@ -298,6 +298,12 @@ tr.exp-row td{padding:0;background:var(--surface2)}
     <button class="mbt" id="itAuto" onclick="setInitiator('auto')">Авто</button>
     <button class="mbt" id="itProd" onclick="setInitiator('product')">Продуктовые</button>
     <div class="sep"></div>
+    <span class="mode-lbl">Совпадение</span>
+    <button class="mbt on" id="mtAll" onclick="setMatchFilter('')">Все</button>
+    <button class="mbt" id="mtBroad" onclick="setMatchFilter('BROAD')">BROAD</button>
+    <button class="mbt" id="mtPhrase" onclick="setMatchFilter('PHRASE')">PHRASE</button>
+    <button class="mbt" id="mtExact" onclick="setMatchFilter('EXACT')">EXACT</button>
+    <div class="sep"></div>
     <span class="mode-lbl">Тип запроса</span>
     <button class="mbt on" id="qtAll" onclick="setQueryType('')">Все</button>
     <button class="mbt" id="qtText" onclick="setQueryType('text')">Текстовые</button>
@@ -410,12 +416,20 @@ var existingNegatives = [];
 var activeTab = 'neg';
 var filterInitiator = '';
 var filterQueryType = '';
+var filterMatchType = '';
 
 // ── Mode filters ──────────────────────────────────────────
 function setInitiator(v) {
   filterInitiator = v;
   ['itAll','itKw','itAuto','itProd'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
   var ids = {''  : 'itAll', 'keyword': 'itKw', 'auto': 'itAuto', 'product': 'itProd'};
+  if (ids[v]) document.getElementById(ids[v]).classList.add('on');
+  renderNegTable(); renderKwTable();
+}
+function setMatchFilter(v) {
+  filterMatchType = v;
+  ['mtAll','mtBroad','mtPhrase','mtExact'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
+  var ids = {'': 'mtAll', 'BROAD': 'mtBroad', 'PHRASE': 'mtPhrase', 'EXACT': 'mtExact'};
   if (ids[v]) document.getElementById(ids[v]).classList.add('on');
   renderNegTable(); renderKwTable();
 }
@@ -428,14 +442,31 @@ function setQueryType(v) {
 }
 
 // ── Badge helpers ─────────────────────────────────────────
+// Тип: для авто-кампаний/таргетов — AUTO, для продуктовых — PRODUCT,
+// иначе тип совпадения ключевого слова.
 function kwTypeBadge(kt, mt) {
-  if (!kt && !mt) return '<span style="color:var(--muted)">—</span>';
   if (kt === 'TARGETING_EXPRESSION_PREDEFINED') return '<span class="b bauto">AUTO</span>';
   if (kt === 'TARGETING_EXPRESSION') return '<span class="b bprod">PRODUCT</span>';
   if (mt === 'BROAD')  return '<span class="b bbroad">BROAD</span>';
   if (mt === 'PHRASE') return '<span class="b bphrase">PHRASE</span>';
   if (mt === 'EXACT')  return '<span class="b bexact">EXACT</span>';
-  return '<span class="b">' + esc(mt || kt) + '</span>';
+  if (mt) return '<span class="b">' + esc(mt) + '</span>';
+  return '<span style="color:var(--muted)">—</span>';
+}
+// Инициатор: запрос/таргет, вызвавший поисковый запрос.
+//  - авто-кампания → тип таргетинга (substitutes, close-match…)
+//  - продуктовый таргет → выражение таргета
+//  - ключевое слово → текст ключа
+function initiatorText(row) {
+  var kt = row.keyword_type || '';
+  if (kt === 'TARGETING_EXPRESSION_PREDEFINED') return row.targeting || row.keyword || 'авто';
+  if (kt === 'TARGETING_EXPRESSION') return row.targeting || row.keyword || '';
+  return row.keyword || row.targeting || '';
+}
+function initiatorCell(row) {
+  var t = initiatorText(row);
+  if (!t) return '<span style="color:var(--dim)">—</span>';
+  return '<span class="n" style="font-size:11px;color:var(--muted);max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(t) + '">' + esc(t) + '</span>';
 }
 function campTypeBadge(tt) {
   if (tt === 'AUTO')   return '<span class="b bauto">AUTO</span>';
@@ -463,6 +494,7 @@ function rowPassesFilter(row) {
     if (filterInitiator === 'auto' && kt !== 'TARGETING_EXPRESSION_PREDEFINED') return false;
     if (filterInitiator === 'product' && kt !== 'TARGETING_EXPRESSION') return false;
   }
+  if (filterMatchType && (row.match_type || '') !== filterMatchType) return false;
   if (filterQueryType) {
     var asin = isAsin(row.search_term);
     if (filterQueryType === 'asin' && !asin) return false;
@@ -681,9 +713,6 @@ function renderNegTable() {
     var mtCell = asin
       ? '<td><span class="b bbroad">ASIN</span></td>'
       : '<td><select class="mt-sel neg-mt" data-i="' + origIdx + '"><option value="NEGATIVE_EXACT">EXACT</option><option value="NEGATIVE_PHRASE">PHRASE</option></select></td>';
-    var initiator = esc(row.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED' ? 'Авто' :
-                        row.keyword_type === 'TARGETING_EXPRESSION' ? 'Продукт' :
-                        row.match_type || row.keyword_type || '—');
     var typeBadge = kwTypeBadge(row.keyword_type, row.match_type);
     var agCell = '<div class="name-cell">' +
       '<div class="name-main" title="' + esc(row.ad_group_name || '') + '">' + esc(row.ad_group_name || '—') + '</div>' +
@@ -697,7 +726,7 @@ function renderNegTable() {
       '<td><input type="checkbox" class="row-cb neg-cb" data-i="' + origIdx + '"></td>' +
       '<td><input class="term-inp-inline" data-i="' + origIdx + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" oninput="updateBadge(' + origIdx + ')"></td>' +
       mtCell +
-      '<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + initiator + '</td>' +
+      '<td>' + initiatorCell(row) + '</td>' +
       '<td>' + typeBadge + '</td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
@@ -791,9 +820,6 @@ function renderKwTable() {
     var origIdx = kwRows.indexOf(row);
     var acos = row.acos != null ? row.acos.toFixed(1) + '%' : '—';
     var acosClass = row.acos == null ? '' : (row.acos < 20 ? ' gn' : (row.acos < 40 ? '' : ' an'));
-    var initiator = esc(row.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED' ? 'Авто' :
-                        row.keyword_type === 'TARGETING_EXPRESSION' ? 'Продукт' :
-                        row.match_type || row.keyword_type || '—');
     var typeBadge = kwTypeBadge(row.keyword_type, row.match_type);
     var agCell = '<div class="name-cell">' +
       '<div class="name-main" title="' + esc(row.ad_group_name || '') + '">' + esc(row.ad_group_name || '—') + '</div>' +
@@ -808,7 +834,7 @@ function renderKwTable() {
         '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button></td>' +
       '<td><span class="n" style="font-size:12px">' + esc(row.search_term) + '</span></td>' +
-      '<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + initiator + '</td>' +
+      '<td>' + initiatorCell(row) + '</td>' +
       '<td>' + typeBadge + '</td>' +
       '<td class="r n gn">' + fmtNum(row.orders) + '</td>' +
       '<td class="r n gn">$' + fmtNum(row.sales) + '</td>' +
