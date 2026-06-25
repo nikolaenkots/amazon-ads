@@ -770,12 +770,12 @@ def get_log():
             "target":          ("target_id",     "targeting_expression", "entity_type = 'product_targeting'"),
             "negative_delete": ("keyword_id",    "keyword_text",         "entity_type = 'negative_keyword'"),
             "product_ad":      ("ad_id",         "asin",                 "entity_type = 'product_ad'"),
-            # _add types: entity_id = campaign_id → lookup campaign_name
-            "ad_group_add":    ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
-            "keyword_add":     ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
-            "negative_add":    ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
-            "negative_product_add": ("campaign_id", "campaign_name",     "entity_type = 'campaign'"),
-            "product_ad_add":  ("campaign_id",   "campaign_name",        "entity_type = 'campaign'"),
+            # _add types: entity_id = ad_group_id for neg/kw adds, campaign_id for others
+            "ad_group_add":         ("campaign_id",  "campaign_name",  "entity_type = 'campaign'"),
+            "keyword_add":          ("ad_group_id",  "ad_group_name",  "entity_type = 'ad_group'"),
+            "negative_add":         ("ad_group_id",  "ad_group_name",  "entity_type = 'ad_group'"),
+            "negative_product_add": ("ad_group_id",  "ad_group_name",  "entity_type = 'ad_group'"),
+            "product_ad_add":       ("campaign_id",  "campaign_name",  "entity_type = 'campaign'"),
         }
         for et, ids in by_type_log.items():
             if et not in TYPE_QUERY or not ids: continue
