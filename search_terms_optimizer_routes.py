@@ -332,25 +332,18 @@ def groups_for_asin():
         FROM {asin_table} s
         JOIN source_asins sa ON sa.advertised_asin = s.advertised_asin
         WHERE s.marketplace = '{safe_mkt}'
-        LIMIT 500
     ),
     g_raw AS (
         SELECT ad_group_id, ad_group_name, campaign_id, ad_group_state, marketplace,
                ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table}
-        WHERE entity_type = 'ad_group'
-          AND marketplace = '{safe_mkt}'
-          AND ad_group_id IN (SELECT ad_group_id FROM ag_ids)
+        FROM {camp_table} WHERE entity_type = 'ad_group'
     ),
-    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c_raw AS (
         SELECT campaign_id, campaign_name, campaign_state, targeting_type, marketplace,
                ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table}
-        WHERE entity_type = 'campaign'
-          AND marketplace = '{safe_mkt}'
-          AND campaign_id IN (SELECT campaign_id FROM g)
+        FROM {camp_table} WHERE entity_type = 'campaign'
     ),
+    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c AS (SELECT * FROM c_raw WHERE rn = 1)
     SELECT g.ad_group_id, g.ad_group_name, g.ad_group_state,
            c.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
