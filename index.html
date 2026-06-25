@@ -150,6 +150,15 @@ main{max-width:900px;margin:0 auto;padding:40px 32px}
     <a href="/bq-stats" class="nav-link">BQ Stats</a>
   </div>
 </div>
+  <div class="nav-drop" id="navAu">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navAu');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Автоматизация
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/automation/search-terms" class="nav-link">Оптимизация запросов</a>
+  </div>
+</div>
 </div>
 <span class="header-right">Панель управления</span>
 </header>
@@ -415,6 +424,26 @@ main{max-width:900px;margin:0 auto;padding:40px 32px}
           <div class="ct blue">Ресурсы</div>
           <div class="cn">BQ Stats</div>
           <div class="cd">Размер таблиц BigQuery, история запросов и стоимость, произвольные SELECT-запросы</div>
+        </div>
+        <div class="ca"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Automation -->
+  <div class="section">
+    <div class="section-label">Автоматизация</div>
+    <div class="cards">
+
+      <a href="/automation/search-terms" class="card accent">
+        <div class="ci accent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </div>
+        <div class="cb">
+          <div class="ct accent">Автоматизация</div>
+          <div class="cn">Оптимизация поисковых запросов</div>
+          <div class="cd">Находит запросы без конверсий для минусовки и прибыльные запросы для добавления в ключевые слова</div>
         </div>
         <div class="ca"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
       </a>
