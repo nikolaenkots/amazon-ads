@@ -489,11 +489,21 @@ function loadAll() {
 //  - групповой минус действует только на свою группу.
 // Сначала ищем точное совпадение (EXACT), затем фразовое
 // (фраза минус-слова входит в поисковый запрос).
+function normMatchType(mt) {
+  if (!mt) return '';
+  var u = mt.toUpperCase().replace(/[^A-Z]/g, '');
+  if (u === 'NEGATIVEEXACT' || u === 'EXACT') return 'EXACT';
+  if (u === 'NEGATIVEPHRASE' || u === 'PHRASE') return 'PHRASE';
+  return u;
+}
+
 function negsForRow(campaignId, adGroupId) {
+  var cid = String(campaignId);
+  var agid = (adGroupId == null) ? '' : String(adGroupId);
   return existingNegatives.filter(function(neg) {
-    if (neg.campaign_id !== campaignId) return false;
-    var ag = neg.ad_group_id || '';
-    return ag === '' || ag === adGroupId;
+    if (String(neg.campaign_id) !== cid) return false;
+    var ag = (neg.ad_group_id == null) ? '' : String(neg.ad_group_id);
+    return ag === '' || ag === agid;
   });
 }
 
@@ -503,13 +513,13 @@ function coverage(term, campaignId, adGroupId) {
   // 1) EXACT
   for (var i = 0; i < negs.length; i++) {
     var nt = (negs[i].keyword_text || '').toLowerCase().trim();
-    if (negs[i].match_type === 'NEGATIVE_EXACT' && nt === tl) return 'exact';
+    if (normMatchType(negs[i].match_type) === 'EXACT' && nt === tl) return 'exact';
   }
   // 2) PHRASE — слово/фраза минуса входит в поисковый запрос
   for (var j = 0; j < negs.length; j++) {
     var np = (negs[j].keyword_text || '').toLowerCase().trim();
     if (!np) continue;
-    if (negs[j].match_type === 'NEGATIVE_PHRASE' && phraseContains(tl, np)) return 'phrase';
+    if (normMatchType(negs[j].match_type) === 'PHRASE' && phraseContains(tl, np)) return 'phrase';
   }
   return '';
 }
