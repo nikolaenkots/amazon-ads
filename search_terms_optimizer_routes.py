@@ -322,7 +322,7 @@ def groups_for_asin():
     WITH source_asins AS (
         SELECT DISTINCT advertised_asin
         FROM {asin_table}
-        WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}'
+        WHERE CAST(ad_group_id AS STRING) = '{safe_agid}' AND marketplace = '{safe_mkt}'
         LIMIT 5
     ),
     ag_ids AS (
@@ -347,7 +347,7 @@ def groups_for_asin():
            c.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
            g.marketplace,
            (SELECT STRING_AGG(DISTINCT advertised_asin ORDER BY advertised_asin LIMIT 3)
-            FROM {asin_table} WHERE ad_group_id = '{safe_agid}' AND marketplace = '{safe_mkt}') AS source_asins
+            FROM {asin_table} WHERE CAST(ad_group_id AS STRING) = '{safe_agid}' AND marketplace = '{safe_mkt}') AS source_asins
     FROM ag_ids
     JOIN g ON g.ad_group_id = ag_ids.ad_group_id AND g.marketplace = '{safe_mkt}'
     LEFT JOIN c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
@@ -394,7 +394,7 @@ def group_keywords():
                ROW_NUMBER() OVER (PARTITION BY keyword_id ORDER BY synced_at DESC) rn
         FROM {camp_table}
         WHERE entity_type = 'keyword'
-          AND ad_group_id = '{safe_agid}'
+          AND CAST(ad_group_id AS STRING) = '{safe_agid}'
           AND marketplace = '{safe_mkt}'
     ),
     stats AS (
@@ -405,7 +405,7 @@ def group_keywords():
                SUM(purchases_14d)  AS orders,
                ROUND(SUM(sales_14d), 2) AS sales
         FROM {st_table}
-        WHERE ad_group_id = '{safe_agid}'
+        WHERE CAST(ad_group_id AS STRING) = '{safe_agid}'
           AND marketplace = '{safe_mkt}'
           AND {date_where}
           AND keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
