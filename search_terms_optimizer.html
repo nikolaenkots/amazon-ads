@@ -325,8 +325,12 @@ tr.exp-row td{padding:0;background:var(--surface2)}
         <span class="tt">Кандидаты в минус слова</span>
         <span class="tc" id="negCount">—</span>
         <div class="fg" style="flex-direction:row;align-items:center;gap:6px">
-          <div class="fl" style="white-space:nowrap">Мин. кликов без заказов:</div>
-          <input type="number" id="minClicks" value="10" min="0" style="width:70px;height:28px;font-size:12px">
+          <div class="fl" style="white-space:nowrap">Мин. кликов:</div>
+          <input type="number" id="minClicks" value="10" min="0" style="width:60px;height:28px;font-size:12px">
+        </div>
+        <div class="fg" style="flex-direction:row;align-items:center;gap:6px">
+          <div class="fl" style="white-space:nowrap">ACoS больше %:</div>
+          <input type="number" id="minAcos" value="40" min="0" style="width:60px;height:28px;font-size:12px" title="Запросы без заказов ИЛИ с ACoS выше этого порога">
         </div>
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer">
           <input type="checkbox" id="hideAdded" style="accent-color:var(--accent)" onchange="renderNegTable()">
@@ -350,13 +354,15 @@ tr.exp-row td{padding:0;background:var(--surface2)}
             <th>Тип</th>
             <th class="r">Клики</th>
             <th class="r">Расход</th>
+            <th class="r">Заказы</th>
+            <th class="r">ACoS</th>
             <th>Группа</th>
             <th>Кампания</th>
             <th>Статус</th>
           </tr>
         </thead>
         <tbody id="negBody">
-          <tr><td colspan="10" class="te">Нажмите «Загрузить» для получения данных</td></tr>
+          <tr><td colspan="12" class="te">Нажмите «Загрузить» для получения данных</td></tr>
         </tbody>
       </table>
     </div>
@@ -389,12 +395,13 @@ tr.exp-row td{padding:0;background:var(--surface2)}
             <th class="r">ACoS</th>
             <th class="r">Клики</th>
             <th class="r">Расход</th>
+            <th class="r">CPC</th>
             <th>Группа</th>
             <th>Кампания</th>
           </tr>
         </thead>
         <tbody id="kwBody">
-          <tr><td colspan="11" class="te">Нажмите «Загрузить» для получения данных</td></tr>
+          <tr><td colspan="12" class="te">Нажмите «Загрузить» для получения данных</td></tr>
         </tbody>
       </table>
     </div>
@@ -607,19 +614,20 @@ function loadAll() {
   var mkt = document.getElementById('mkt').value;
   var pids = selectedPortfolios.join(',');
   var minClicks = document.getElementById('minClicks').value;
+  var minAcos = document.getElementById('minAcos').value || '40';
   var minOrders = document.getElementById('minOrders').value;
 
   var base = '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + periodParams();
 
   // Load negatives candidates
-  document.getElementById('negBody').innerHTML = '<tr><td colspan="10" class="te"><span class="sp"></span></td></tr>';
-  document.getElementById('kwBody').innerHTML = '<tr><td colspan="11" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('negBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('kwBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
   document.getElementById('negCount').textContent = '…';
   document.getElementById('kwCount').textContent = '…';
 
   Promise.all([
     fetch('/automation/search-terms/existing-negatives' + base).then(function(r){ return r.json(); }),
-    fetch('/automation/search-terms/negatives-candidates' + base + '&min_clicks=' + minClicks).then(function(r){ return r.json(); }),
+    fetch('/automation/search-terms/negatives-candidates' + base + '&min_clicks=' + minClicks + '&min_acos=' + minAcos).then(function(r){ return r.json(); }),
     fetch('/automation/search-terms/keywords-candidates' + base + '&min_orders=' + minOrders).then(function(r){ return r.json(); })
   ]).then(function(results) {
     existingNegatives = results[0].negatives || [];
@@ -697,7 +705,7 @@ function renderNegTable() {
   var hideAdded = document.getElementById('hideAdded') && document.getElementById('hideAdded').checked;
   var rows = negRows.filter(function(row){ return rowPassesFilter(row); });
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="te">Нет данных</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="te">Нет данных</td></tr>';
     document.getElementById('negCount').textContent = '0 строк';
     return;
   }
@@ -730,12 +738,14 @@ function renderNegTable() {
       '<td>' + typeBadge + '</td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
+      '<td class="r n' + (row.orders ? ' gn' : '') + '">' + fmtNum(row.orders) + '</td>' +
+      '<td class="r n' + (row.acos == null ? '' : (row.acos < 20 ? ' gn' : (row.acos < 40 ? '' : ' an'))) + '">' + (row.acos != null ? row.acos.toFixed(1) + '%' : '—') + '</td>' +
       '<td>' + agCell + '</td>' +
       '<td>' + campCell + '</td>' +
       '<td id="negbadge-' + origIdx + '">' + badge + '</td>' +
       '</tr>';
   });
-  tbody.innerHTML = html || '<tr><td colspan="10" class="te">Нет данных по текущим фильтрам</td></tr>';
+  tbody.innerHTML = html || '<tr><td colspan="12" class="te">Нет данных по текущим фильтрам</td></tr>';
   document.getElementById('negCount').textContent = shown + ' строк';
 }
 
@@ -812,7 +822,7 @@ function renderKwTable() {
   var tbody = document.getElementById('kwBody');
   var rows = kwRows.filter(function(row){ return rowPassesFilter(row); });
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="te">Нет данных</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="te">Нет данных</td></tr>';
     document.getElementById('kwCount').textContent = '0 строк';
     return;
   }
@@ -841,10 +851,11 @@ function renderKwTable() {
       '<td class="r n' + acosClass + '">' + acos + '</td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
+      '<td class="r n">' + (row.cpc != null ? '$' + fmtNum(row.cpc) : '—') + '</td>' +
       '<td>' + agCell + '</td>' +
       '<td>' + campCell + '</td>' +
       '</tr>' +
-      '<tr class="exp-row" id="exp-' + origIdx + '" style="display:none"><td colspan="11"><div class="exp-panel" id="expp-' + origIdx + '"><span class="sp"></span></div></td></tr>';
+      '<tr class="exp-row" id="exp-' + origIdx + '" style="display:none"><td colspan="12"><div class="exp-panel" id="expp-' + origIdx + '"><span class="sp"></span></div></td></tr>';
   }).join('');
   document.getElementById('kwCount').textContent = rows.length + ' строк';
 }
@@ -900,7 +911,7 @@ function renderExpPanel(i, groups, sourceRow) {
           ? '<span class="b" style="background:rgba(108,63,201,.07);color:var(--purple);border:1px solid rgba(108,63,201,.15)">AUTO</span>'
           : '<span class="b" style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)">MANUAL</span>';
         return '<label class="group-item" style="' + dim + '">' +
-          '<input type="radio" name="grp-' + i + '" value="' + gi + '" data-agid="' + esc(g.ad_group_id) + '" data-campid="' + esc(g.campaign_id) + '">' +
+          '<input type="radio" name="grp-' + i + '" value="' + gi + '" data-agid="' + esc(g.ad_group_id) + '" data-campid="' + esc(g.campaign_id) + '" onchange="loadGroupKeywords(' + i + ', this.getAttribute(\'data-agid\'))">' +
           '<div class="group-item-info">' +
             '<div class="group-item-name">' + esc(g.ad_group_name || '') + star + '</div>' +
             '<div class="group-item-camp">' + esc(g.campaign_name || '') + '</div>' +
@@ -912,6 +923,7 @@ function renderExpPanel(i, groups, sourceRow) {
 
   panel.innerHTML = '<div class="exp-title">Выберите группу для добавления ключевого слова</div>' +
     groupsHtml +
+    '<div id="gkw-' + i + '"></div>' +
     '<div class="exp-acts">' +
       '<div class="fg" style="flex-direction:row;align-items:center;gap:6px">' +
         '<span class="fl">Тип совпадения</span>' +
@@ -921,8 +933,52 @@ function renderExpPanel(i, groups, sourceRow) {
           '<option value="BROAD">BROAD</option>' +
         '</select>' +
       '</div>' +
+      '<div class="fg" style="flex-direction:row;align-items:center;gap:6px">' +
+        '<span class="fl">Ставка $</span>' +
+        '<input type="number" class="kw-bid" data-i="' + i + '" step="0.01" min="0" placeholder="авто" style="width:80px;height:30px;font-size:12px">' +
+      '</div>' +
       '<button class="btn btn-p" onclick="addKwToQueue(' + i + ')">Добавить в очередь</button>' +
     '</div>';
+}
+
+// ── Load existing keywords for selected group ─────────────
+function loadGroupKeywords(i, agId) {
+  var cont = document.getElementById('gkw-' + i);
+  if (!cont || !agId) return;
+  cont.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--muted)">Загрузка ключевых слов группы…</div>';
+  var mkt = document.getElementById('mkt').value;
+  var url = '/automation/search-terms/group-keywords?account_type=' + acct + '&marketplace=' + mkt +
+            '&ad_group_id=' + encodeURIComponent(agId) + periodParams();
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    var kws = d.keywords || [];
+    if (!kws.length) {
+      cont.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--muted)">В группе нет ключевых слов (или это авто-группа)</div>';
+      return;
+    }
+    var rowsHtml = kws.map(function(k){
+      var acos = k.acos != null ? k.acos.toFixed(1) + '%' : '—';
+      var acl = k.acos == null ? '' : (k.acos < 20 ? 'gn' : (k.acos < 40 ? '' : 'an'));
+      return '<tr>' +
+        '<td>' + esc(k.keyword_text || '') + '</td>' +
+        '<td>' + kwTypeBadge(null, k.match_type) + '</td>' +
+        '<td>' + (k.keyword_state && k.keyword_state !== 'ENABLED' ? stateBadge(k.keyword_state) : '<span class="b be">ON</span>') + '</td>' +
+        '<td class="r n">' + (k.keyword_bid != null ? '$' + fmtNum(k.keyword_bid) : '—') + '</td>' +
+        '<td class="r n">' + fmtNum(k.impressions) + '</td>' +
+        '<td class="r n">' + fmtNum(k.clicks) + '</td>' +
+        '<td class="r n">' + (k.cpc != null ? '$' + fmtNum(k.cpc) : '—') + '</td>' +
+        '<td class="r n an">$' + fmtNum(k.cost) + '</td>' +
+        '<td class="r n gn">' + fmtNum(k.orders) + '</td>' +
+        '<td class="r n ' + acl + '">' + acos + '</td>' +
+        '</tr>';
+    }).join('');
+    cont.innerHTML = '<div style="margin:10px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden">' +
+      '<div style="padding:8px 12px;font-size:11px;font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border)">Ключевые слова в группе (' + kws.length + ')</div>' +
+      '<div style="max-height:260px;overflow-y:auto"><table style="font-size:12px">' +
+      '<thead><tr><th>Ключ</th><th>Тип</th><th>Статус</th><th class="r">Ставка</th><th class="r">Показы</th><th class="r">Клики</th><th class="r">CPC</th><th class="r">Расход</th><th class="r">Заказы</th><th class="r">ACoS</th></tr></thead>' +
+      '<tbody>' + rowsHtml + '</tbody></table></div></div>';
+  }).catch(function(e){
+    cont.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--red)">Ошибка: ' + esc(e.message) + '</div>';
+  });
 }
 
 function addKwToQueue(i) {
@@ -932,6 +988,8 @@ function addKwToQueue(i) {
 
   var mtSel = document.querySelector('.kw-mt[data-i="' + i + '"]');
   var matchType = mtSel ? mtSel.value : 'EXACT';
+  var bidInp = document.querySelector('.kw-bid[data-i="' + i + '"]');
+  var bid = bidInp && bidInp.value ? bidInp.value : '';
   var agId = radio.getAttribute('data-agid');
   var campId = radio.getAttribute('data-campid');
   var mkt = document.getElementById('mkt').value;
@@ -949,7 +1007,7 @@ function addKwToQueue(i) {
       match_type: matchType,
       ad_group_id: agId,
       campaign_id: campId,
-      bid: ''
+      bid: bid
     })
   };
 
