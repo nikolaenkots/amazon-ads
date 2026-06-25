@@ -70,6 +70,19 @@ td{padding:7px 11px;vertical-align:middle}
 .be{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .bp{background:rgba(160,160,170,.1);color:var(--muted);border:1px solid var(--border)}
 .bn2{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.bauto{background:rgba(108,63,201,.07);color:var(--purple);border:1px solid rgba(108,63,201,.15)}
+.bman{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+.bbroad{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bphrase{background:rgba(16,90,190,.08);color:#1555b0;border:1px solid rgba(16,90,190,.2)}
+.bexact{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.bprod{background:rgba(26,143,92,.05);color:var(--green);border:1px solid var(--green-bd)}
+.name-cell{display:flex;flex-direction:column;gap:2px;min-width:0}
+.name-main{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.mode-row{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--border);flex-wrap:wrap}
+.mode-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.mbt{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .12s}
+.mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sep{width:1px;height:18px;background:var(--border);margin:0 2px}
 .n{font-family:'DM Mono',monospace;font-size:12px}
 td.r{text-align:right}
 .gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
@@ -233,6 +246,30 @@ tr.exp-row td{padding:0;background:var(--surface2)}
       </div>
     </div>
     <div class="fg">
+      <div class="fl">Тип кампании</div>
+      <select id="campTypeF" style="width:110px">
+        <option value="">Все</option>
+        <option value="MANUAL">MANUAL</option>
+        <option value="AUTO">AUTO</option>
+      </select>
+    </div>
+    <div class="fg">
+      <div class="fl">Статус кампании</div>
+      <select id="campStateF" style="width:120px">
+        <option value="">Все</option>
+        <option value="ENABLED" selected>Активные</option>
+        <option value="PAUSED">На паузе</option>
+      </select>
+    </div>
+    <div class="fg">
+      <div class="fl">Статус группы</div>
+      <select id="agStateF" style="width:120px">
+        <option value="">Все</option>
+        <option value="ENABLED" selected>Активные</option>
+        <option value="PAUSED">На паузе</option>
+      </select>
+    </div>
+    <div class="fg">
       <div class="fl">Период анализа</div>
       <select id="periodMode" style="width:180px" onchange="onPeriodMode()">
         <option value="days">Последние N дней</option>
@@ -254,6 +291,18 @@ tr.exp-row td{padding:0;background:var(--surface2)}
       <button class="btn btn-p" onclick="loadAll()">Загрузить</button>
     </div>
   </div>
+  <div class="mode-row">
+    <span class="mode-lbl">Инициатор</span>
+    <button class="mbt on" id="itAll" onclick="setInitiator('')">Все</button>
+    <button class="mbt" id="itKw" onclick="setInitiator('keyword')">Ключевые слова</button>
+    <button class="mbt" id="itAuto" onclick="setInitiator('auto')">Авто</button>
+    <button class="mbt" id="itProd" onclick="setInitiator('product')">Продуктовые</button>
+    <div class="sep"></div>
+    <span class="mode-lbl">Тип запроса</span>
+    <button class="mbt on" id="qtAll" onclick="setQueryType('')">Все</button>
+    <button class="mbt" id="qtText" onclick="setQueryType('text')">Текстовые</button>
+    <button class="mbt" id="qtAsin" onclick="setQueryType('asin')">ASIN</button>
+  </div>
 </div>
 
 <!-- Tabs -->
@@ -273,6 +322,10 @@ tr.exp-row td{padding:0;background:var(--surface2)}
           <div class="fl" style="white-space:nowrap">Мин. кликов без заказов:</div>
           <input type="number" id="minClicks" value="10" min="0" style="width:70px;height:28px;font-size:12px">
         </div>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="hideAdded" style="accent-color:var(--accent)" onchange="renderNegTable()">
+          Скрыть добавленные
+        </label>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="selectAll" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer" onchange="toggleAll(this.checked)">
@@ -287,15 +340,17 @@ tr.exp-row td{padding:0;background:var(--surface2)}
             <th style="width:32px"></th>
             <th>Запрос</th>
             <th>Тип минус</th>
+            <th>Инициатор</th>
+            <th>Тип</th>
             <th class="r">Клики</th>
             <th class="r">Расход</th>
-            <th>Кампания</th>
             <th>Группа</th>
+            <th>Кампания</th>
             <th>Статус</th>
           </tr>
         </thead>
         <tbody id="negBody">
-          <tr><td colspan="8" class="te">Нажмите «Загрузить» для получения данных</td></tr>
+          <tr><td colspan="10" class="te">Нажмите «Загрузить» для получения данных</td></tr>
         </tbody>
       </table>
     </div>
@@ -321,18 +376,19 @@ tr.exp-row td{padding:0;background:var(--surface2)}
           <tr>
             <th style="width:32px"></th>
             <th>Запрос</th>
-            <th>Тип совпадения</th>
+            <th>Инициатор</th>
+            <th>Тип</th>
             <th class="r">Заказы</th>
             <th class="r">Продажи</th>
             <th class="r">ACoS</th>
             <th class="r">Клики</th>
             <th class="r">Расход</th>
-            <th>Кампания</th>
             <th>Группа</th>
+            <th>Кампания</th>
           </tr>
         </thead>
         <tbody id="kwBody">
-          <tr><td colspan="10" class="te">Нажмите «Загрузить» для получения данных</td></tr>
+          <tr><td colspan="11" class="te">Нажмите «Загрузить» для получения данных</td></tr>
         </tbody>
       </table>
     </div>
@@ -352,6 +408,68 @@ var negRows = [];
 var kwRows = [];
 var existingNegatives = [];
 var activeTab = 'neg';
+var filterInitiator = '';
+var filterQueryType = '';
+
+// ── Mode filters ──────────────────────────────────────────
+function setInitiator(v) {
+  filterInitiator = v;
+  ['itAll','itKw','itAuto','itProd'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
+  var ids = {''  : 'itAll', 'keyword': 'itKw', 'auto': 'itAuto', 'product': 'itProd'};
+  if (ids[v]) document.getElementById(ids[v]).classList.add('on');
+  renderNegTable(); renderKwTable();
+}
+function setQueryType(v) {
+  filterQueryType = v;
+  ['qtAll','qtText','qtAsin'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
+  var ids = {'': 'qtAll', 'text': 'qtText', 'asin': 'qtAsin'};
+  if (ids[v]) document.getElementById(ids[v]).classList.add('on');
+  renderNegTable(); renderKwTable();
+}
+
+// ── Badge helpers ─────────────────────────────────────────
+function kwTypeBadge(kt, mt) {
+  if (!kt && !mt) return '<span style="color:var(--muted)">—</span>';
+  if (kt === 'TARGETING_EXPRESSION_PREDEFINED') return '<span class="b bauto">AUTO</span>';
+  if (kt === 'TARGETING_EXPRESSION') return '<span class="b bprod">PRODUCT</span>';
+  if (mt === 'BROAD')  return '<span class="b bbroad">BROAD</span>';
+  if (mt === 'PHRASE') return '<span class="b bphrase">PHRASE</span>';
+  if (mt === 'EXACT')  return '<span class="b bexact">EXACT</span>';
+  return '<span class="b">' + esc(mt || kt) + '</span>';
+}
+function campTypeBadge(tt) {
+  if (tt === 'AUTO')   return '<span class="b bauto">AUTO</span>';
+  if (tt === 'MANUAL') return '<span class="b bman">MANUAL</span>';
+  return '';
+}
+function stateBadge(s) {
+  if (!s || s === 'ENABLED') return '';
+  if (s === 'PAUSED')   return '<span class="b bp">PAUSED</span>';
+  if (s === 'ARCHIVED') return '<span class="b" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)">ARCH</span>';
+  return '';
+}
+
+// ── Row filter logic ──────────────────────────────────────
+function rowPassesFilter(row) {
+  var ct = document.getElementById('campTypeF').value;
+  var cs = document.getElementById('campStateF').value;
+  var ags = document.getElementById('agStateF').value;
+  if (ct && (row.targeting_type || '') !== ct) return false;
+  if (cs && (row.campaign_state || '') !== cs) return false;
+  if (ags && (row.ad_group_state || '') !== ags) return false;
+  if (filterInitiator) {
+    var kt = (row.keyword_type || '').toUpperCase();
+    if (filterInitiator === 'keyword' && !(kt !== 'TARGETING_EXPRESSION_PREDEFINED' && kt !== 'TARGETING_EXPRESSION')) return false;
+    if (filterInitiator === 'auto' && kt !== 'TARGETING_EXPRESSION_PREDEFINED') return false;
+    if (filterInitiator === 'product' && kt !== 'TARGETING_EXPRESSION') return false;
+  }
+  if (filterQueryType) {
+    var asin = isAsin(row.search_term);
+    if (filterQueryType === 'asin' && !asin) return false;
+    if (filterQueryType === 'text' && asin) return false;
+  }
+  return true;
+}
 
 // ── Account type ─────────────────────────────────────────
 function setAcct(a) {
@@ -462,10 +580,11 @@ function loadAll() {
   var base = '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + periodParams();
 
   // Load negatives candidates
-  document.getElementById('negBody').innerHTML = '<tr><td colspan="8" class="te"><span class="sp"></span></td></tr>';
-  document.getElementById('kwBody').innerHTML = '<tr><td colspan="10" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('negBody').innerHTML = '<tr><td colspan="10" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('kwBody').innerHTML = '<tr><td colspan="11" class="te"><span class="sp"></span></td></tr>';
+  document.getElementById('negCount').textContent = '…';
+  document.getElementById('kwCount').textContent = '…';
 
-  // Load existing negatives first, then candidates
   Promise.all([
     fetch('/automation/search-terms/existing-negatives' + base).then(function(r){ return r.json(); }),
     fetch('/automation/search-terms/negatives-candidates' + base + '&min_clicks=' + minClicks).then(function(r){ return r.json(); }),
@@ -476,8 +595,6 @@ function loadAll() {
     kwRows = results[2].rows || [];
     renderNegTable();
     renderKwTable();
-    document.getElementById('negCount').textContent = negRows.length + ' строк';
-    document.getElementById('kwCount').textContent = kwRows.length + ' строк';
     if (results[1].error) toast(results[1].error, 'err');
     if (results[2].error) toast(results[2].error, 'err');
   }).catch(function(e){ toast('Ошибка: ' + e.message, 'err'); });
@@ -545,27 +662,52 @@ function phraseContains(haystack, needle) {
 // ── Render negatives table ────────────────────────────────
 function renderNegTable() {
   var tbody = document.getElementById('negBody');
-  if (!negRows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="te">Нет данных</td></tr>';
+  var hideAdded = document.getElementById('hideAdded') && document.getElementById('hideAdded').checked;
+  var rows = negRows.filter(function(row){ return rowPassesFilter(row); });
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="te">Нет данных</td></tr>';
+    document.getElementById('negCount').textContent = '0 строк';
     return;
   }
-  tbody.innerHTML = negRows.map(function(row, i) {
-    var badge = badgeHtml(coverage(row.search_term, row.campaign_id, row.ad_group_id));
+  var html = '';
+  var shown = 0;
+  rows.forEach(function(row, i) {
+    var origIdx = negRows.indexOf(row);
+    var cov = coverage(row.search_term, row.campaign_id, row.ad_group_id);
+    if (hideAdded && cov) return;
+    shown++;
+    var badge = badgeHtml(cov);
     var asin = isAsin(row.search_term);
     var mtCell = asin
-      ? '<td><span class="sbadge" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)">ASIN</span></td>'
-      : '<td><select class="mt-sel neg-mt" data-i="' + i + '"><option value="NEGATIVE_EXACT">EXACT</option><option value="NEGATIVE_PHRASE">PHRASE</option></select></td>';
-    return '<tr class="dr" data-i="' + i + '">' +
-      '<td><input type="checkbox" class="row-cb neg-cb" data-i="' + i + '"></td>' +
-      '<td><input class="term-inp-inline" data-i="' + i + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" oninput="updateBadge(' + i + ')"></td>' +
+      ? '<td><span class="b bbroad">ASIN</span></td>'
+      : '<td><select class="mt-sel neg-mt" data-i="' + origIdx + '"><option value="NEGATIVE_EXACT">EXACT</option><option value="NEGATIVE_PHRASE">PHRASE</option></select></td>';
+    var initiator = esc(row.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED' ? 'Авто' :
+                        row.keyword_type === 'TARGETING_EXPRESSION' ? 'Продукт' :
+                        row.match_type || row.keyword_type || '—');
+    var typeBadge = kwTypeBadge(row.keyword_type, row.match_type);
+    var agCell = '<div class="name-cell">' +
+      '<div class="name-main" title="' + esc(row.ad_group_name || '') + '">' + esc(row.ad_group_name || '—') + '</div>' +
+      (stateBadge(row.ad_group_state) ? '<div>' + stateBadge(row.ad_group_state) + '</div>' : '') +
+      '</div>';
+    var campCell = '<div class="name-cell">' +
+      '<div class="name-main" title="' + esc(row.campaign_name || '') + '">' + esc(row.campaign_name || '—') + '</div>' +
+      '<div style="display:flex;gap:3px;flex-wrap:wrap">' + campTypeBadge(row.targeting_type) + stateBadge(row.campaign_state) + '</div>' +
+      '</div>';
+    html += '<tr class="dr" data-i="' + origIdx + '">' +
+      '<td><input type="checkbox" class="row-cb neg-cb" data-i="' + origIdx + '"></td>' +
+      '<td><input class="term-inp-inline" data-i="' + origIdx + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" oninput="updateBadge(' + origIdx + ')"></td>' +
       mtCell +
+      '<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + initiator + '</td>' +
+      '<td>' + typeBadge + '</td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
-      '<td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + esc(row.campaign_name || '') + '</div></td>' +
-      '<td><div style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">' + esc(row.ad_group_name || '') + '</div></td>' +
-      '<td id="negbadge-' + i + '">' + badge + '</td>' +
+      '<td>' + agCell + '</td>' +
+      '<td>' + campCell + '</td>' +
+      '<td id="negbadge-' + origIdx + '">' + badge + '</td>' +
       '</tr>';
-  }).join('');
+  });
+  tbody.innerHTML = html || '<tr><td colspan="10" class="te">Нет данных по текущим фильтрам</td></tr>';
+  document.getElementById('negCount').textContent = shown + ' строк';
 }
 
 function badgeHtml(cov) {
@@ -639,33 +781,46 @@ function addNegSelected() {
 // ── Render keywords table ─────────────────────────────────
 function renderKwTable() {
   var tbody = document.getElementById('kwBody');
-  if (!kwRows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="te">Нет данных</td></tr>';
+  var rows = kwRows.filter(function(row){ return rowPassesFilter(row); });
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="te">Нет данных</td></tr>';
+    document.getElementById('kwCount').textContent = '0 строк';
     return;
   }
-  tbody.innerHTML = kwRows.map(function(row, i) {
+  tbody.innerHTML = rows.map(function(row, i) {
+    var origIdx = kwRows.indexOf(row);
     var acos = row.acos != null ? row.acos.toFixed(1) + '%' : '—';
     var acosClass = row.acos == null ? '' : (row.acos < 20 ? ' gn' : (row.acos < 40 ? '' : ' an'));
-    return '<tr class="dr" id="kwr-' + i + '">' +
-      '<td><button class="expand-btn" id="expbtn-' + i + '" onclick="toggleExpand(' + i + ')" title="Показать группы">' +
+    var initiator = esc(row.keyword_type === 'TARGETING_EXPRESSION_PREDEFINED' ? 'Авто' :
+                        row.keyword_type === 'TARGETING_EXPRESSION' ? 'Продукт' :
+                        row.match_type || row.keyword_type || '—');
+    var typeBadge = kwTypeBadge(row.keyword_type, row.match_type);
+    var agCell = '<div class="name-cell">' +
+      '<div class="name-main" title="' + esc(row.ad_group_name || '') + '">' + esc(row.ad_group_name || '—') + '</div>' +
+      (stateBadge(row.ad_group_state) ? '<div>' + stateBadge(row.ad_group_state) + '</div>' : '') +
+      '</div>';
+    var campCell = '<div class="name-cell">' +
+      '<div class="name-main" title="' + esc(row.campaign_name || '') + '">' + esc(row.campaign_name || '—') + '</div>' +
+      '<div style="display:flex;gap:3px;flex-wrap:wrap">' + campTypeBadge(row.targeting_type) + stateBadge(row.campaign_state) + '</div>' +
+      '</div>';
+    return '<tr class="dr" id="kwr-' + origIdx + '">' +
+      '<td><button class="expand-btn" id="expbtn-' + origIdx + '" onclick="toggleExpand(' + origIdx + ')" title="Показать группы">' +
         '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button></td>' +
       '<td><span class="n" style="font-size:12px">' + esc(row.search_term) + '</span></td>' +
-      '<td><select class="mt-sel kw-mt" data-i="' + i + '">' +
-        '<option value="BROAD">BROAD</option>' +
-        '<option value="PHRASE">PHRASE</option>' +
-        '<option value="EXACT">EXACT</option>' +
-      '</select></td>' +
+      '<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + initiator + '</td>' +
+      '<td>' + typeBadge + '</td>' +
       '<td class="r n gn">' + fmtNum(row.orders) + '</td>' +
       '<td class="r n gn">$' + fmtNum(row.sales) + '</td>' +
       '<td class="r n' + acosClass + '">' + acos + '</td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
-      '<td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + esc(row.campaign_name || '') + '</div></td>' +
-      '<td><div style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">' + esc(row.ad_group_name || '') + '</div></td>' +
+      '<td>' + agCell + '</td>' +
+      '<td>' + campCell + '</td>' +
       '</tr>' +
-      '<tr class="exp-row" id="exp-' + i + '" style="display:none"><td colspan="10"><div class="exp-panel" id="expp-' + i + '"><span class="sp"></span></div></td></tr>';
+      '<tr class="exp-row" id="exp-' + origIdx + '" style="display:none"><td colspan="11"><div class="exp-panel" id="expp-' + origIdx + '"><span class="sp"></span></div></td></tr>';
   }).join('');
+  document.getElementById('kwCount').textContent = rows.length + ' строк';
 }
 
 // ── Expand row (keywords) ─────────────────────────────────

@@ -124,11 +124,12 @@ def negatives_candidates():
         FROM {camp_table} WHERE entity_type = 'ad_group'
     ),
     c AS (SELECT * FROM c_raw WHERE rn = 1 AND marketplace = '{safe_mkt}'),
-    g AS (SELECT ad_group_id, ad_group_name, campaign_id, marketplace FROM g_raw WHERE rn = 1 AND marketplace = '{safe_mkt}')
+    g_raw2 AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn2 FROM {camp_table} WHERE entity_type = 'ad_group'),
+    g AS (SELECT ad_group_id, ad_group_name, ad_group_state, campaign_id, marketplace FROM g_raw2 WHERE rn2 = 1 AND marketplace = '{safe_mkt}')
     SELECT
         st.search_term, st.clicks, st.cost, st.impressions,
-        st.campaign_id, c.campaign_name,
-        st.ad_group_id, g.ad_group_name,
+        st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
+        st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
         st.keyword_type, st.match_type
     FROM st
@@ -262,13 +263,14 @@ def keywords_candidates():
         FROM {camp_table} WHERE entity_type = 'ad_group'
     ),
     c AS (SELECT * FROM c_raw WHERE rn = 1 AND marketplace = '{safe_mkt}'),
-    g AS (SELECT ad_group_id, ad_group_name, campaign_id, marketplace FROM g_raw WHERE rn = 1 AND marketplace = '{safe_mkt}')
+    g_raw2 AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn2 FROM {camp_table} WHERE entity_type = 'ad_group'),
+    g AS (SELECT ad_group_id, ad_group_name, ad_group_state, campaign_id, marketplace FROM g_raw2 WHERE rn2 = 1 AND marketplace = '{safe_mkt}')
     SELECT
         st.search_term, st.clicks, st.cost, st.impressions,
         st.orders, st.sales,
         CASE WHEN st.sales > 0 THEN ROUND(st.cost / st.sales * 100, 1) ELSE NULL END AS acos,
-        st.campaign_id, c.campaign_name,
-        st.ad_group_id, g.ad_group_name,
+        st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
+        st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
         st.keyword_type, st.match_type
     FROM st
