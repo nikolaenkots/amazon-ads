@@ -404,11 +404,11 @@ def group_keywords():
                ROUND(SUM(cost), 2) AS cost,
                SUM(purchases_14d)  AS orders,
                ROUND(SUM(sales_14d), 2) AS sales
-        FROM {st_table}
-        WHERE CAST(ad_group_id AS STRING) = '{safe_agid}'
-          AND marketplace = '{safe_mkt}'
+        FROM {st_table} s
+        WHERE CAST(s.ad_group_id AS STRING) = '{safe_agid}'
+          AND s.marketplace = '{safe_mkt}'
           AND {date_where}
-          AND keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+          AND s.keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
         GROUP BY keyword, match_type
     )
     SELECT kw.keyword_text, kw.match_type, kw.keyword_state, kw.keyword_bid,
