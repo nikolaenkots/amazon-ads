@@ -913,6 +913,14 @@ function renderExpPanel(i, groups, sourceRow) {
   panel.innerHTML = '<div class="exp-title">Выберите группу для добавления ключевого слова</div>' +
     groupsHtml +
     '<div class="exp-acts">' +
+      '<div class="fg" style="flex-direction:row;align-items:center;gap:6px">' +
+        '<span class="fl">Тип совпадения</span>' +
+        '<select class="kw-mt" data-i="' + i + '" style="height:30px;font-size:12px">' +
+          '<option value="EXACT">EXACT</option>' +
+          '<option value="PHRASE">PHRASE</option>' +
+          '<option value="BROAD">BROAD</option>' +
+        '</select>' +
+      '</div>' +
       '<button class="btn btn-p" onclick="addKwToQueue(' + i + ')">Добавить в очередь</button>' +
     '</div>';
 }
@@ -923,13 +931,19 @@ function addKwToQueue(i) {
   if (!radio) { toast('Выберите группу', 'err'); return; }
 
   var mtSel = document.querySelector('.kw-mt[data-i="' + i + '"]');
-  var matchType = mtSel ? mtSel.value : 'PHRASE';
+  var matchType = mtSel ? mtSel.value : 'EXACT';
   var agId = radio.getAttribute('data-agid');
   var campId = radio.getAttribute('data-campid');
+  var mkt = document.getElementById('mkt').value;
 
   var payload = {
+    account_type: acct,
+    marketplace: mkt,
+    profile_id: getProfileId(acct, mkt),
     entity_type: 'keyword_add',
+    entity_id: String(agId),
     field_name: '—',
+    old_value: '',
     new_value: JSON.stringify({
       text: row.search_term,
       match_type: matchType,
