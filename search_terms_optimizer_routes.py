@@ -3,6 +3,13 @@ import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
 
+try:
+    from google.cloud import bigquery
+    # Hard server-side cap so a slow scan cannot hang the worker forever
+    _QJC = bigquery.QueryJobConfig(job_timeout_ms=30000)
+except Exception:
+    _QJC = None
+
 st_optimizer_bp = Blueprint('st_optimizer', __name__)
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -367,7 +374,7 @@ def groups_for_asin():
 
     try:
         client = get_client()
-        rows = list(client.query(sql).result())
+        rows = list(client.query(sql, job_config=_QJC).result())
         groups = [dict(r) for r in rows]
         asin = groups[0]['source_asins'] if groups else ''
         for grp in groups:
@@ -433,7 +440,7 @@ def group_keywords():
 
     try:
         client = get_client()
-        rows = list(client.query(sql).result())
+        rows = list(client.query(sql, job_config=_QJC).result())
         result = [{k: _cvt(v) for k, v in dict(r).items()} for r in rows]
         return jsonify({'keywords': result})
     except Exception as e:
