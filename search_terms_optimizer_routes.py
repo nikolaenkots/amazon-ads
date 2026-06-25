@@ -411,14 +411,14 @@ def group_keywords():
           AND s.keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
         GROUP BY keyword, match_type
     )
-    SELECT kw.keyword_text, kw.match_type, kw.keyword_state, kw.keyword_bid,
+    SELECT kw.keyword_id, kw.keyword_text, kw.match_type, kw.keyword_state, kw.keyword_bid,
            s.impressions, s.clicks, s.cost, s.orders, s.sales,
            CASE WHEN s.clicks > 0 THEN ROUND(s.cost / s.clicks, 2) ELSE NULL END AS cpc,
            CASE WHEN s.sales > 0 THEN ROUND(s.cost / s.sales * 100, 1) ELSE NULL END AS acos
     FROM kw
     LEFT JOIN stats s
         ON LOWER(s.keyword_text) = LOWER(kw.keyword_text)
-        AND s.match_type = kw.match_type
+        AND UPPER(s.match_type) = UPPER(kw.match_type)
     WHERE kw.rn = 1
     ORDER BY s.clicks DESC NULLS LAST, kw.keyword_text
     LIMIT 500
