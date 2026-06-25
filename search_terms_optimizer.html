@@ -780,12 +780,12 @@ function addNegSelected() {
       marketplace: mkt,
       profile_id: profileId,
       entity_type: asin ? 'negative_product_add' : 'negative_add',
-      entity_id: asin ? String(row.ad_group_id || row.campaign_id) : String(row.campaign_id),
+      entity_id: String(row.ad_group_id || row.campaign_id),
       field_name: '—',
       old_value: '',
       new_value: asin
         ? JSON.stringify({ asin: text.toUpperCase(), campaign_id: row.campaign_id, ad_group_id: row.ad_group_id || '' })
-        : JSON.stringify({ text: text, match_type: matchType, campaign_id: row.campaign_id, ad_group_id: '' })
+        : JSON.stringify({ text: text, match_type: matchType, campaign_id: row.campaign_id, ad_group_id: row.ad_group_id || '' })
     });
   });
 
