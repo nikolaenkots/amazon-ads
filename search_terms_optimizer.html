@@ -233,8 +233,22 @@ tr.exp-row td{padding:0;background:var(--surface2)}
       </div>
     </div>
     <div class="fg">
-      <div class="fl">Дней анализа</div>
-      <input type="number" id="days" value="30" min="1" max="365" style="width:90px">
+      <div class="fl">Период анализа</div>
+      <select id="periodMode" style="width:180px" onchange="onPeriodMode()">
+        <option value="days">Последние N дней</option>
+        <option value="range">Выбранный период</option>
+      </select>
+    </div>
+    <div class="fg" id="daysWrap">
+      <div class="fl">Дней</div>
+      <input type="number" id="days" value="30" min="1" max="365" style="width:80px">
+    </div>
+    <div class="fg" id="rangeWrap" style="display:none">
+      <div class="fl">Период (с — по)</div>
+      <div style="display:flex;gap:6px">
+        <input type="date" id="dateFrom" style="width:150px">
+        <input type="date" id="dateTo" style="width:150px">
+      </div>
     </div>
     <div class="fg" style="justify-content:flex-end">
       <button class="btn btn-p" onclick="loadAll()">Загрузить</button>
@@ -403,7 +417,9 @@ function pfChange(el) {
 function loadPortfolios() {
   selectedPortfolios = [];
   pfLabel();
-  fetch('/negatives/portfolios?account_type=' + acct)
+  var mkt = document.getElementById('mkt').value;
+  document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Загрузка...</div>';
+  fetch('/automation/search-terms/portfolios?account_type=' + acct + '&marketplace=' + mkt)
     .then(function(r){ return r.json(); })
     .then(function(d){
       allPortfolios = d.portfolios || [];
@@ -412,15 +428,38 @@ function loadPortfolios() {
     .catch(function(){ document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Ошибка загрузки</div>'; });
 }
 
+// ── Period mode ───────────────────────────────────────────
+function onPeriodMode() {
+  var mode = document.getElementById('periodMode').value;
+  document.getElementById('daysWrap').style.display  = mode === 'days'  ? '' : 'none';
+  document.getElementById('rangeWrap').style.display = mode === 'range' ? '' : 'none';
+}
+
+function periodParams() {
+  var mode = document.getElementById('periodMode').value;
+  if (mode === 'range') {
+    var df = document.getElementById('dateFrom').value;
+    var dt = document.getElementById('dateTo').value;
+    return '&date_from=' + encodeURIComponent(df) + '&date_to=' + encodeURIComponent(dt);
+  }
+  return '&days=' + encodeURIComponent(document.getElementById('days').value || '30');
+}
+
 // ── Load all data ─────────────────────────────────────────
 function loadAll() {
+  var mode = document.getElementById('periodMode').value;
+  if (mode === 'range') {
+    var df = document.getElementById('dateFrom').value;
+    var dt = document.getElementById('dateTo').value;
+    if (!df || !dt) { toast('Укажите даты периода', 'err'); return; }
+    if (df > dt) { toast('Дата «с» позже даты «по»', 'err'); return; }
+  }
   var mkt = document.getElementById('mkt').value;
-  var days = document.getElementById('days').value;
   var pids = selectedPortfolios.join(',');
   var minClicks = document.getElementById('minClicks').value;
   var minOrders = document.getElementById('minOrders').value;
 
-  var base = '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + '&days=' + days;
+  var base = '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + periodParams();
 
   // Load negatives candidates
   document.getElementById('negBody').innerHTML = '<tr><td colspan="8" class="te"><span class="sp"></span></td></tr>';
@@ -445,16 +484,42 @@ function loadAll() {
 }
 
 // ── Negatives coverage check ──────────────────────────────
-function isCovered(term) {
-  var tl = term.toLowerCase();
-  for (var i = 0; i < existingNegatives.length; i++) {
-    var neg = existingNegatives[i];
-    var nt = (neg.keyword_text || '').toLowerCase();
-    if (neg.match_type === 'NEGATIVE_EXACT' && nt === tl) return true;
-    if (neg.match_type === 'NEGATIVE_PHRASE' && tl.includes(nt)) return true;
-    if (nt === tl) return true;
+// Проверяем по минус-словам ИМЕННО этой кампании/группы:
+//  - кампанийный минус (ad_group_id пустой) действует на всю кампанию;
+//  - групповой минус действует только на свою группу.
+// Сначала ищем точное совпадение (EXACT), затем фразовое
+// (фраза минус-слова входит в поисковый запрос).
+function negsForRow(campaignId, adGroupId) {
+  return existingNegatives.filter(function(neg) {
+    if (neg.campaign_id !== campaignId) return false;
+    var ag = neg.ad_group_id || '';
+    return ag === '' || ag === adGroupId;
+  });
+}
+
+function coverage(term, campaignId, adGroupId) {
+  var tl = (term || '').toLowerCase().trim();
+  var negs = negsForRow(campaignId, adGroupId);
+  // 1) EXACT
+  for (var i = 0; i < negs.length; i++) {
+    var nt = (negs[i].keyword_text || '').toLowerCase().trim();
+    if (negs[i].match_type === 'NEGATIVE_EXACT' && nt === tl) return 'exact';
   }
-  return false;
+  // 2) PHRASE — слово/фраза минуса входит в поисковый запрос
+  for (var j = 0; j < negs.length; j++) {
+    var np = (negs[j].keyword_text || '').toLowerCase().trim();
+    if (!np) continue;
+    if (negs[j].match_type === 'NEGATIVE_PHRASE' && phraseContains(tl, np)) return 'phrase';
+  }
+  return '';
+}
+
+// Проверяем вхождение фразы np как последовательности слов внутри tl
+function phraseContains(haystack, needle) {
+  if (haystack === needle) return true;
+  var h = ' ' + haystack.replace(/\s+/g, ' ') + ' ';
+  var n = ' ' + needle.replace(/\s+/g, ' ') + ' ';
+  return h.indexOf(n) !== -1;
 }
 
 // ── Render negatives table ────────────────────────────────
@@ -465,24 +530,38 @@ function renderNegTable() {
     return;
   }
   tbody.innerHTML = negRows.map(function(row, i) {
-    var covered = isCovered(row.search_term);
-    var badge = covered
-      ? '<span class="sbadge covered">✓ уже в минус</span>'
-      : '<span class="sbadge none">—</span>';
+    var badge = badgeHtml(coverage(row.search_term, row.campaign_id, row.ad_group_id));
     return '<tr class="dr" data-i="' + i + '">' +
       '<td><input type="checkbox" class="row-cb neg-cb" data-i="' + i + '"></td>' +
-      '<td><input class="term-inp-inline" data-i="' + i + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px"></td>' +
+      '<td><input class="term-inp-inline" data-i="' + i + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" oninput="updateBadge(' + i + ')"></td>' +
       '<td><select class="mt-sel neg-mt" data-i="' + i + '">' +
-        '<option value="NEGATIVE_PHRASE">PHRASE</option>' +
         '<option value="NEGATIVE_EXACT">EXACT</option>' +
+        '<option value="NEGATIVE_PHRASE">PHRASE</option>' +
       '</select></td>' +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
       '<td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + esc(row.campaign_name || '') + '</div></td>' +
       '<td><div style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">' + esc(row.ad_group_name || '') + '</div></td>' +
-      '<td>' + badge + '</td>' +
+      '<td id="negbadge-' + i + '">' + badge + '</td>' +
       '</tr>';
   }).join('');
+}
+
+function badgeHtml(cov) {
+  return cov === 'exact'
+    ? '<span class="sbadge covered">✓ уже в минус (EXACT)</span>'
+    : cov === 'phrase'
+    ? '<span class="sbadge covered">✓ уже в минус (PHRASE)</span>'
+    : '<span class="sbadge none">—</span>';
+}
+
+function updateBadge(i) {
+  var row = negRows[i];
+  var inp = document.querySelector('.term-inp-inline[data-i="' + i + '"]');
+  var cell = document.getElementById('negbadge-' + i);
+  if (!row || !cell) return;
+  var term = inp ? inp.value : row.search_term;
+  cell.innerHTML = badgeHtml(coverage(term, row.campaign_id, row.ad_group_id));
 }
 
 // ── Select all negatives ──────────────────────────────────
