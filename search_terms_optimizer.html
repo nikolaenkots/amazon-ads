@@ -494,6 +494,7 @@ function normMatchType(mt) {
   var u = mt.toUpperCase().replace(/[^A-Z]/g, '');
   if (u === 'NEGATIVEEXACT' || u === 'EXACT') return 'EXACT';
   if (u === 'NEGATIVEPHRASE' || u === 'PHRASE') return 'PHRASE';
+  if (u === 'NEGATIVEPRODUCT' || u === 'PRODUCT' || u === 'PRODUCTEXACT') return 'PRODUCT';
   return u;
 }
 
@@ -510,6 +511,15 @@ function negsForRow(campaignId, adGroupId) {
 function coverage(term, campaignId, adGroupId) {
   var tl = (term || '').toLowerCase().trim();
   var negs = negsForRow(campaignId, adGroupId);
+  // ASIN — проверяем негативные продуктовые таргеты
+  if (isAsin(term)) {
+    for (var k = 0; k < negs.length; k++) {
+      if (normMatchType(negs[k].match_type) !== 'PRODUCT') continue;
+      var na = (negs[k].keyword_text || '').toLowerCase().trim();
+      if (na.indexOf(tl) !== -1) return 'exact';
+    }
+    return '';
+  }
   // 1) EXACT
   for (var i = 0; i < negs.length; i++) {
     var nt = (negs[i].keyword_text || '').toLowerCase().trim();
@@ -599,11 +609,11 @@ function addNegSelected() {
       marketplace: mkt,
       profile_id: profileId,
       entity_type: asin ? 'negative_product_add' : 'negative_add',
-      entity_id: String(row.campaign_id),
+      entity_id: asin ? String(row.ad_group_id || row.campaign_id) : String(row.campaign_id),
       field_name: '—',
       old_value: '',
       new_value: asin
-        ? JSON.stringify({ asin: text.toUpperCase(), campaign_id: row.campaign_id, ad_group_id: '' })
+        ? JSON.stringify({ asin: text.toUpperCase(), campaign_id: row.campaign_id, ad_group_id: row.ad_group_id || '' })
         : JSON.stringify({ text: text, match_type: matchType, campaign_id: row.campaign_id, ad_group_id: '' })
     });
   });
