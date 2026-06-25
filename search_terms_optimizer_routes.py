@@ -186,6 +186,20 @@ def existing_negatives():
       AND keyword_text IS NOT NULL
       AND (keyword_state IS NULL OR keyword_state != 'ARCHIVED')
     {portfolio_cond}
+
+    UNION ALL
+
+    SELECT DISTINCT
+        targeting_expression AS keyword_text,
+        'NEGATIVE_PRODUCT' AS match_type,
+        campaign_id, ad_group_id
+    FROM {camp_table}
+    WHERE entity_type = 'negative_product_targeting'
+      AND marketplace = '{safe_mkt}'
+      AND targeting_expression IS NOT NULL
+      AND (target_state IS NULL OR target_state != 'ARCHIVED')
+    {portfolio_cond}
+
     LIMIT 200000
     """
 
