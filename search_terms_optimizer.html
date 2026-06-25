@@ -950,6 +950,10 @@ function loadGroupKeywords(i, agId) {
   var url = '/automation/search-terms/group-keywords?account_type=' + acct + '&marketplace=' + mkt +
             '&ad_group_id=' + encodeURIComponent(agId) + periodParams();
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if (d.error) {
+      cont.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--red)">Ошибка: ' + esc(d.error) + '</div>';
+      return;
+    }
     var kws = d.keywords || [];
     if (!kws.length) {
       cont.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--muted)">В группе нет ключевых слов (или это авто-группа)</div>';
