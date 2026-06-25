@@ -219,6 +219,15 @@ tr.er td{padding:0}
     <a href="/bq-stats" class="nav-link">BQ Stats</a>
   </div>
 </div>
+  <div class="nav-drop" id="navAu">
+  <button class="nav-drop-btn" onclick="var d=document.getElementById('navAu');document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')">
+    Автоматизация
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <div class="nav-drop-menu">
+    <a href="/automation/search-terms" class="nav-link">Оптимизация запросов</a>
+  </div>
+</div>
 </div>
 </header>
 
