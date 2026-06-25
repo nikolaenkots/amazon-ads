@@ -83,6 +83,7 @@ def negatives_candidates():
     marketplace  = args.get('marketplace', 'US').upper()
     portfolio_ids_raw = args.get('portfolio_ids', '')
     min_clicks   = max(0, int(args.get('min_clicks', 10)))
+    min_acos     = float(args.get('min_acos', 40))
 
     st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
@@ -106,12 +107,15 @@ def negatives_candidates():
             SUM(s.impressions)        AS impressions,
             SUM(s.clicks)             AS clicks,
             ROUND(SUM(s.cost), 2)     AS cost,
-            SUM(s.purchases_14d)      AS purchases_14d
+            SUM(s.purchases_14d)      AS purchases_14d,
+            ROUND(SUM(s.sales_14d), 2) AS sales
         FROM {st_table} s
         WHERE s.marketplace = '{safe_mkt}'
           AND {date_where}
         GROUP BY s.search_term, s.campaign_id, s.ad_group_id, s.keyword_type, s.match_type, s.keyword, s.targeting
-        HAVING SUM(s.clicks) >= {min_clicks} AND SUM(s.purchases_14d) = 0
+        HAVING SUM(s.clicks) >= {min_clicks}
+          AND (SUM(s.purchases_14d) = 0
+               OR SAFE_DIVIDE(SUM(s.cost), SUM(s.sales_14d)) * 100 > {min_acos})
     ),
     c_raw AS (
         SELECT *,
@@ -128,6 +132,8 @@ def negatives_candidates():
     g AS (SELECT ad_group_id, ad_group_name, ad_group_state, campaign_id, marketplace FROM g_raw2 WHERE rn2 = 1 AND marketplace = '{safe_mkt}')
     SELECT
         st.search_term, st.clicks, st.cost, st.impressions,
+        st.purchases_14d AS orders, st.sales,
+        CASE WHEN st.sales > 0 THEN ROUND(st.cost / st.sales * 100, 1) ELSE NULL END AS acos,
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
@@ -269,6 +275,7 @@ def keywords_candidates():
         st.search_term, st.clicks, st.cost, st.impressions,
         st.orders, st.sales,
         CASE WHEN st.sales > 0 THEN ROUND(st.cost / st.sales * 100, 1) ELSE NULL END AS acos,
+        CASE WHEN st.clicks > 0 THEN ROUND(st.cost / st.clicks, 2) ELSE NULL END AS cpc,
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
@@ -359,5 +366,68 @@ def groups_for_asin():
         for grp in groups:
             grp.pop('source_asins', None)
         return jsonify({'groups': groups, 'asin': asin})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@st_optimizer_bp.route('/automation/search-terms/group-keywords')
+def group_keywords():
+    """Текущие ключевые слова в группе с их параметрами и метриками."""
+    args         = request.args
+    account_type = args.get('account_type', 'MERCH').upper()
+    suffix       = _suffix(account_type)
+    marketplace  = args.get('marketplace', 'US').upper()
+    ad_group_id  = args.get('ad_group_id', '').strip()
+
+    if not ad_group_id:
+        return jsonify({'keywords': []})
+
+    camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
+    safe_mkt   = marketplace.replace("'", "''")
+    safe_agid  = ad_group_id.replace("'", "''")
+    date_where = _date_where(args, 's')
+
+    sql = f"""
+    WITH kw AS (
+        SELECT keyword_id, keyword_text, match_type, keyword_state, keyword_bid,
+               ROW_NUMBER() OVER (PARTITION BY keyword_id ORDER BY synced_at DESC) rn
+        FROM {camp_table}
+        WHERE entity_type = 'keyword'
+          AND ad_group_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+    ),
+    stats AS (
+        SELECT keyword AS keyword_text, match_type,
+               SUM(impressions) AS impressions,
+               SUM(clicks)      AS clicks,
+               ROUND(SUM(cost), 2) AS cost,
+               SUM(purchases_14d)  AS orders,
+               ROUND(SUM(sales_14d), 2) AS sales
+        FROM {st_table}
+        WHERE ad_group_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+          AND {date_where}
+          AND keyword_type NOT IN ('TARGETING_EXPRESSION_PREDEFINED','TARGETING_EXPRESSION')
+        GROUP BY keyword, match_type
+    )
+    SELECT kw.keyword_text, kw.match_type, kw.keyword_state, kw.keyword_bid,
+           s.impressions, s.clicks, s.cost, s.orders, s.sales,
+           CASE WHEN s.clicks > 0 THEN ROUND(s.cost / s.clicks, 2) ELSE NULL END AS cpc,
+           CASE WHEN s.sales > 0 THEN ROUND(s.cost / s.sales * 100, 1) ELSE NULL END AS acos
+    FROM kw
+    LEFT JOIN stats s
+        ON LOWER(s.keyword_text) = LOWER(kw.keyword_text)
+        AND s.match_type = kw.match_type
+    WHERE kw.rn = 1
+    ORDER BY s.clicks DESC NULLS LAST, kw.keyword_text
+    LIMIT 500
+    """
+
+    try:
+        client = get_client()
+        rows = list(client.query(sql).result())
+        result = [{k: _cvt(v) for k, v in dict(r).items()} for r in rows]
+        return jsonify({'keywords': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
