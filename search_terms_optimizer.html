@@ -903,13 +903,25 @@ function toggleExpand(i) {
   var mkt = document.getElementById('mkt').value;
   var url = '/automation/search-terms/groups-for-asin?account_type=' + acct + '&marketplace=' + mkt + '&ad_group_id=' + encodeURIComponent(row.ad_group_id);
 
-  fetch(url)
+  var ctrl = new AbortController();
+  var tmo = setTimeout(function(){ ctrl.abort(); }, 30000);
+  fetch(url, {signal: ctrl.signal})
     .then(function(r){ return r.json(); })
     .then(function(d){
+      clearTimeout(tmo);
+      if (d.error) {
+        document.getElementById('expp-' + i).innerHTML = '<span style="color:var(--red);font-size:12px">Ошибка: ' + esc(d.error) + '</span>';
+        return;
+      }
       renderExpPanel(i, d.groups || [], row);
     })
     .catch(function(e){
-      document.getElementById('expp-' + i).innerHTML = '<span style="color:var(--red);font-size:12px">Ошибка: ' + esc(e.message) + '</span>';
+      clearTimeout(tmo);
+      var msg = e.name === 'AbortError'
+        ? 'Запрос слишком долгий (>30с). Попробуйте ещё раз — повторный запрос быстрее за счёт кэша.'
+        : e.message;
+      expandedRows[i] = false; // allow retry
+      document.getElementById('expp-' + i).innerHTML = '<span style="color:var(--red);font-size:12px">' + esc(msg) + '</span>';
     });
 }
 

@@ -3,6 +3,13 @@ import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
 
+try:
+    from google.cloud import bigquery
+    # Hard server-side cap so a slow scan cannot hang the worker forever
+    _QJC = bigquery.QueryJobConfig(job_timeout_ms=30000)
+except Exception:
+    _QJC = None
+
 st_optimizer_bp = Blueprint('st_optimizer', __name__)
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -330,25 +337,18 @@ def groups_for_asin():
         FROM {asin_table} s
         JOIN source_asins sa ON sa.advertised_asin = s.advertised_asin
         WHERE s.marketplace = '{safe_mkt}'
-        LIMIT 500
     ),
     g_raw AS (
         SELECT ad_group_id, ad_group_name, campaign_id, ad_group_state, marketplace,
                ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table}
-        WHERE entity_type = 'ad_group'
-          AND marketplace = '{safe_mkt}'
-          AND ad_group_id IN (SELECT ad_group_id FROM ag_ids)
+        FROM {camp_table} WHERE entity_type = 'ad_group'
     ),
-    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c_raw AS (
         SELECT campaign_id, campaign_name, campaign_state, targeting_type, marketplace,
                ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
-        FROM {camp_table}
-        WHERE entity_type = 'campaign'
-          AND marketplace = '{safe_mkt}'
-          AND campaign_id IN (SELECT campaign_id FROM g)
+        FROM {camp_table} WHERE entity_type = 'campaign'
     ),
+    g AS (SELECT * FROM g_raw WHERE rn = 1),
     c AS (SELECT * FROM c_raw WHERE rn = 1)
     SELECT g.ad_group_id, g.ad_group_name, g.ad_group_state,
            c.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
@@ -367,7 +367,7 @@ def groups_for_asin():
 
     try:
         client = get_client()
-        rows = list(client.query(sql).result())
+        rows = list(client.query(sql, job_config=_QJC).result())
         groups = [dict(r) for r in rows]
         asin = groups[0]['source_asins'] if groups else ''
         for grp in groups:
@@ -433,7 +433,7 @@ def group_keywords():
 
     try:
         client = get_client()
-        rows = list(client.query(sql).result())
+        rows = list(client.query(sql, job_config=_QJC).result())
         result = [{k: _cvt(v) for k, v in dict(r).items()} for r in rows]
         return jsonify({'keywords': result})
     except Exception as e:
