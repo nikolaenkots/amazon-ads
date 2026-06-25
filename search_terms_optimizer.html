@@ -541,13 +541,14 @@ function renderNegTable() {
   }
   tbody.innerHTML = negRows.map(function(row, i) {
     var badge = badgeHtml(coverage(row.search_term, row.campaign_id, row.ad_group_id));
+    var asin = isAsin(row.search_term);
+    var mtCell = asin
+      ? '<td><span class="sbadge" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)">ASIN</span></td>'
+      : '<td><select class="mt-sel neg-mt" data-i="' + i + '"><option value="NEGATIVE_EXACT">EXACT</option><option value="NEGATIVE_PHRASE">PHRASE</option></select></td>';
     return '<tr class="dr" data-i="' + i + '">' +
       '<td><input type="checkbox" class="row-cb neg-cb" data-i="' + i + '"></td>' +
       '<td><input class="term-inp-inline" data-i="' + i + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" oninput="updateBadge(' + i + ')"></td>' +
-      '<td><select class="mt-sel neg-mt" data-i="' + i + '">' +
-        '<option value="NEGATIVE_EXACT">EXACT</option>' +
-        '<option value="NEGATIVE_PHRASE">PHRASE</option>' +
-      '</select></td>' +
+      mtCell +
       '<td class="r n">' + fmtNum(row.clicks) + '</td>' +
       '<td class="r n an">$' + fmtNum(row.cost) + '</td>' +
       '<td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + esc(row.campaign_name || '') + '</div></td>' +
@@ -581,36 +582,42 @@ function toggleAll(checked) {
 
 // ── Add selected negatives to queue ──────────────────────
 function addNegSelected() {
-  var selected = [];
+  var mkt = document.getElementById('mkt').value;
+  var profileId = getProfileId(acct, mkt);
+  var items = [];
   document.querySelectorAll('.neg-cb:checked').forEach(function(cb) {
     var i = parseInt(cb.getAttribute('data-i'));
     var row = negRows[i];
     var termInp = document.querySelector('.term-inp-inline[data-i="' + i + '"]');
     var mtSel = document.querySelector('.neg-mt[data-i="' + i + '"]');
-    var text = termInp ? termInp.value.trim() : row.search_term;
-    var matchType = mtSel ? mtSel.value : 'NEGATIVE_PHRASE';
-    if (text) {
-      selected.push({
-        entity_type: 'negative_add',
-        field_name: '—',
-        new_value: JSON.stringify({
-          text: text,
-          match_type: matchType,
-          campaign_id: row.campaign_id,
-          ad_group_id: ''
-        })
-      });
-    }
+    var text = (termInp ? termInp.value.trim() : row.search_term) || '';
+    var matchType = mtSel ? mtSel.value : 'NEGATIVE_EXACT';
+    if (!text) return;
+    var asin = isAsin(text);
+    items.push({
+      account_type: acct,
+      marketplace: mkt,
+      profile_id: profileId,
+      entity_type: asin ? 'negative_product_add' : 'negative_add',
+      entity_id: String(row.campaign_id),
+      field_name: '—',
+      old_value: '',
+      new_value: asin
+        ? JSON.stringify({ asin: text.toUpperCase(), campaign_id: row.campaign_id, ad_group_id: '' })
+        : JSON.stringify({ text: text, match_type: matchType, campaign_id: row.campaign_id, ad_group_id: '' })
+    });
   });
 
-  if (!selected.length) { toast('Ничего не выбрано', 'err'); return; }
+  if (!items.length) { toast('Ничего не выбрано', 'err'); return; }
 
-  var count = selected.length;
-  Promise.all(selected.map(function(payload) {
+  var count = items.length;
+  Promise.all(items.map(function(payload) {
     return fetch('/control/add', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) throw new Error(d.error);
     });
   })).then(function() {
     toast('Добавлено в очередь: ' + count + ' записей', 'ok');
@@ -795,7 +802,17 @@ document.addEventListener('click', function(e) {
   });
 });
 
+function getProfileId(at, mkt) {
+  var key = at + '_' + mkt;
+  return (window._pm && window._pm[key]) ? String(window._pm[key]) : '';
+}
+
+function isAsin(text) {
+  return /^[A-Z0-9]{10}$/i.test((text || '').trim());
+}
+
 // ── Init ──────────────────────────────────────────────────
+fetch('/control/profiles').then(function(r){ return r.json(); }).then(function(d){ window._pm = d.profiles || {}; }).catch(function(){ window._pm = {}; });
 loadPortfolios();
 </script>
 </body>
