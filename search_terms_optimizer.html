@@ -652,6 +652,7 @@ function loadAll() {
     existingNegatives = results[0].negatives || [];
     negRows = results[1].rows || [];
     kwRows = results[2].rows || [];
+    expandedRows = {}; // reset expansion state — rows changed (e.g. geo switch)
     renderNegTable();
     renderKwTable();
     if (results[1].error) toast(results[1].error, 'err');
