@@ -2782,6 +2782,205 @@ app.py
 
 ---
 
+## Оптимизатор поисковых запросов `/automation/search-terms` (июнь 2026)
+
+### Файлы
+| Файл | Blueprint | Описание |
+|---|---|---|
+| `search_terms_optimizer_routes.py` | `st_optimizer_bp` | 6 API-эндпоинтов |
+| `search_terms_optimizer.html` | — | Фронтенд страницы |
+| Зарегистрирован в `app.py` | | `app.register_blueprint(st_optimizer_bp)` |
+
+Карточка добавлена на `index.html` в секцию "Автоматизация".
+
+### Назначение
+Инструмент для нахождения неэффективных поисковых запросов и добавления их в минус-слова, а также нахождения эффективных запросов и добавления их как ключевые слова. Работает поверх `pending_changes → /control → send.py`.
+
+### Два режима (вкладки)
+- **В минус слова** — запросы с расходом без продаж / высоким ACoS
+- **В ключевые слова** — запросы с конверсией, которых нет в мануальных кампаниях
+
+### API эндпоинты
+
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/automation/search-terms` | HTML страница |
+| `GET` | `/automation/search-terms/portfolios` | Список портфолио |
+| `GET` | `/automation/search-terms/negatives-candidates` | Кандидаты на минус-слова |
+| `GET` | `/automation/search-terms/existing-negatives` | Уже добавленные минусы |
+| `GET` | `/automation/search-terms/keywords-candidates` | Кандидаты на ключевые слова |
+| `GET` | `/automation/search-terms/groups-for-asin` | Группы рекламирующие тот же ASIN |
+| `GET` | `/automation/search-terms/group-keywords` | Ключевые слова группы с их метриками |
+
+### Параметры запросов
+
+**negatives-candidates:**
+- `account_type`, `marketplace`, `days` / `date_from`+`date_to`
+- `min_clicks` (default 5) — минимум кликов для отображения
+- `min_acos` (default 40) — порог ACoS (%) для нулевых-продаж строк
+- `portfolio_ids` — фильтр по портфолио
+
+**keywords-candidates:**
+- `account_type`, `marketplace`, `days` / `date_from`+`date_to`
+- `min_orders` (default 1) — минимум заказов
+- `portfolio_ids`
+
+**group-keywords:**
+- `account_type`, `marketplace`, `ad_group_id`
+- `days` / `date_from`+`date_to` — для статистики (ключи возвращаются всегда)
+
+**groups-for-asin:**
+- `account_type`, `marketplace`, `ad_group_id` — ищет ASIN в asin_stats, находит все группы рекламирующие тот же ASIN
+- Идентичен `/search-terms/groups-for-asin` в `search_terms_routes.py` — тот же SQL
+
+### Типы сущностей в pending_changes
+
+| entity_type | Описание | entity_id |
+|---|---|---|
+| `negative_add` | Минус-слово (текст) | `ad_group_id` |
+| `negative_product_add` | Минус-таргет (ASIN) | `ad_group_id` |
+| `keyword_add` | Ключевое слово | `ad_group_id` |
+| `keyword` / `bid` | Изменение ставки существующего ключа | `keyword_id` |
+
+**new_value для negative_add:**
+```json
+{"text": "слово", "match_type": "EXACT", "ad_group_id": "123", "campaign_id": "456"}
+```
+
+**new_value для keyword_add:**
+```json
+{"text": "слово", "match_type": "BROAD", "ad_group_id": "123", "campaign_id": "456", "bid": "0.50"}
+```
+
+### Формат match_type (важно!)
+
+Amazon SP API хранит в BQ `negativeExact` / `negativePhrase` (camelCase), а не `NEGATIVE_EXACT` / `NEGATIVE_PHRASE`.
+
+Функция нормализации на фронтенде:
+```js
+function normMatchType(mt) {
+  if (!mt) return '';
+  const m = mt.toUpperCase();
+  if (m === 'NEGATIVEEXACT' || m === 'NEGATIVE_EXACT')   return 'EXACT';
+  if (m === 'NEGATIVEPHRASE' || m === 'NEGATIVE_PHRASE') return 'PHRASE';
+  if (m === 'NEGATIVEPRODUCT' || m === 'NEGATIVE_PRODUCT') return 'PRODUCT';
+  return m; // EXACT / PHRASE / BROAD / PRODUCT
+}
+```
+
+Без нормализации проверка покрытия (coverage check) показывала «—» для уже добавленных минусов.
+
+### ASIN обработка
+
+ASIN-запросы определяются по паттерну `/^[A-Z0-9]{10}$/i`.
+- ASIN → `entity_type: 'negative_product_add'`
+- Покрытие: проверяем `NEGATIVE_PRODUCT` type в existingNegatives
+
+### Таблица минус-кандидатов (колонки)
+
+□ | Запрос | Тип минус | Инициатор | Тип | Клики | Расход | Заказы | ACoS | Группа | Кампания | Статус
+
+- **Инициатор** — ключ/таргет вызвавший показ: `row.keyword` для ручных кампаний, `row.targeting` для авто
+- **Тип** — бейдж AUTO/MANUAL + тип совпадения BROAD/PHRASE/EXACT
+- **Статус** — покрытие: «Добавлен» если уже есть в existingNegatives, «—» если нет
+
+### Таблица кандидатов в ключевые слова (колонки)
+
+▼ | Запрос | Инициатор | Тип | Заказы | Продажи | ACoS | Клики | Расход | CPC | Группа | Кампания
+
+- ▼ — кнопка раскрытия панели выбора группы
+
+### Панель добавления ключевого слова (expand panel)
+
+При раскрытии строки:
+1. Загружает список групп через `groups-for-asin`
+2. Пользователь выбирает группу (radio)
+3. При выборе — немедленно загружаются ключевые слова группы (`group-keywords`)
+4. Внизу: Тип совпадения (BROAD/PHRASE/EXACT), Ставка $, кнопка «Добавить в очередь»
+
+**Ключевые слова группы** — отображаются прямо под выбранной группой-строкой. Стиль — список карточек (как Products Analytics), не таблица:
+- Статус бейдж (ON/PAUSED) + название + тип совпадения слева
+- Компактная статистика (Клики/CPC/Расход/Заказы/ACoS) по центру
+- Inline-редактируемая ставка справа (кнопка → input → ✓/✕ → `/control/add` с `field_name:'bid'`)
+- Если за период нет данных — серая надпись «нет статистики за период»
+
+### Фильтры (filter bar)
+
+**Шапка фильтров:**
+- Аккаунт (MERCH/KDP)
+- Маркетплейс
+- Портфолио
+- Тип кампании (Все/MANUAL/AUTO)
+- Статус кампании (Все/Активные/На паузе)
+- Статус группы (Все/Активные)
+- Период анализа + Дней
+
+**Mode-row (под шапкой):**
+- Инициатор: Все / Ключевые слова / Авто / Продуктовые
+- Совпадение: Все / BROAD / PHRASE / EXACT
+- Тип запроса: Все / Текстовые / ASIN
+- Мин. кликов / Мин. ACoS (для минусов) / Мин. заказов (для ключей)
+- Чекбокс «Скрыть добавленные»
+
+Фильтрация происходит **на клиенте** через `rowPassesFilter(row)`.
+
+### Профили (getProfileId)
+
+```js
+// При инициализации:
+fetch('/control/profiles').then(d => window._pm = d.profiles);
+// Ключ: acct + '_' + mkt → profile_id
+function getProfileId(at, mkt) { return (window._pm || {})[at + '_' + mkt] || ''; }
+```
+
+### Структура покрытия (coverage check)
+
+```js
+function negsForRow(campaignId, adGroupId) {
+  return existingNegatives.filter(function(n) {
+    return String(n.campaign_id) === String(campaignId)
+        && (n.ad_group_id == null || String(n.ad_group_id) === String(adGroupId));
+  });
+}
+
+function coverage(term, campaignId, adGroupId) {
+  var negs = negsForRow(campaignId, adGroupId);
+  var up = (term || '').toUpperCase().trim();
+  if (isAsin(up)) {
+    return negs.some(n => normMatchType(n.match_type) === 'PRODUCT'
+        && (n.keyword_text || '').toUpperCase() === up) ? 'added' : null;
+  }
+  if (negs.some(n => normMatchType(n.match_type) === 'EXACT'
+      && (n.keyword_text || '').toUpperCase() === up)) return 'added';
+  if (negs.some(n => normMatchType(n.match_type) === 'PHRASE'
+      && up.includes((n.keyword_text || '').toUpperCase()))) return 'phrase';
+  return null;
+}
+```
+
+### Ключевые фиксы (решённые проблемы)
+
+**BigQuery ad_group_id тип:** в BigQuery колонки `ad_group_id` хранятся как **STRING** во всех таблицах (campaigns, asin_stats, search_terms). Не нужен никакой CAST — прямое сравнение `ad_group_id = 'значение'` работает и использует кластеризацию. `CAST(ad_group_id AS STRING)` мешает кластеризации и замедляет запросы. `SAFE_CAST(... AS INT64)` ломает запросы (тип неверный).
+
+**Алиас `s` в date_where:** `_date_where(args, 's')` генерирует `s.date >= ...`. В CTE `stats` таблица должна иметь алиас: `FROM {st_table} s`.
+
+**expandedRows не сбрасывался при смене гео:** при смене маркетплейса без перезагрузки страницы `loadAll()` пересоздавал строки, но `expandedRows` хранил старые флаги `true`. Строка с тем же индексом показывала спиннер, но делала `return` до fetch → вечный спиннер. **Исправление:** `expandedRows = {}` сбрасывается в `loadAll()`.
+
+**groups-for-asin идентичен search_terms_routes.py:** оба используют один и тот же SQL без пре-фильтров. Попытки «оптимизации» (пре-фильтр окон, LIMIT на ag_ids) ухудшали план — откатывать к исходному.
+
+**30-секундный таймаут:** `job_timeout_ms=30000` через `_QJC = bigquery.QueryJobConfig(job_timeout_ms=30000)` в `group-keywords` и `groups-for-asin`. На фронте — `AbortController` 30с + `expandedRows[i] = false` при таймауте (разрешает повтор). Сообщение: «Запрос слишком долгий (>30с). Попробуйте ещё раз».
+
+**Негативы добавлялись в кампанию вместо группы:** в `new_value` поле `ad_group_id` было `''`. Исправление: передавать `row.ad_group_id || ''` из данных строки.
+
+**TYPE_QUERY в control_routes.py:** для `keyword_add`, `negative_add`, `negative_product_add` entity_id = `ad_group_id`, а не `campaign_id`. Запрос подтягивания контекста исправлен:
+```python
+"keyword_add":          ("ad_group_id", "ad_group_name", "entity_type = 'ad_group'"),
+"negative_add":         ("ad_group_id", "ad_group_name", "entity_type = 'ad_group'"),
+"negative_product_add": ("ad_group_id", "ad_group_name", "entity_type = 'ad_group'"),
+```
+
+---
+
 ## Каталог: коды маркетплейсов
 
 | Внутренний код | Amazon Ads API | Каталог (BQ) |
