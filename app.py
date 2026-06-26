@@ -68,6 +68,7 @@ from negatives_routes import negatives_bp
 from bq_stats_routes import bq_stats_bp
 from campaign_copy_routes import campaign_copy_bp
 from search_terms_optimizer_routes import st_optimizer_bp
+from bid_automation_routes import bid_automation_bp
 
 
 app.register_blueprint(catalog_bp)
@@ -88,6 +89,7 @@ app.register_blueprint(negatives_bp)
 app.register_blueprint(bq_stats_bp)
 app.register_blueprint(campaign_copy_bp)
 app.register_blueprint(st_optimizer_bp)
+app.register_blueprint(bid_automation_bp)
 
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
