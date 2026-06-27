@@ -59,6 +59,7 @@ def ba_keywords():
     name_filter       = args.get('name_filter', '').strip()
     state_filter      = args.get('state_filter', '')    # ENABLED | PAUSED | ''
     camp_state_filter = args.get('camp_state', '')      # ENABLED | PAUSED | ''
+    group_state_filter= args.get('group_state', '')     # ENABLED | PAUSED | ''
     from_last_change  = args.get('from_last_change', '') in ('1', 'true', 'yes')
     sort_by           = args.get('sort_by', 'clicks')
     sort_dir          = args.get('sort_dir', 'DESC').upper()
@@ -72,6 +73,7 @@ def ba_keywords():
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
     stat_table = f"`{PROJECT_ID}.{DATASET}.targets_stats_{suffix}`"
     clog_table = f"`{PROJECT_ID}.{DATASET}.change_log_{suffix}`"
+    asin_table = f"`{PROJECT_ID}.{DATASET}.asin_stats_{suffix}`"
     pf_table   = f"`{PROJECT_ID}.{DATASET}.portfolio_labels`"
 
     safe_mkt = _safe(marketplace)
@@ -123,6 +125,10 @@ def ba_keywords():
     if camp_state_filter in ('ENABLED', 'PAUSED'):
         camp_extra_conds.append(f"campaign_state = '{camp_state_filter}'")
     camp_filter = ('AND ' + ' AND '.join(camp_extra_conds)) if camp_extra_conds else ''
+
+    group_filter = ''
+    if group_state_filter in ('ENABLED', 'PAUSED'):
+        group_filter = f"AND ad_group_state = '{group_state_filter}'"
 
     allowed_sort = {
         'clicks', 'cost', 'acos', 'sales', 'bid', 'last_change_date',
@@ -191,7 +197,7 @@ def ba_keywords():
         FROM {camp_table}
         WHERE entity_type = 'ad_group' AND marketplace = '{safe_mkt}'
     ),
-    g AS (SELECT * FROM g_raw WHERE rn = 1),
+    g AS (SELECT * FROM g_raw WHERE rn = 1 {group_filter}),
     -- last bid change from change_log (defined before stats so the analysis
     -- window can start at each entity's last change date)
     last_change AS (
@@ -219,13 +225,26 @@ def ba_keywords():
           {upper_bound}
         GROUP BY s.keyword_id
     ),
-    -- lifetime clicks per ad group (proxy for the product's accumulated traffic /
-    -- "age"): the group's product ads are the ASIN(s), so total group clicks ≈ ASIN clicks
+    -- Product "age" = total clicks on the ASIN across ALL campaigns (lifetime).
+    -- Map ad group → its advertised ASIN(s), then sum each ASIN's all-campaign clicks.
+    asin_clicks AS (
+        SELECT advertised_asin, SUM(clicks) AS asin_total_clicks
+        FROM {asin_table}
+        WHERE marketplace = '{safe_mkt}'
+          AND advertised_asin IS NOT NULL AND advertised_asin != ''
+        GROUP BY advertised_asin
+    ),
+    ag_asin AS (
+        SELECT DISTINCT ad_group_id, advertised_asin
+        FROM {asin_table}
+        WHERE marketplace = '{safe_mkt}'
+          AND advertised_asin IS NOT NULL AND advertised_asin != ''
+    ),
     grp_clicks AS (
-        SELECT s.ad_group_id, SUM(s.clicks) AS group_total_clicks
-        FROM {stat_table} s
-        WHERE s.marketplace = '{safe_mkt}'
-        GROUP BY s.ad_group_id
+        SELECT aa.ad_group_id, SUM(ac.asin_total_clicks) AS group_total_clicks
+        FROM ag_asin aa
+        JOIN asin_clicks ac ON ac.advertised_asin = aa.advertised_asin
+        GROUP BY aa.ad_group_id
     ),
     prev_bid AS (
         SELECT
@@ -249,7 +268,7 @@ def ba_keywords():
             kw.match_type,
             kw.keyword_type,
             kw.keyword_state,
-            kw.bid,
+            COALESCE(kw.bid, SAFE_CAST(g.ad_group_default_bid AS FLOAT64)) AS bid,
             kw.ad_group_id,
             kw.campaign_id,
             kw.marketplace,

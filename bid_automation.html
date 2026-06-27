@@ -38,6 +38,35 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 /* Layout — card-based, matching the campaigns analytics page */
 .page{max-width:1640px;margin:0 auto;padding:18px 32px}
 .toolbar{display:flex;align-items:center;gap:8px;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+
+/* Filter panel (search-terms-optimizer style) */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{display:flex;gap:4px}
+.atb{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pdw{position:relative}
+.pdt{height:34px;min-width:160px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;padding:0 26px 0 10px;display:flex;align-items:center;cursor:pointer;transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:260px;max-height:300px;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.pdd.on{display:block}
+.pds{width:100%;height:30px;margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);font-size:12px;padding:0 8px;outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px}
+.pdi:hover{background:var(--surface2)}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+.mode-row{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--border);flex-wrap:wrap}
+.mode-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.mbt{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .12s}
+.mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.msep{width:1px;height:18px;background:var(--border);margin:0 2px}
 .content{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .table-wrap{overflow:auto;max-height:calc(100vh - 320px)}
 
@@ -81,6 +110,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
 /* Bid button */
 .bid-wrap{display:flex;align-items:center;gap:4px}
 .bid-btn{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--text);transition:border-color .12s;white-space:nowrap}
+.rec-bid{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
+.rec-pct{font-size:9px;opacity:.8}
 .bid-btn:hover{border-color:var(--accent)}
 .bid-edit{display:none;align-items:center;gap:3px}
 .bid-inp{width:70px;height:24px;padding:0 6px;font-family:'DM Mono',monospace;font-size:11px;border:1px solid var(--accent);border-radius:5px}
@@ -127,7 +158,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
 .rules-head:hover{background:var(--surface2)}
 .rules-body{padding:14px;border-top:1px solid var(--border);display:none}
 .rules-body.open{display:block}
-.rules-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.rules-grid{display:block;overflow-x:auto}
 .rule-card{border:1px solid var(--border);border-radius:7px;padding:12px;background:var(--bg)}
 .rule-card h4{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .rule-field{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
@@ -208,68 +239,100 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
 
 <div class="page" id="mainPage">
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <select id="selAccount" onchange="onAccountChange()">
-      <option value="MERCH">MERCH</option>
-      <option value="KDP">KDP</option>
-    </select>
-    <select id="selMkt" onchange="loadCampaigns(); loadData()">
-      <option value="US">US</option>
-      <option value="UK">UK</option>
-      <option value="DE">DE</option>
-      <option value="FR">FR</option>
-      <option value="IT">IT</option>
-      <option value="ES">ES</option>
-      <option value="CA">CA</option>
-      <option value="JP">JP</option>
-      <option value="AU">AU</option>
-    </select>
-    <select id="selTgtType" onchange="loadData()">
-      <option value="">Все типы</option>
-      <option value="MANUAL">MANUAL</option>
-      <option value="AUTO">AUTO</option>
-    </select>
-    <select id="selCampaign" onchange="onCampaignChange()" style="max-width:200px" title="Кампания">
-      <option value="">Все кампании</option>
-    </select>
-    <select id="selAdGroup" onchange="loadData()" style="max-width:180px" title="Группа">
-      <option value="">Все группы</option>
-    </select>
-    <select id="selCampState" onchange="loadData()" title="Статус кампании">
-      <option value="">Кампании: все</option>
-      <option value="ENABLED">Кампании: активные</option>
-      <option value="PAUSED">Кампании: пауза</option>
-    </select>
-    <select id="selState" onchange="loadData()" title="Статус таргета/ключа">
-      <option value="">Таргеты: все</option>
-      <option value="ENABLED">Таргеты: активные</option>
-      <option value="PAUSED">Таргеты: пауза</option>
-    </select>
-    <div class="sep"></div>
-    <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px" title="Аналитика считается с даты последнего изменения ставки каждого ключа">
-      <input type="checkbox" id="chkFromLastChange" onchange="loadData()" checked> С даты изменения
-    </label>
-    <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px">
-      <input type="checkbox" id="chkDateWindow" onchange="toggleDateWindow()"> Период анализа
-    </label>
-    <div id="dateFields" style="display:none;display:flex;gap:6px;align-items:center">
-      <input type="date" id="dateFrom" onchange="loadData()" style="width:130px">
-      <span style="color:var(--muted);font-size:12px">—</span>
-      <input type="date" id="dateTo" onchange="loadData()" style="width:130px">
+  <!-- Filter panel -->
+  <div class="fp">
+    <div class="fr">
+      <div class="fg">
+        <div class="fl">Аккаунт</div>
+        <div class="at">
+          <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+          <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Маркетплейс</div>
+        <select id="selMkt" style="width:100px" onchange="loadPortfolios()">
+          <option>US</option><option>UK</option><option>DE</option>
+          <option>FR</option><option>IT</option><option>ES</option>
+          <option>CA</option><option>JP</option><option>AU</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Портфолио</div>
+        <div class="pdw" id="pdw">
+          <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
+          <svg class="pda" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="pdd" id="pdd">
+            <input class="pds" id="pds" placeholder="Поиск…" oninput="pfSearch(this.value)">
+            <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Тип кампании</div>
+        <select id="selTgtType" style="width:110px">
+          <option value="">Все</option>
+          <option value="MANUAL">MANUAL</option>
+          <option value="AUTO">AUTO</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус кампании</div>
+        <select id="selCampState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус группы</div>
+        <select id="selGroupState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус таргета</div>
+        <select id="selState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Период анализа</div>
+        <select id="periodMode" style="width:170px" onchange="onPeriodMode()">
+          <option value="days">Последние N дней</option>
+          <option value="range">Выбранный период</option>
+        </select>
+      </div>
+      <div class="fg" id="daysWrap">
+        <div class="fl">Дней</div>
+        <input type="number" id="selDays" value="30" min="1" max="365" style="width:80px">
+      </div>
+      <div class="fg" id="rangeWrap" style="display:none">
+        <div class="fl">Период (с — по)</div>
+        <div style="display:flex;gap:6px">
+          <input type="date" id="dateFrom" style="width:140px">
+          <input type="date" id="dateTo" style="width:140px">
+        </div>
+      </div>
+      <div class="fg" style="justify-content:flex-end">
+        <button class="btn btn-p" onclick="loadData()">Загрузить</button>
+      </div>
     </div>
-    <select id="selDays" onchange="loadData()" style="width:110px">
-      <option value="7">7 дней</option>
-      <option value="14">14 дней</option>
-      <option value="30" selected>30 дней</option>
-      <option value="60">60 дней</option>
-      <option value="90">90 дней</option>
-    </select>
-    <input type="text" id="inpFilter" placeholder="Поиск..." style="width:160px" oninput="debounceLoad()">
-    <div class="sep"></div>
-    <button class="btn btn-s att-filter-btn" id="attFilterBtn" onclick="toggleAttFilter()" title="Только строки с рекомендацией">Требует внимания</button>
-    <div class="sep"></div>
-    <span id="loadStatus" style="font-size:12px;color:var(--muted)"></span>
+    <div class="mode-row">
+      <label class="mode-lbl" style="display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text)">
+        <input type="checkbox" id="chkFromLastChange" checked> Учитывать последние изменения
+      </label>
+      <span style="font-size:11px;color:var(--dim)">аналитика считается с даты последнего изменения ставки каждого ключа</span>
+      <div class="msep"></div>
+      <button class="mbt att-filter-btn" id="attFilterBtn" onclick="toggleAttFilter()" title="Только строки с рекомендацией">Требует внимания</button>
+      <div class="msep"></div>
+      <input type="text" id="inpFilter" placeholder="Поиск по тексту..." style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px;width:180px" oninput="debounceLoad()">
+      <span id="loadStatus" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+    </div>
   </div>
 
   <!-- Rules panel -->
@@ -308,7 +371,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th style="width:12px"></th><!-- rule dot -->
             <th onclick="sortBy('keyword_text')">Ключ / Таргет <span class="sort-arrow" id="sa_keyword_text"></span></th>
             <th onclick="sortBy('match_type')" style="width:80px">Тип <span class="sort-arrow" id="sa_match_type"></span></th>
-            <th onclick="sortBy('bid')" style="width:70px">Ставка <span class="sort-arrow" id="sa_bid"></span></th>
+            <th onclick="sortBy('bid')" style="width:150px">Ставка → реком. <span class="sort-arrow" id="sa_bid"></span></th>
             <th onclick="sortBy('clicks')" style="width:60px">Клики <span class="sort-arrow" id="sa_clicks"></span></th>
             <th style="width:70px" title="Всего кликов на ASIN в группе (возраст товара)">ASIN кл.</th>
             <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
@@ -393,12 +456,13 @@ var page = 1;
 var perPage = 100;
 var totalRows = 0;
 
-// Default rules
-var DEFAULT_RULES = {
-  new:    { label:'Новые (<10 кликов)', color:'#1a6fd4', highAcos:50, highPct:10, lowAcos:15, lowPct:10, minBid:0.20, maxBid:5.00, minClicks:0 },
-  medium: { label:'Средние (10-50)',    color:'#b07800', highAcos:40, highPct:15, lowAcos:12, lowPct:15, minBid:0.20, maxBid:5.00, minClicks:10 },
-  mature: { label:'Зрелые (>50)',       color:'#1a8f5c', highAcos:35, highPct:20, lowAcos:10, lowPct:20, minBid:0.20, maxBid:5.00, minClicks:25 }
-};
+// Default rules — a flexible list of rows. Each rule matches an ASIN-age range
+// [ageFrom, ageTo) by total ASIN clicks; the first matching rule applies.
+var DEFAULT_RULES = [
+  { name:'Новые',   color:'#1a6fd4', ageFrom:0,  ageTo:10,   highAcos:50, highPct:10, lowAcos:15, lowPct:10, minBid:0.20, maxBid:5.00, minClicks:0 },
+  { name:'Средние', color:'#b07800', ageFrom:10, ageTo:50,   highAcos:40, highPct:15, lowAcos:12, lowPct:15, minBid:0.20, maxBid:5.00, minClicks:10 },
+  { name:'Зрелые',  color:'#1a8f5c', ageFrom:50, ageTo:null, highAcos:35, highPct:20, lowAcos:10, lowPct:20, minBid:0.20, maxBid:5.00, minClicks:25 }
+];
 var rules = loadRulesFromStorage();
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -421,21 +485,27 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 // HTML attribute (onclick="..."). JSON.stringify uses double quotes and breaks the attr.
 function q(s) { return "'" + String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;') + "'"; }
 
-function getAgeCategory(clicks) {
-  if (clicks < 10) return 'new';
-  if (clicks <= 50) return 'medium';
-  return 'mature';
-}
-
-// Age = product maturity, measured by total clicks on the ASIN(s) in the ad
-// group (group lifetime clicks), NOT the keyword's own clicks.
+// Age = product maturity, measured by total clicks on the ASIN across ALL
+// campaigns (sent from the backend as group_total_clicks).
 function ageClicks(row) {
   return row.group_total_clicks != null ? row.group_total_clicks : (row.clicks || 0);
 }
 
+// Find the first rule row whose age range matches the row's ASIN clicks.
+function matchRule(row) {
+  var a = ageClicks(row);
+  for (var i = 0; i < rules.length; i++) {
+    var rr = rules[i];
+    var from = (rr.ageFrom == null ? 0 : rr.ageFrom);
+    var to   = rr.ageTo;
+    if (a >= from && (to == null || to === '' || a < to)) return rr;
+  }
+  return rules[rules.length - 1] || null;
+}
+
 function getRuleAction(row) {
-  var cat = getAgeCategory(ageClicks(row));
-  var r = rules[cat];
+  var r = matchRule(row);
+  if (!r) return 'hold';
   var acos = row.acos;
   var clicks = row.clicks || 0;
   if (clicks < r.minClicks) return 'hold';
@@ -453,8 +523,8 @@ function getRuleColor(action) {
 }
 
 function calcNewBid(row) {
-  var cat = getAgeCategory(ageClicks(row));
-  var r = rules[cat];
+  var r = matchRule(row);
+  if (!r) return row.bid || 0;
   var action = getRuleAction(row);
   var bid = row.bid || 0.30;
   var nb = bid;
@@ -464,52 +534,75 @@ function calcNewBid(row) {
   return Math.round(nb * 100) / 100;
 }
 
-// ── Data loading ───────────────────────────────────────────────────────────
-function onAccountChange() { loadCampaigns(); loadData(); }
+// ── Account / portfolio / period ────────────────────────────────────────────
+var acct = 'MERCH';
+var allPortfolios = [];
+var selectedPortfolios = [];
 
-function loadCampaigns() {
-  var account = document.getElementById('selAccount').value;
-  var mkt     = document.getElementById('selMkt').value;
-  var sel = document.getElementById('selCampaign');
-  var ag  = document.getElementById('selAdGroup');
-  ag.innerHTML = '<option value="">Все группы</option>';
-  fetch('/automation/bid-automation/campaigns?account_type=' + account + '&marketplace=' + mkt)
+function setAcct(a) {
+  acct = a;
+  document.getElementById('tbM').classList.toggle('on', a === 'MERCH');
+  document.getElementById('tbK').classList.toggle('on', a === 'KDP');
+  loadPortfolios();
+}
+
+function pfToggle(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('pdd'), dt = document.getElementById('pdt');
+  var open = dd.classList.contains('on');
+  dd.classList.toggle('on', !open);
+  dt.classList.toggle('on', !open);
+  if (!open) document.getElementById('pds').focus();
+}
+function pfSearch(query) {
+  var lq = query.toLowerCase();
+  document.querySelectorAll('#pdlist .pdi').forEach(function(el) {
+    el.style.display = el.querySelector('span').textContent.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+function pfLabel() {
+  var lbl = document.getElementById('pdl');
+  if (selectedPortfolios.length === 0) lbl.textContent = 'Все';
+  else if (selectedPortfolios.length === 1) {
+    var p = allPortfolios.find(function(x){ return x.id === selectedPortfolios[0]; });
+    lbl.textContent = p ? p.name : selectedPortfolios[0];
+  } else lbl.textContent = selectedPortfolios.length + ' портфолио';
+}
+function renderPortfolios(list) {
+  var cont = document.getElementById('pdlist');
+  if (!list.length) { cont.innerHTML = '<div class="pd-empty">Нет портфолио</div>'; return; }
+  cont.innerHTML = list.map(function(p) {
+    var checked = selectedPortfolios.includes(p.id) ? 'checked' : '';
+    return '<label class="pdi"><input type="checkbox" value="' + esc(p.id) + '" ' + checked + ' onchange="pfChange(this)"><span>' + esc(p.name) + '</span></label>';
+  }).join('');
+}
+function pfChange(el) {
+  if (el.checked) { if (!selectedPortfolios.includes(el.value)) selectedPortfolios.push(el.value); }
+  else selectedPortfolios = selectedPortfolios.filter(function(x){ return x !== el.value; });
+  pfLabel();
+}
+function loadPortfolios() {
+  selectedPortfolios = [];
+  pfLabel();
+  var mkt = document.getElementById('selMkt').value;
+  document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Загрузка...</div>';
+  fetch('/automation/search-terms/portfolios?account_type=' + acct + '&marketplace=' + mkt)
     .then(function(r){ return r.json(); })
-    .then(function(d) {
-      if (d.error || !d.rows) return;
-      var html = '<option value="">Все кампании</option>';
-      d.rows.forEach(function(c) {
-        var mark = c.campaign_state === 'ENABLED' ? '' : ' ⏸';
-        html += '<option value="' + esc(c.campaign_id) + '">' + esc(c.campaign_name) + mark + '</option>';
-      });
-      sel.innerHTML = html;
-    });
+    .then(function(d){ allPortfolios = d.portfolios || []; renderPortfolios(allPortfolios); })
+    .catch(function(){ document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Ошибка загрузки</div>'; });
+}
+document.addEventListener('click', function(){
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdt').classList.remove('on');
+});
+
+function onPeriodMode() {
+  var mode = document.getElementById('periodMode').value;
+  document.getElementById('daysWrap').style.display  = mode === 'days'  ? '' : 'none';
+  document.getElementById('rangeWrap').style.display = mode === 'range' ? '' : 'none';
 }
 
-function onCampaignChange() {
-  var account = document.getElementById('selAccount').value;
-  var mkt     = document.getElementById('selMkt').value;
-  var campId  = document.getElementById('selCampaign').value;
-  var ag = document.getElementById('selAdGroup');
-  ag.innerHTML = '<option value="">Все группы</option>';
-  if (campId) {
-    fetch('/automation/bid-automation/ad-groups?account_type=' + account + '&marketplace=' + mkt + '&campaign_id=' + encodeURIComponent(campId))
-      .then(function(r){ return r.json(); })
-      .then(function(d) {
-        if (d.error || !d.rows) { loadData(); return; }
-        var html = '<option value="">Все группы</option>';
-        d.rows.forEach(function(g) {
-          var mark = g.ad_group_state === 'ENABLED' ? '' : ' ⏸';
-          html += '<option value="' + esc(g.ad_group_id) + '">' + esc(g.ad_group_name) + mark + '</option>';
-        });
-        ag.innerHTML = html;
-        loadData();
-      });
-  } else {
-    loadData();
-  }
-}
-
+// ── Data loading ───────────────────────────────────────────────────────────
 function prevPage() { if (page > 1) { page--; fetchRows(); } }
 function nextPage() { if (page < Math.ceil(totalRows / perPage)) { page++; fetchRows(); } }
 
@@ -518,46 +611,37 @@ function debounceLoad() {
   debTimer = setTimeout(loadData, 400);
 }
 
-function toggleDateWindow() {
-  var on = document.getElementById('chkDateWindow').checked;
-  document.getElementById('dateFields').style.display = on ? 'flex' : 'none';
-  document.getElementById('selDays').style.display = on ? 'none' : '';
-  if (!on) loadData();
-}
-
 function loadData() {
   page = 1;
   fetchRows();
 }
 
 function fetchRows() {
-  var account  = document.getElementById('selAccount').value;
-  var mkt      = document.getElementById('selMkt').value;
-  var tgtType  = document.getElementById('selTgtType').value;
-  var state    = document.getElementById('selState').value;
-  var campState= document.getElementById('selCampState').value;
-  var campId   = document.getElementById('selCampaign').value;
-  var agId     = document.getElementById('selAdGroup').value;
-  var filter   = document.getElementById('inpFilter').value.trim();
-  var useDates = document.getElementById('chkDateWindow').checked;
-  var fromLast = document.getElementById('chkFromLastChange').checked;
+  var mkt        = document.getElementById('selMkt').value;
+  var tgtType    = document.getElementById('selTgtType').value;
+  var state      = document.getElementById('selState').value;
+  var campState  = document.getElementById('selCampState').value;
+  var groupState = document.getElementById('selGroupState').value;
+  var filter     = document.getElementById('inpFilter').value.trim();
+  var periodMode = document.getElementById('periodMode').value;
+  var fromLast   = document.getElementById('chkFromLastChange').checked;
 
   var params = new URLSearchParams({
-    account_type: account,
+    account_type: acct,
     marketplace:  mkt,
     sort_by:      sortCol,
     sort_dir:     sortDir,
     page:         page,
     per_page:     perPage
   });
-  if (tgtType)   params.set('targeting_type', tgtType);
-  if (state)     params.set('state_filter', state);
-  if (campState) params.set('camp_state', campState);
-  if (campId)    params.set('campaign_id', campId);
-  if (agId)      params.set('ad_group_id', agId);
-  if (filter)    params.set('name_filter', filter);
-  if (fromLast)  params.set('from_last_change', '1');
-  if (useDates) {
+  if (tgtType)    params.set('targeting_type', tgtType);
+  if (state)      params.set('state_filter', state);
+  if (campState)  params.set('camp_state', campState);
+  if (groupState) params.set('group_state', groupState);
+  if (filter)     params.set('name_filter', filter);
+  if (fromLast)   params.set('from_last_change', '1');
+  if (selectedPortfolios.length) params.set('portfolio_ids', selectedPortfolios.join(','));
+  if (periodMode === 'range') {
     params.set('date_from', document.getElementById('dateFrom').value);
     params.set('date_to',   document.getElementById('dateTo').value);
   } else {
@@ -617,9 +701,9 @@ function renderTable() {
     var action = isBlocked ? 'hold' : getRuleAction(r);
     var rColor = getRuleColor(action);
     var rec = recommendations[r.entity_id] || '';
-    var cat = getAgeCategory(ageClicks(r));
-    var catLabel = cat === 'new' ? 'new' : cat === 'medium' ? 'med' : 'mat';
-    var catText  = cat === 'new' ? 'новый' : cat === 'medium' ? 'средний' : 'зрелый';
+    var matched = matchRule(r);
+    var catColor = matched ? matched.color : '#aaaab8';
+    var catText  = matched ? matched.name : '—';
     var stateClass = (r.keyword_state === 'ENABLED') ? 'dot-on' : 'dot-off';
     var kwText = r.keyword_text || r.targeting || '—';
     var matchType = normalizeMatch(r.match_type || r.keyword_type || '');
@@ -632,7 +716,7 @@ function renderTable() {
     html += '    <button class="expand-btn" onclick="toggleExpand(' + i + ',' + q(r.entity_id) + ',' + q(r.entity_type) + ')" id="eb-' + i + '" style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:11px;flex-shrink:0">+</button>';
     html += '    <span class="dot ' + stateClass + '"></span>';
     html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
-    html += '    <span class="badge badge-' + catLabel + '" title="Возраст товара по кликам ASIN в группе: ' + ageClicks(r).toLocaleString() + '">' + catText + '</span>';
+    html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Возраст товара по кликам ASIN (все кампании): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
     if (rec) html += '    <span class="att-badge">!</span>';
     html += '  </div>';
     html += '  <div style="font-size:10px;color:var(--dim);margin-top:1px;padding-left:26px">' + esc(r.campaign_name||'') + ' / ' + esc(r.ad_group_name||'') + '</div>';
@@ -641,6 +725,15 @@ function renderTable() {
     html += '<td>';
     html += '  <div class="bid-wrap">';
     html += '    <button class="bid-btn" onclick="openBidEdit(' + q(rid) + ')" id="bbt-' + rid + '">' + fmt2(r.bid) + '</button>';
+    // Recommended new bid next to the current one, with a small % delta
+    if (!isBlocked && (action === 'raise' || action === 'lower')) {
+      var nb = calcNewBid(r);
+      var base = r.bid || 0;
+      var pct = base > 0 ? Math.round((nb - base) / base * 100) : 0;
+      var sign = pct > 0 ? '+' : '';
+      html += '    <span style="color:var(--dim);font-size:11px">→</span>';
+      html += '    <span class="rec-bid" style="color:' + rColor + '" title="Рекомендуемая ставка">$' + nb.toFixed(2) + '<span class="rec-pct">' + sign + pct + '%</span></span>';
+    }
     html += '    <div class="bid-edit" id="be-' + rid + '" data-eid="' + esc(r.entity_id) + '" data-etype="' + esc(r.entity_type) + '" data-oldbid="' + (r.bid||0) + '">';
     html += '      <input class="bid-inp" id="bi-' + rid + '" type="number" step="0.01" min="0.02" value="' + (r.bid||0.30) + '">';
     html += '      <button class="bid-ok" onclick="saveKwBid(' + q(rid) + ')">OK</button>';
@@ -711,9 +804,9 @@ function toggleExpand(i, entityId, entityType) {
 }
 
 function loadExpandPanel(i, entityId, entityType, cont) {
-  var account = document.getElementById('selAccount').value;
+  var account = acct;
   var mkt     = document.getElementById('selMkt').value;
-  var useDates = document.getElementById('chkDateWindow').checked;
+  var useDates = document.getElementById('periodMode').value === 'range';
   var days    = document.getElementById('selDays').value;
   var dateFrom = document.getElementById('dateFrom').value;
   var dateTo   = document.getElementById('dateTo').value;
@@ -850,7 +943,7 @@ function saveKwBid(rid) {
   var inp = document.getElementById('bi-' + rid);
   var newBid = parseFloat(inp.value);
   if (isNaN(newBid) || newBid < 0.02) { inp.style.borderColor='var(--accent)'; return; }
-  var account = document.getElementById('selAccount').value;
+  var account = acct;
   var mkt     = document.getElementById('selMkt').value;
   fetch('/control/add', {
     method: 'POST',
@@ -941,7 +1034,7 @@ function sortBy(col) {
 
 // ── Queue selected ─────────────────────────────────────────────────────────
 function applyRuleSelected() {
-  var account = document.getElementById('selAccount').value;
+  var account = acct;
   var mkt     = document.getElementById('selMkt').value;
   var items = [];
   selectedIds.forEach(function(entityId) {
@@ -1092,31 +1185,86 @@ function renderStatusBar() {
   document.getElementById('pgNext').disabled = page >= p;
 }
 
-// ── Rules ──────────────────────────────────────────────────────────────────
+// ── Rules (editable table of rows) ──────────────────────────────────────────
 function loadRulesFromStorage() {
   try {
     var s = localStorage.getItem('ba_rules');
-    if (s) return JSON.parse(s);
+    if (s) {
+      var parsed = JSON.parse(s);
+      if (Array.isArray(parsed) && parsed.length) return parsed;   // new format
+    }
   } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_RULES));
 }
 
-function saveRules() {
-  var cats = ['new', 'medium', 'mature'];
-  cats.forEach(function(cat) {
-    rules[cat].highAcos  = parseFloat(document.getElementById('r_' + cat + '_highAcos').value) || rules[cat].highAcos;
-    rules[cat].highPct   = parseFloat(document.getElementById('r_' + cat + '_highPct').value)  || rules[cat].highPct;
-    rules[cat].lowAcos   = parseFloat(document.getElementById('r_' + cat + '_lowAcos').value)  || rules[cat].lowAcos;
-    rules[cat].lowPct    = parseFloat(document.getElementById('r_' + cat + '_lowPct').value)   || rules[cat].lowPct;
-    rules[cat].minBid    = parseFloat(document.getElementById('r_' + cat + '_minBid').value)   || rules[cat].minBid;
-    rules[cat].maxBid    = parseFloat(document.getElementById('r_' + cat + '_maxBid').value)   || rules[cat].maxBid;
-    rules[cat].minClicks = parseInt(document.getElementById('r_' + cat + '_minClicks').value)  || 0;
+var RULE_COLS = [
+  { key:'name',     label:'Название',         type:'text',  w:'110px' },
+  { key:'ageFrom',  label:'ASIN кл. от',      type:'number',w:'80px'  },
+  { key:'ageTo',    label:'до',               type:'number',w:'80px'  },
+  { key:'highAcos', label:'ACoS> сниз.',      type:'number',w:'80px'  },
+  { key:'highPct',  label:'−%',               type:'number',w:'60px'  },
+  { key:'lowAcos',  label:'ACoS< повыс.',     type:'number',w:'80px'  },
+  { key:'lowPct',   label:'+%',               type:'number',w:'60px'  },
+  { key:'minBid',   label:'мин $',            type:'number',w:'70px'  },
+  { key:'maxBid',   label:'макс $',           type:'number',w:'70px'  },
+  { key:'minClicks',label:'мин кл. ключа',    type:'number',w:'80px'  }
+];
+
+function renderRulesPanel() {
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr>';
+  html += '<th style="width:14px"></th>';
+  RULE_COLS.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
+  html += '<th style="width:60px"></th>';
+  html += '</tr></thead><tbody id="rulesTbody">';
+  rules.forEach(function(r, idx){ html += ruleRowHtml(r, idx); });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:10px"><button class="btn btn-s" onclick="addRule()" style="height:28px;font-size:12px">+ Добавить правило</button></div>';
+  document.getElementById('rulesGrid').innerHTML = html;
+}
+
+function ruleRowHtml(r, idx) {
+  var h = '<tr data-ridx="' + idx + '">';
+  h += '<td style="padding:3px 4px"><input type="color" value="' + (r.color||'#888888') + '" onchange="ruleEdit(' + idx + ',\'color\',this.value)" style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0"></td>';
+  RULE_COLS.forEach(function(c){
+    var v = r[c.key];
+    if (v == null) v = '';
+    var ph = (c.key === 'ageTo') ? '∞' : '';
+    h += '<td style="padding:3px 4px"><input type="' + c.type + '" value="' + esc(v) + '" placeholder="' + ph + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)" style="width:100%;height:26px;padding:0 6px;border:1px solid var(--border);border-radius:5px;font-family:' + (c.type==='number'?'\'DM Mono\',monospace':'inherit') + ';font-size:11px;background:var(--surface)"></td>';
   });
+  h += '<td style="padding:3px 4px;text-align:center"><button class="btn btn-s" onclick="removeRule(' + idx + ')" style="height:24px;width:24px;padding:0;font-size:13px;color:var(--red)" title="Удалить">×</button></td>';
+  h += '</tr>';
+  return h;
+}
+
+function ruleEdit(idx, key, val) {
+  if (!rules[idx]) return;
+  if (key === 'name' || key === 'color') rules[idx][key] = val;
+  else if (key === 'ageTo' && (val === '' || val == null)) rules[idx][key] = null;
+  else rules[idx][key] = parseFloat(val);
+}
+
+function addRule() {
+  var last = rules[rules.length - 1] || { ageTo: 0 };
+  rules.push({
+    name:'Новое', color:'#6c3fc9',
+    ageFrom: last.ageTo == null ? 0 : last.ageTo, ageTo: null,
+    highAcos:40, highPct:15, lowAcos:12, lowPct:15, minBid:0.20, maxBid:5.00, minClicks:0
+  });
+  renderRulesPanel();
+}
+
+function removeRule(idx) {
+  rules.splice(idx, 1);
+  renderRulesPanel();
+}
+
+function saveRules() {
   localStorage.setItem('ba_rules', JSON.stringify(rules));
   var st = document.getElementById('rulesSaveStatus');
   st.textContent = 'Сохранено';
   setTimeout(function(){ st.textContent = ''; }, 2000);
-  renderTable(); // re-render with new rules
+  renderTable();
 }
 
 function resetRules() {
@@ -1124,29 +1272,6 @@ function resetRules() {
   localStorage.removeItem('ba_rules');
   renderRulesPanel();
   renderTable();
-}
-
-function renderRulesPanel() {
-  var cats = ['new', 'medium', 'mature'];
-  var html = '';
-  cats.forEach(function(cat) {
-    var r = rules[cat];
-    html += '<div class="rule-card">';
-    html += '<h4><span class="rule-dot" style="background:' + r.color + ';border-color:' + r.color + '33;width:12px;height:12px"></span>' + r.label + '</h4>';
-    html += field(cat, 'highAcos',  'ACoS снизить (%) >',   r.highAcos);
-    html += field(cat, 'highPct',   'Снижение ставки (%)',    r.highPct);
-    html += field(cat, 'lowAcos',   'ACoS повысить (%) <',   r.lowAcos);
-    html += field(cat, 'lowPct',    'Повышение ставки (%)',   r.lowPct);
-    html += field(cat, 'minBid',    'Минимальная ставка ($)', r.minBid);
-    html += field(cat, 'maxBid',    'Максимальная ставка ($)',r.maxBid);
-    html += field(cat, 'minClicks', 'Мин. кликов для реш.',  r.minClicks);
-    html += '</div>';
-  });
-  document.getElementById('rulesGrid').innerHTML = html;
-}
-
-function field(cat, key, label, val) {
-  return '<div class="rule-field"><label>' + label + '</label><input id="r_' + cat + '_' + key + '" type="number" step="0.01" value="' + val + '"></div>';
 }
 
 function toggleRules() {
@@ -1164,10 +1289,9 @@ renderRulesPanel();
   var d30   = new Date(); d30.setDate(today.getDate() - 30);
   document.getElementById('dateTo').value   = today.toISOString().split('T')[0];
   document.getElementById('dateFrom').value = d30.toISOString().split('T')[0];
-  document.getElementById('dateFields').style.display = 'none';
 })();
 
-loadCampaigns();
+loadPortfolios();
 loadData();
 </script>
 </body>
