@@ -110,6 +110,10 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
 /* Bid button */
 .bid-wrap{display:flex;align-items:center;gap:4px}
 .bid-btn{font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--text);transition:border-color .12s;white-space:nowrap}
+.sttab-btn{height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);text-transform:none;letter-spacing:0;transition:all .12s}
+.sttab-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cur-bid{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.newbid-btn{font-weight:600}
 .rec-bid{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
 .rec-pct{font-size:9px;opacity:.8}
 .bid-btn:hover{border-color:var(--accent)}
@@ -328,7 +332,16 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       </label>
       <span style="font-size:11px;color:var(--dim)">аналитика считается с даты последнего изменения ставки каждого ключа</span>
       <div class="msep"></div>
-      <button class="mbt att-filter-btn" id="attFilterBtn" onclick="toggleAttFilter()" title="Только строки с рекомендацией">Требует внимания</button>
+      <span class="mode-lbl">Рекомендация</span>
+      <select id="selRecFilter" onchange="setRecFilter(this.value)" style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px">
+        <option value="">Все</option>
+        <option value="lower">Снизить</option>
+        <option value="raise">Повысить</option>
+        <option value="hold">Удерживать</option>
+        <option value="new">Новые (мало данных)</option>
+        <option value="changed">С изменением ставки</option>
+      </select>
+      <button class="mbt att-filter-btn" id="attFilterBtn" onclick="toggleAttFilter()" title="Только строки с заметкой">Требует внимания</button>
       <div class="msep"></div>
       <input type="text" id="inpFilter" placeholder="Поиск по тексту..." style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px;width:180px" oninput="debounceLoad()">
       <span id="loadStatus" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
@@ -445,6 +458,8 @@ var expandedRows = {};
 var selectedIds = new Set();
 var blockedIds = new Set();
 var recommendations = {};  // entity_id → string
+var bidOverrides = {};     // entity_id → manually edited new bid
+var recFilter = '';        // '' | raise | lower | hold | new
 var panelCtx = {};         // expand index → {agId, campId, account, mkt, negTexts, negAsins}
 var _negTerms = [];        // terms staged for the negatives modal
 var _negCtx = null;
@@ -532,6 +547,13 @@ function calcNewBid(row) {
   if (action === 'lower') nb = bid * (1 - r.highPct / 100);
   nb = Math.max(r.minBid, Math.min(r.maxBid, nb));
   return Math.round(nb * 100) / 100;
+}
+
+// The new bid actually used: manual override if the user edited it, else the rule.
+function effectiveNewBid(row) {
+  var o = bidOverrides[row.entity_id];
+  if (o != null && !isNaN(o)) return o;
+  return calcNewBid(row);
 }
 
 // ── Account / portfolio / period ────────────────────────────────────────────
@@ -688,9 +710,15 @@ function renderTable() {
   }
   document.getElementById('tableMsg').textContent = '';
 
-  var visibleRows = attFilterOn
-    ? rows.filter(function(r){ return recommendations[r.entity_id]; })
-    : rows;
+  var visibleRows = rows;
+  if (attFilterOn) visibleRows = visibleRows.filter(function(r){ return recommendations[r.entity_id]; });
+  if (recFilter) {
+    visibleRows = visibleRows.filter(function(r){
+      if (blockedIds.has(r.entity_id)) return recFilter === 'hold';
+      if (recFilter === 'changed') return Math.abs(effectiveNewBid(r) - (r.bid||0)) >= 0.01;
+      return getRuleAction(r) === recFilter;
+    });
+  }
 
   var html = '';
   for (var i = 0; i < visibleRows.length; i++) {
@@ -724,19 +752,20 @@ function renderTable() {
     html += '<td class="mono">' + esc(matchType) + '</td>';
     html += '<td>';
     html += '  <div class="bid-wrap">';
-    html += '    <button class="bid-btn" onclick="openBidEdit(' + q(rid) + ')" id="bbt-' + rid + '">' + fmt2(r.bid) + '</button>';
-    // Recommended new bid next to the current one, with a small % delta
-    if (!isBlocked && (action === 'raise' || action === 'lower')) {
-      var nb = calcNewBid(r);
-      var base = r.bid || 0;
-      var pct = base > 0 ? Math.round((nb - base) / base * 100) : 0;
-      var sign = pct > 0 ? '+' : '';
-      html += '    <span style="color:var(--dim);font-size:11px">→</span>';
-      html += '    <span class="rec-bid" style="color:' + rColor + '" title="Рекомендуемая ставка">$' + nb.toFixed(2) + '<span class="rec-pct">' + sign + pct + '%</span></span>';
-    }
-    html += '    <div class="bid-edit" id="be-' + rid + '" data-eid="' + esc(r.entity_id) + '" data-etype="' + esc(r.entity_type) + '" data-oldbid="' + (r.bid||0) + '">';
-    html += '      <input class="bid-inp" id="bi-' + rid + '" type="number" step="0.01" min="0.02" value="' + (r.bid||0.30) + '">';
-    html += '      <button class="bid-ok" onclick="saveKwBid(' + q(rid) + ')">OK</button>';
+    // Current bid (read-only)
+    html += '    <span class="cur-bid" title="Текущая ставка">' + fmt2(r.bid) + '</span>';
+    html += '    <span style="color:var(--dim);font-size:11px">→</span>';
+    // New bid (editable). Shows the override if set, otherwise the recommendation.
+    var nb = effectiveNewBid(r);
+    var base = r.bid || 0;
+    var pct = base > 0 ? Math.round((nb - base) / base * 100) : 0;
+    var sign = pct > 0 ? '+' : '';
+    var changed = Math.abs(nb - base) >= 0.01;
+    var nbColor = changed ? rColor : 'var(--muted)';
+    html += '    <button class="bid-btn newbid-btn" onclick="openBidEdit(' + q(rid) + ')" id="bbt-' + rid + '" style="color:' + nbColor + ';border-color:' + (changed ? nbColor : 'var(--border)') + '" title="Нажмите чтобы изменить новую ставку">$' + nb.toFixed(2) + (changed ? ' <span class="rec-pct">' + sign + pct + '%</span>' : '') + '</button>';
+    html += '    <div class="bid-edit" id="be-' + rid + '" data-eid="' + esc(r.entity_id) + '" data-oldbid="' + (r.bid||0) + '">';
+    html += '      <input class="bid-inp" id="bi-' + rid + '" type="number" step="0.01" min="0.02" value="' + nb.toFixed(2) + '">';
+    html += '      <button class="bid-ok" onclick="saveNewBid(' + q(rid) + ')">OK</button>';
     html += '      <button class="bid-cx" onclick="closeBidEdit(' + q(rid) + ')">×</button>';
     html += '    </div>';
     html += '  </div>';
@@ -863,13 +892,18 @@ function loadExpandPanel(i, entityId, entityType, cont) {
       html += '</div>';
     }
 
-    // Search terms
+    // Search terms + negatives tabs
+    var negCount = (negData.texts || []).length + (negData.asins || []).length;
     html += '<div class="exp-section">';
-    html += '<div class="exp-head" style="display:flex;align-items:center;gap:10px">';
-    html += '  <span>Поисковые запросы</span>';
-    html += '  <label style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" onchange="stToggleAll(' + i + ',this.checked)"> выбрать все</label>';
-    html += '  <button class="btn btn-s" style="height:24px;padding:0 10px;font-size:11px;margin-left:auto" onclick="openNegModal(' + i + ')">✕ В минус слова</button>';
+    html += '<div class="exp-head" style="display:flex;align-items:center;gap:8px">';
+    html += '  <button class="sttab-btn on" id="sttabb-q-' + i + '" onclick="stTab(' + i + ',\'q\')">Поисковые запросы</button>';
+    html += '  <button class="sttab-btn" id="sttabb-n-' + i + '" onclick="stTab(' + i + ',\'n\')">Минусы группы (' + negCount + ')</button>';
+    html += '  <label id="stselall-' + i + '" style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:12px"><input type="checkbox" onchange="stToggleAll(' + i + ',this.checked)"> выбрать все</label>';
+    html += '  <button class="btn btn-s" id="stnegbtn-' + i + '" style="height:24px;padding:0 10px;font-size:11px;margin-left:auto" onclick="openNegModal(' + i + ')">✕ В минус слова</button>';
     html += '</div>';
+
+    // Tab: queries
+    html += '<div id="sttab-q-' + i + '">';
     if (stData.error) {
       html += '<div style="padding:10px;color:var(--accent);font-size:12px">' + esc(stData.error) + '</div>';
     } else if (!stData.rows || !stData.rows.length) {
@@ -892,6 +926,19 @@ function loadExpandPanel(i, entityId, entityType, cont) {
       });
       html += '</tbody></table>';
     }
+    html += '</div>';
+
+    // Tab: negatives in the group
+    html += '<div id="sttab-n-' + i + '" style="display:none">';
+    if (!negCount) {
+      html += '<div style="padding:10px;color:var(--dim);font-size:12px">В этой группе нет минус-слов</div>';
+    } else {
+      html += '<div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">';
+      (negData.texts || []).forEach(function(t){ html += '<span class="term-tag">' + esc(t) + '</span>'; });
+      (negData.asins || []).forEach(function(a){ html += '<span class="term-tag asin">' + esc(a) + '</span>'; });
+      html += '</div>';
+    }
+    html += '</div>';
     html += '</div>';
 
     // Bid history
@@ -935,36 +982,16 @@ function closeBidEdit(rid) {
   document.getElementById('bbt-' + rid).style.display = '';
   document.getElementById('be-' + rid).style.display = 'none';
 }
-function saveKwBid(rid) {
+// Save the manually edited NEW bid as an override (staged, not sent until queued)
+function saveNewBid(rid) {
   var be = document.getElementById('be-' + rid);
-  var entityId   = be.dataset.eid;
-  var entityType = be.dataset.etype;
-  var oldBid     = parseFloat(be.dataset.oldbid) || 0;
+  var entityId = be.dataset.eid;
   var inp = document.getElementById('bi-' + rid);
   var newBid = parseFloat(inp.value);
   if (isNaN(newBid) || newBid < 0.02) { inp.style.borderColor='var(--accent)'; return; }
-  var account = acct;
-  var mkt     = document.getElementById('selMkt').value;
-  fetch('/control/add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      account_type: account,
-      marketplace:  mkt,
-      entity_type:  entityType,
-      entity_id:    entityId,
-      field_name:   'bid',
-      new_value:    String(newBid),
-      old_value:    String(oldBid)
-    })
-  }).then(function(r){ return r.json(); })
-    .then(function(d) {
-      closeBidEdit(rid);
-      document.getElementById('bbt-' + rid).textContent = '$' + newBid.toFixed(2);
-      var rowObj = rows.find(function(x){ return x.entity_id === entityId; });
-      if (rowObj) { rowObj.prev_bid = rowObj.bid; rowObj.bid = newBid; }
-    })
-    .catch(function(e){ alert('Ошибка: ' + e.message); });
+  bidOverrides[entityId] = Math.round(newBid * 100) / 100;
+  closeBidEdit(rid);
+  renderTable();
 }
 
 // ── Selection ──────────────────────────────────────────────────────────────
@@ -1016,6 +1043,11 @@ function toggleAttFilter() {
   renderTable();
 }
 
+function setRecFilter(v) {
+  recFilter = v;
+  renderTable();
+}
+
 // ── Recommendations ────────────────────────────────────────────────────────
 function saveRec(entityId, val) {
   if (val) recommendations[entityId] = val;
@@ -1041,10 +1073,8 @@ function applyRuleSelected() {
     if (blockedIds.has(entityId)) return;
     var rowObj = rows.find(function(r){ return r.entity_id === entityId; });
     if (!rowObj) return;
-    var action = getRuleAction(rowObj);
-    if (action === 'hold' || action === 'new') return;
-    var nb = calcNewBid(rowObj);
-    if (Math.abs(nb - (rowObj.bid || 0)) < 0.01) return;
+    var nb = effectiveNewBid(rowObj);   // uses manual override if set
+    if (Math.abs(nb - (rowObj.bid || 0)) < 0.01) return;  // no change → skip
     items.push({
       account_type: account,
       marketplace:  mkt,
@@ -1055,7 +1085,7 @@ function applyRuleSelected() {
       old_value:    String(rowObj.bid || '')
     });
   });
-  if (!items.length) { alert('Нет строк с изменениями (blocked или hold/new исключены)'); return; }
+  if (!items.length) { alert('Нет строк с изменениями (заблокированные или без изменения ставки исключены)'); return; }
   if (!confirm('Добавить ' + items.length + ' изменений в очередь?')) return;
   queueItems(items);
 }
@@ -1083,6 +1113,17 @@ var isAsin = function(t){ return /^[Bb]0[0-9A-Za-z]{8}$/.test(t || ''); };
 
 function stToggleAll(i, checked) {
   document.querySelectorAll('.stcb-' + i).forEach(function(cb){ if (!cb.disabled) cb.checked = checked; });
+}
+
+function stTab(i, which) {
+  var q = which === 'q';
+  document.getElementById('sttab-q-' + i).style.display = q ? '' : 'none';
+  document.getElementById('sttab-n-' + i).style.display = q ? 'none' : '';
+  document.getElementById('sttabb-q-' + i).classList.toggle('on', q);
+  document.getElementById('sttabb-n-' + i).classList.toggle('on', !q);
+  // select-all + negative button only make sense on the queries tab
+  document.getElementById('stselall-' + i).style.display = q ? '' : 'none';
+  document.getElementById('stnegbtn-' + i).style.display = q ? '' : 'none';
 }
 
 function openModal(id)  { document.getElementById(id).classList.add('op'); }

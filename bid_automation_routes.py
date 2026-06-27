@@ -94,20 +94,24 @@ def ba_keywords():
     else:
         start_expr = fallback_start
 
-    # Campaign-level filters
+    # Filters applied to the keyword/target rows themselves
     camp_conds = [
         f"marketplace = '{safe_mkt}'",
         "entity_type IN ('keyword', 'product_targeting')",
     ]
-    if portfolio_ids_raw:
-        pids = [p.strip() for p in portfolio_ids_raw.split(',') if p.strip()]
-        if pids:
-            quoted = ','.join(f"'{_safe(p)}'" for p in pids)
-            camp_conds.append(f"portfolio_id IN ({quoted})")
     if campaign_id_raw:
         camp_conds.append(f"campaign_id = '{_safe(campaign_id_raw)}'")
     if ad_group_id_raw:
         camp_conds.append(f"ad_group_id = '{_safe(ad_group_id_raw)}'")
+
+    # Portfolio lives on the CAMPAIGN entity, not on keyword/target rows — apply
+    # it to the campaign CTE (otherwise it filters out all keyword rows).
+    portfolio_cond = ''
+    if portfolio_ids_raw:
+        pids = [p.strip() for p in portfolio_ids_raw.split(',') if p.strip()]
+        if pids:
+            quoted = ','.join(f"'{_safe(p)}'" for p in pids)
+            portfolio_cond = f"AND portfolio_id IN ({quoted})"
 
     kw_extra_conds = []
     if state_filter in ('ENABLED', 'PAUSED'):
@@ -188,7 +192,7 @@ def ba_keywords():
         SELECT *,
             ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
         FROM {camp_table}
-        WHERE entity_type = 'campaign' AND marketplace = '{safe_mkt}' {camp_filter}
+        WHERE entity_type = 'campaign' AND marketplace = '{safe_mkt}' {camp_filter} {portfolio_cond}
     ),
     c AS (SELECT * FROM c_raw WHERE rn = 1),
     g_raw AS (
