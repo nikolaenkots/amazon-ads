@@ -59,6 +59,7 @@ def ba_keywords():
     name_filter       = args.get('name_filter', '').strip()
     state_filter      = args.get('state_filter', '')    # ENABLED | PAUSED | ''
     camp_state_filter = args.get('camp_state', '')      # ENABLED | PAUSED | ''
+    group_state_filter= args.get('group_state', '')     # ENABLED | PAUSED | ''
     from_last_change  = args.get('from_last_change', '') in ('1', 'true', 'yes')
     sort_by           = args.get('sort_by', 'clicks')
     sort_dir          = args.get('sort_dir', 'DESC').upper()
@@ -72,6 +73,7 @@ def ba_keywords():
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
     stat_table = f"`{PROJECT_ID}.{DATASET}.targets_stats_{suffix}`"
     clog_table = f"`{PROJECT_ID}.{DATASET}.change_log_{suffix}`"
+    asin_table = f"`{PROJECT_ID}.{DATASET}.asin_stats_{suffix}`"
     pf_table   = f"`{PROJECT_ID}.{DATASET}.portfolio_labels`"
 
     safe_mkt = _safe(marketplace)
@@ -123,6 +125,10 @@ def ba_keywords():
     if camp_state_filter in ('ENABLED', 'PAUSED'):
         camp_extra_conds.append(f"campaign_state = '{camp_state_filter}'")
     camp_filter = ('AND ' + ' AND '.join(camp_extra_conds)) if camp_extra_conds else ''
+
+    group_filter = ''
+    if group_state_filter in ('ENABLED', 'PAUSED'):
+        group_filter = f"AND ad_group_state = '{group_state_filter}'"
 
     allowed_sort = {
         'clicks', 'cost', 'acos', 'sales', 'bid', 'last_change_date',
@@ -191,7 +197,7 @@ def ba_keywords():
         FROM {camp_table}
         WHERE entity_type = 'ad_group' AND marketplace = '{safe_mkt}'
     ),
-    g AS (SELECT * FROM g_raw WHERE rn = 1),
+    g AS (SELECT * FROM g_raw WHERE rn = 1 {group_filter}),
     -- last bid change from change_log (defined before stats so the analysis
     -- window can start at each entity's last change date)
     last_change AS (
@@ -219,6 +225,27 @@ def ba_keywords():
           {upper_bound}
         GROUP BY s.keyword_id
     ),
+    -- Product "age" = total clicks on the ASIN across ALL campaigns (lifetime).
+    -- Map ad group → its advertised ASIN(s), then sum each ASIN's all-campaign clicks.
+    asin_clicks AS (
+        SELECT advertised_asin, SUM(clicks) AS asin_total_clicks
+        FROM {asin_table}
+        WHERE marketplace = '{safe_mkt}'
+          AND advertised_asin IS NOT NULL AND advertised_asin != ''
+        GROUP BY advertised_asin
+    ),
+    ag_asin AS (
+        SELECT DISTINCT ad_group_id, advertised_asin
+        FROM {asin_table}
+        WHERE marketplace = '{safe_mkt}'
+          AND advertised_asin IS NOT NULL AND advertised_asin != ''
+    ),
+    grp_clicks AS (
+        SELECT aa.ad_group_id, SUM(ac.asin_total_clicks) AS group_total_clicks
+        FROM ag_asin aa
+        JOIN asin_clicks ac ON ac.advertised_asin = aa.advertised_asin
+        GROUP BY aa.ad_group_id
+    ),
     prev_bid AS (
         SELECT
             cl.entity_id,
@@ -241,7 +268,7 @@ def ba_keywords():
             kw.match_type,
             kw.keyword_type,
             kw.keyword_state,
-            kw.bid,
+            COALESCE(kw.bid, SAFE_CAST(g.ad_group_default_bid AS FLOAT64)) AS bid,
             kw.ad_group_id,
             kw.campaign_id,
             kw.marketplace,
@@ -261,10 +288,12 @@ def ba_keywords():
                  THEN ROUND(COALESCE(st.cost,0) / st.sales * 100, 1)
                  ELSE NULL END AS acos,
             lc.last_change_date,
-            pv.prev_bid
+            pv.prev_bid,
+            COALESCE(gc.group_total_clicks, 0) AS group_total_clicks
         FROM kw
         INNER JOIN c  ON c.campaign_id  = kw.campaign_id  AND c.marketplace = kw.marketplace
         INNER JOIN g  ON g.ad_group_id  = kw.ad_group_id  AND g.marketplace = kw.marketplace
+        LEFT JOIN grp_clicks gc ON gc.ad_group_id = kw.ad_group_id
         LEFT JOIN {pf_table} pl
             ON pl.portfolio_id  = c.portfolio_id
             AND pl.marketplace  = c.marketplace
@@ -314,6 +343,7 @@ def ba_keywords():
                 'acos':           _cvt(r['acos']) if r['acos'] is not None else None,
                 'last_change_date': r['last_change_date'].isoformat() if r['last_change_date'] else None,
                 'prev_bid':       _cvt(r['prev_bid']) if r['prev_bid'] else None,
+                'group_total_clicks': r['group_total_clicks'],
             })
         return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
@@ -398,6 +428,84 @@ def ba_ad_groups():
         return jsonify({'rows': rows})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@bid_automation_bp.route('/automation/bid-automation/negatives')
+def ba_negatives():
+    """Существующие минус-слова и минус-продукты в группе (для подсветки).
+    Возвращает множества текстов (lowercase) и ASIN (upper)."""
+    args         = request.args
+    account_type = args.get('account_type', 'MERCH').upper()
+    marketplace  = args.get('marketplace', 'US').upper()
+    ad_group_id  = args.get('ad_group_id', '').strip()
+    if not ad_group_id:
+        return jsonify({'error': 'ad_group_id обязателен'}), 400
+
+    suffix      = _suffix(account_type)
+    camp_table  = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    pend_table  = f"`{PROJECT_ID}.{DATASET}.pending_changes_{suffix}`"
+    safe_mkt    = _safe(marketplace)
+    safe_agid   = _safe(ad_group_id)
+
+    # Current negatives synced from Amazon (dedup latest by synced_at)
+    sql = f"""
+    WITH neg_raw AS (
+        SELECT entity_type, keyword_text, targeting_expression,
+            CASE WHEN entity_type = 'negative_keyword' THEN keyword_state ELSE target_state END AS st,
+            ROW_NUMBER() OVER (
+                PARTITION BY COALESCE(keyword_id, target_id), marketplace
+                ORDER BY synced_at DESC
+            ) rn
+        FROM {camp_table}
+        WHERE entity_type IN ('negative_keyword', 'negative_product_targeting')
+          AND ad_group_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+    )
+    SELECT entity_type, keyword_text, targeting_expression
+    FROM neg_raw
+    WHERE rn = 1 AND (st IS NULL OR st != 'ARCHIVED')
+    """
+
+    texts = set()
+    asins = set()
+    try:
+        client = get_client()
+        for r in client.query(sql, job_config=_QJC).result():
+            if r['entity_type'] == 'negative_keyword' and r['keyword_text']:
+                texts.add(r['keyword_text'].strip().lower())
+            elif r['entity_type'] == 'negative_product_targeting' and r['targeting_expression']:
+                expr = r['targeting_expression']
+                # формат вида: asin="B0XXXXXXXX"
+                import re
+                m = re.search(r'(B0[0-9A-Z]{8})', expr.upper())
+                if m:
+                    asins.add(m.group(1))
+                else:
+                    asins.add(expr.strip().upper())
+
+        # Также учитываем ожидающие изменения (ещё не отправленные)
+        psql = f"""
+        SELECT entity_type, new_value
+        FROM {pend_table}
+        WHERE entity_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+          AND entity_type IN ('negative_add', 'negative_product_add')
+          AND status IN ('PENDING', 'APPROVED', 'SENDING')
+        """
+        import json as _json
+        for r in client.query(psql, job_config=_QJC).result():
+            try:
+                v = _json.loads(r['new_value']) if r['new_value'] else {}
+            except Exception:
+                v = {}
+            if r['entity_type'] == 'negative_add' and v.get('text'):
+                texts.add(str(v['text']).strip().lower())
+            elif r['entity_type'] == 'negative_product_add' and v.get('asin'):
+                asins.add(str(v['asin']).strip().upper())
+
+        return jsonify({'texts': sorted(texts), 'asins': sorted(asins)})
+    except Exception as e:
+        return jsonify({'error': str(e), 'texts': [], 'asins': []}), 500
 
 
 @bid_automation_bp.route('/automation/bid-automation/search-terms')
