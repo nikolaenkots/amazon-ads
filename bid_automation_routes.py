@@ -83,7 +83,7 @@ def ba_keywords():
     # Campaign-level filters
     camp_conds = [
         f"marketplace = '{safe_mkt}'",
-        "entity_type IN ('keyword', 'target')",
+        "entity_type IN ('keyword', 'product_targeting')",
     ]
     if portfolio_ids_raw:
         pids = [p.strip() for p in portfolio_ids_raw.split(',') if p.strip()]
@@ -97,11 +97,11 @@ def ba_keywords():
 
     kw_extra_conds = []
     if state_filter in ('ENABLED', 'PAUSED'):
-        kw_extra_conds.append(f"kw.keyword_state = '{state_filter}'")
+        kw_extra_conds.append(f"keyword_state = '{state_filter}'")
     if name_filter:
         sf = _safe(name_filter)
         kw_extra_conds.append(
-            f"(LOWER(kw.keyword_text) LIKE LOWER('%{sf}%') OR LOWER(kw.targeting) LIKE LOWER('%{sf}%'))"
+            f"LOWER(keyword_text) LIKE LOWER('%{sf}%')"
         )
     kw_extra = ('AND ' + ' AND '.join(kw_extra_conds)) if kw_extra_conds else ''
 
@@ -123,7 +123,19 @@ def ba_keywords():
 
     sql = f"""
     WITH kw_raw AS (
-        SELECT *,
+        SELECT
+            COALESCE(keyword_id, target_id)  AS entity_id,
+            CASE WHEN entity_type = 'keyword' THEN 'keyword' ELSE 'target' END AS entity_type,
+            keyword_id,
+            target_id,
+            CASE WHEN entity_type = 'keyword' THEN keyword_text ELSE targeting_expression END AS keyword_text,
+            targeting_expression,
+            match_type,
+            CASE WHEN entity_type = 'keyword' THEN keyword_state ELSE target_state END AS keyword_state,
+            SAFE_CAST(CASE WHEN entity_type = 'keyword' THEN keyword_bid ELSE target_bid END AS FLOAT64) AS bid,
+            ad_group_id,
+            campaign_id,
+            marketplace,
             ROW_NUMBER() OVER (
                 PARTITION BY
                     COALESCE(keyword_id, target_id),
@@ -135,16 +147,16 @@ def ba_keywords():
     ),
     kw AS (
         SELECT
-            COALESCE(keyword_id, target_id)  AS entity_id,
-            CASE WHEN entity_type = 'keyword' THEN 'keyword' ELSE 'target' END AS entity_type,
+            entity_id,
+            entity_type,
             keyword_id,
             target_id,
             keyword_text,
-            targeting,
+            targeting_expression AS targeting,
             match_type,
-            keyword_type,
-            CASE WHEN entity_type = 'keyword' THEN keyword_state ELSE target_state END AS keyword_state,
-            SAFE_CAST(bid AS FLOAT64)        AS bid,
+            CAST(NULL AS STRING) AS keyword_type,
+            keyword_state,
+            bid,
             ad_group_id,
             campaign_id,
             marketplace
@@ -193,12 +205,13 @@ def ba_keywords():
     prev_bid AS (
         SELECT
             cl.entity_id,
-            cl.old_value  AS prev_bid
+            ANY_VALUE(cl.old_value)  AS prev_bid
         FROM {clog_table} cl
         INNER JOIN last_change lc
             ON lc.entity_id = cl.entity_id AND lc.last_change_date = cl.sent_at
         WHERE cl.field_name = 'bid'
           AND cl.result = 'SUCCESS'
+        GROUP BY cl.entity_id
     ),
     base AS (
         SELECT
@@ -368,8 +381,7 @@ def ba_bid_history():
         sent_at,
         old_value,
         new_value,
-        result,
-        note
+        result
     FROM {clog_table}
     WHERE entity_id  = '{safe_eid}'
       AND field_name = 'bid'
@@ -386,7 +398,7 @@ def ba_bid_history():
             'old_value': r['old_value'],
             'new_value': r['new_value'],
             'result':    r['result'],
-            'note':      r['note'],
+            'note':      None,
         } for r in rows]
         return jsonify({'rows': result})
     except Exception as e:
