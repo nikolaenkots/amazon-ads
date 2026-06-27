@@ -358,7 +358,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <span style="margin-left:auto;font-size:11px;color:var(--dim)" id="rulesToggleLabel">развернуть</span>
     </div>
     <div class="rules-body" id="rulesBody">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Настройки сохраняются в браузере. Цветной индикатор слева в таблице показывает рекомендуемое действие для каждого ключа.</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Правила хранятся в базе и применяются на сервере. Приоритет: портфолио+таргетинг → портфолио → глобальное+таргетинг → глобальное. Правило с выключенным «возрастом» действует на всё портфолио независимо от кликов ASIN.</div>
       <div class="rules-grid" id="rulesGrid">
         <!-- filled by JS -->
       </div>
@@ -480,14 +480,9 @@ var page = 1;
 var perPage = 100;
 var totalRows = 0;
 
-// Default rules — a flexible list of rows. Each rule matches an ASIN-age range
-// [ageFrom, ageTo) by total ASIN clicks; the first matching rule applies.
-var DEFAULT_RULES = [
-  { name:'Новые',   color:'#1a6fd4', ageFrom:0,  ageTo:10,   highAcos:50, highPct:10, lowAcos:15, lowPct:10, minBid:0.20, maxBid:5.00, minClicks:0,  noSaleClicks:15 },
-  { name:'Средние', color:'#b07800', ageFrom:10, ageTo:50,   highAcos:40, highPct:15, lowAcos:12, lowPct:15, minBid:0.20, maxBid:5.00, minClicks:10, noSaleClicks:25 },
-  { name:'Зрелые',  color:'#1a8f5c', ageFrom:50, ageTo:null, highAcos:35, highPct:20, lowAcos:10, lowPct:20, minBid:0.20, maxBid:5.00, minClicks:25, noSaleClicks:30 }
-];
-var rules = loadRulesFromStorage();
+// Rules now live in BigQuery (loaded via /rules). Each rule matches by scope
+// (global/portfolio), targeting_type (ANY/AUTO/MANUAL) and optionally ASIN-age.
+var rules = [];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function toggleNav(id) {
@@ -509,40 +504,13 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 // HTML attribute (onclick="..."). JSON.stringify uses double quotes and breaks the attr.
 function q(s) { return "'" + String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;') + "'"; }
 
-// Age = product maturity, measured by total clicks on the ASIN across ALL
-// campaigns (sent from the backend as group_total_clicks).
+// Age = product maturity, total ASIN clicks across all campaigns (from backend).
 function ageClicks(row) {
   return row.group_total_clicks != null ? row.group_total_clicks : (row.clicks || 0);
 }
 
-// Find the first rule row whose age range matches the row's ASIN clicks.
-function matchRule(row) {
-  var a = ageClicks(row);
-  for (var i = 0; i < rules.length; i++) {
-    var rr = rules[i];
-    var from = (rr.ageFrom == null ? 0 : rr.ageFrom);
-    var to   = rr.ageTo;
-    if (a >= from && (to == null || to === '' || a < to)) return rr;
-  }
-  return rules[rules.length - 1] || null;
-}
-
-function getRuleAction(row) {
-  var r = matchRule(row);
-  if (!r) return 'hold';
-  var acos = row.acos;
-  var clicks = row.clicks || 0;
-  if (clicks < r.minClicks) return 'hold';
-  if (acos == null) {
-    // Clicks but no sales: spend with zero return. Past the threshold → pause
-    // the keyword/target; otherwise it's still too early to judge.
-    if (r.noSaleClicks && clicks >= r.noSaleClicks) return 'pause';
-    return clicks > 5 ? 'hold' : 'new';
-  }
-  if (acos > r.highAcos) return 'lower';
-  if (acos < r.lowAcos)  return 'raise';
-  return 'hold';
-}
+// Action and new bid are now computed server-side (rules live in BigQuery).
+function getRuleAction(row) { return row.action || 'hold'; }
 
 function getRuleColor(action) {
   if (action === 'raise') return '#1a8f5c';
@@ -553,15 +521,7 @@ function getRuleColor(action) {
 }
 
 function calcNewBid(row) {
-  var r = matchRule(row);
-  if (!r) return row.bid || 0;
-  var action = getRuleAction(row);
-  var bid = row.bid || 0.30;
-  var nb = bid;
-  if (action === 'raise') nb = bid * (1 + r.lowPct / 100);
-  if (action === 'lower') nb = bid * (1 - r.highPct / 100);
-  nb = Math.max(r.minBid, Math.min(r.maxBid, nb));
-  return Math.round(nb * 100) / 100;
+  return row.new_bid != null ? row.new_bid : (row.bid || 0);
 }
 
 // The new bid actually used: manual override if the user edited it, else the rule.
@@ -581,6 +541,7 @@ function setAcct(a) {
   document.getElementById('tbM').classList.toggle('on', a === 'MERCH');
   document.getElementById('tbK').classList.toggle('on', a === 'KDP');
   loadPortfolios();
+  loadRules();
 }
 
 function pfToggle(e) {
@@ -625,7 +586,7 @@ function loadPortfolios() {
   document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Загрузка...</div>';
   fetch('/automation/search-terms/portfolios?account_type=' + acct + '&marketplace=' + mkt)
     .then(function(r){ return r.json(); })
-    .then(function(d){ allPortfolios = d.portfolios || []; renderPortfolios(allPortfolios); })
+    .then(function(d){ allPortfolios = d.portfolios || []; renderPortfolios(allPortfolios); if (rules.length) renderRulesPanel(); })
     .catch(function(){ document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Ошибка загрузки</div>'; });
 }
 document.addEventListener('click', function(){
@@ -681,6 +642,7 @@ function fetchRows() {
   if (groupState) params.set('group_state', groupState);
   if (filter)     params.set('name_filter', filter);
   if (fromLast)   params.set('from_last_change', '1');
+  if (recFilter)  params.set('rec_filter', recFilter);
   if (selectedPortfolios.length) params.set('portfolio_ids', selectedPortfolios.join(','));
   if (periodMode === 'range') {
     params.set('date_from', document.getElementById('dateFrom').value);
@@ -730,14 +692,8 @@ function renderTable() {
   document.getElementById('tableMsg').textContent = '';
 
   var visibleRows = rows;
+  // Recommendation filter is applied server-side; "Требует внимания" (notes) stays client-side.
   if (attFilterOn) visibleRows = visibleRows.filter(function(r){ return recommendations[r.entity_id]; });
-  if (recFilter) {
-    visibleRows = visibleRows.filter(function(r){
-      if (blockedIds.has(r.entity_id)) return recFilter === 'hold';
-      if (recFilter === 'changed') return Math.abs(effectiveNewBid(r) - (r.bid||0)) >= 0.01;
-      return getRuleAction(r) === recFilter;
-    });
-  }
 
   // Reflect the filtered count in the table header
   var thc = document.getElementById('thCount');
@@ -758,9 +714,8 @@ function renderTable() {
     var action = isBlocked ? 'hold' : getRuleAction(r);
     var rColor = getRuleColor(action);
     var rec = recommendations[r.entity_id] || '';
-    var matched = matchRule(r);
-    var catColor = matched ? matched.color : '#aaaab8';
-    var catText  = matched ? matched.name : '—';
+    var catColor = r.rule_color || '#aaaab8';
+    var catText  = r.rule_name || '—';
     var stateClass = (r.keyword_state === 'ENABLED') ? 'dot-on' : 'dot-off';
     var kwText = r.keyword_text || r.targeting || '—';
     var matchType = normalizeMatch(r.match_type || r.keyword_type || '');
@@ -1082,7 +1037,7 @@ function toggleAttFilter() {
 
 function setRecFilter(v) {
   recFilter = v;
-  renderTable();
+  loadData();   // server-side filter
 }
 
 // ── Recommendations ────────────────────────────────────────────────────────
@@ -1294,39 +1249,46 @@ function renderStatusBar() {
   document.getElementById('pgNext').disabled = page >= p;
 }
 
-// ── Rules (editable table of rows) ──────────────────────────────────────────
-function loadRulesFromStorage() {
-  try {
-    var s = localStorage.getItem('ba_rules');
-    if (s) {
-      var parsed = JSON.parse(s);
-      if (Array.isArray(parsed) && parsed.length) return parsed;   // new format
-    }
-  } catch(e) {}
-  return JSON.parse(JSON.stringify(DEFAULT_RULES));
-}
-
-var RULE_COLS = [
-  { key:'name',     label:'Название',         type:'text',  w:'110px' },
-  { key:'ageFrom',  label:'ASIN кл. от',      type:'number',w:'80px'  },
-  { key:'ageTo',    label:'до',               type:'number',w:'80px'  },
-  { key:'highAcos', label:'ACoS> сниз.',      type:'number',w:'80px'  },
-  { key:'highPct',  label:'−%',               type:'number',w:'60px'  },
-  { key:'lowAcos',  label:'ACoS< повыс.',     type:'number',w:'80px'  },
-  { key:'lowPct',   label:'+%',               type:'number',w:'60px'  },
-  { key:'minBid',   label:'мин $',            type:'number',w:'70px'  },
-  { key:'maxBid',   label:'макс $',           type:'number',w:'70px'  },
-  { key:'minClicks',label:'мин кл. ключа',    type:'number',w:'80px'  },
-  { key:'noSaleClicks',label:'кл. без продаж→off', type:'number',w:'90px' }
+// ── Rules (stored in BigQuery) ──────────────────────────────────────────────
+var NUM_RULE_COLS = [
+  { key:'age_from', label:'ASIN кл. от', age:true },
+  { key:'age_to',   label:'до',          age:true },
+  { key:'high_acos',label:'ACoS> сниз.' },
+  { key:'high_pct', label:'−%' },
+  { key:'low_acos', label:'ACoS< повыс.' },
+  { key:'low_pct',  label:'+%' },
+  { key:'min_bid',  label:'мин $' },
+  { key:'max_bid',  label:'макс $' },
+  { key:'min_clicks',   label:'мин кл. ключа' },
+  { key:'no_sale_clicks', label:'кл. без продаж→off' }
 ];
 
+function loadRules() {
+  fetch('/automation/bid-automation/rules?account_type=' + acct)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) { toast('Правила: ' + d.error, true); rules = []; }
+      else rules = d.rules || [];
+      renderRulesPanel();
+    })
+    .catch(function(e){ toast('Правила: ' + e.message, true); });
+}
+
+function pfOptionsHtml(selected) {
+  var h = '<option value="">— портфолио —</option>';
+  allPortfolios.forEach(function(p){
+    h += '<option value="' + esc(p.id) + '"' + (p.id === selected ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+  });
+  return h;
+}
+
 function renderRulesPanel() {
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1100px">';
   html += '<thead><tr>';
-  html += '<th style="width:14px"></th>';
-  RULE_COLS.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
-  html += '<th style="width:60px"></th>';
-  html += '</tr></thead><tbody id="rulesTbody">';
+  var heads = ['', 'Название', 'Область', 'Портфолио', 'Таргетинг', 'Возраст'];
+  heads.forEach(function(l){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + l + '</th>'; });
+  NUM_RULE_COLS.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
+  html += '<th></th></tr></thead><tbody>';
   rules.forEach(function(r, idx){ html += ruleRowHtml(r, idx); });
   html += '</tbody></table>';
   html += '<div style="margin-top:10px"><button class="btn btn-s" onclick="addRule()" style="height:28px;font-size:12px">+ Добавить правило</button></div>';
@@ -1334,13 +1296,35 @@ function renderRulesPanel() {
 }
 
 function ruleRowHtml(r, idx) {
+  var inpStyle = 'width:100%;height:26px;padding:0 6px;border:1px solid var(--border);border-radius:5px;font-family:\'DM Mono\',monospace;font-size:11px;background:var(--surface)';
+  var selStyle = 'height:26px;padding:0 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface)';
+  var isPf = r.scope === 'portfolio';
+  var useAge = r.use_age !== false;
   var h = '<tr data-ridx="' + idx + '">';
+  // color
   h += '<td style="padding:3px 4px"><input type="color" value="' + (r.color||'#888888') + '" onchange="ruleEdit(' + idx + ',\'color\',this.value)" style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0"></td>';
-  RULE_COLS.forEach(function(c){
-    var v = r[c.key];
-    if (v == null) v = '';
-    var ph = (c.key === 'ageTo') ? '∞' : '';
-    h += '<td style="padding:3px 4px"><input type="' + c.type + '" value="' + esc(v) + '" placeholder="' + ph + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)" style="width:100%;height:26px;padding:0 6px;border:1px solid var(--border);border-radius:5px;font-family:' + (c.type==='number'?'\'DM Mono\',monospace':'inherit') + ';font-size:11px;background:var(--surface)"></td>';
+  // name
+  h += '<td style="padding:3px 4px"><input type="text" value="' + esc(r.name||'') + '" onchange="ruleEdit(' + idx + ',\'name\',this.value)" style="' + inpStyle + ';font-family:inherit;min-width:90px"></td>';
+  // scope
+  h += '<td style="padding:3px 4px"><select onchange="ruleEdit(' + idx + ',\'scope\',this.value)" style="' + selStyle + '">' +
+       '<option value="global"' + (!isPf?' selected':'') + '>Глобально</option>' +
+       '<option value="portfolio"' + (isPf?' selected':'') + '>Портфолио</option></select></td>';
+  // portfolio
+  h += '<td style="padding:3px 4px">' + (isPf
+       ? '<select onchange="ruleEdit(' + idx + ',\'portfolio_id\',this.value)" style="' + selStyle + ';max-width:140px">' + pfOptionsHtml(r.portfolio_id||'') + '</select>'
+       : '<span style="color:var(--dim);font-size:11px">—</span>') + '</td>';
+  // targeting
+  h += '<td style="padding:3px 4px"><select onchange="ruleEdit(' + idx + ',\'targeting_type\',this.value)" style="' + selStyle + '">' +
+       ['ANY','AUTO','MANUAL'].map(function(t){ return '<option value="' + t + '"' + ((r.targeting_type||'ANY')===t?' selected':'') + '>' + t + '</option>'; }).join('') +
+       '</select></td>';
+  // use_age
+  h += '<td style="padding:3px 4px;text-align:center"><input type="checkbox"' + (useAge?' checked':'') + ' onchange="ruleEdit(' + idx + ',\'use_age\',this.checked)" title="Учитывать возраст"></td>';
+  // numeric columns
+  NUM_RULE_COLS.forEach(function(c){
+    var v = r[c.key]; if (v == null) v = '';
+    var dis = (c.age && !useAge) ? ' disabled style="' + inpStyle + ';opacity:.4" ' : ' style="' + inpStyle + '" ';
+    var ph = (c.key === 'age_to') ? '∞' : '';
+    h += '<td style="padding:3px 4px"><input type="number" value="' + esc(v) + '" placeholder="' + ph + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)"' + dis + '></td>';
   });
   h += '<td style="padding:3px 4px;text-align:center"><button class="btn btn-s" onclick="removeRule(' + idx + ')" style="height:24px;width:24px;padding:0;font-size:13px;color:var(--red)" title="Удалить">×</button></td>';
   h += '</tr>';
@@ -1349,17 +1333,25 @@ function ruleRowHtml(r, idx) {
 
 function ruleEdit(idx, key, val) {
   if (!rules[idx]) return;
-  if (key === 'name' || key === 'color') rules[idx][key] = val;
-  else if (key === 'ageTo' && (val === '' || val == null)) rules[idx][key] = null;
-  else rules[idx][key] = parseFloat(val);
+  if (key === 'name' || key === 'color' || key === 'scope' || key === 'portfolio_id' || key === 'targeting_type') {
+    rules[idx][key] = val;
+    if (key === 'scope') renderRulesPanel();   // toggle portfolio select
+  } else if (key === 'use_age') {
+    rules[idx][key] = val;
+    renderRulesPanel();
+  } else if (key === 'age_to' && (val === '' || val == null)) {
+    rules[idx][key] = null;
+  } else {
+    rules[idx][key] = parseFloat(val);
+  }
 }
 
 function addRule() {
-  var last = rules[rules.length - 1] || { ageTo: 0 };
   rules.push({
-    name:'Новое', color:'#6c3fc9',
-    ageFrom: last.ageTo == null ? 0 : last.ageTo, ageTo: null,
-    highAcos:40, highPct:15, lowAcos:12, lowPct:15, minBid:0.20, maxBid:5.00, minClicks:0
+    name:'Новое', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
+    use_age:true, age_from:0, age_to:null,
+    high_acos:40, high_pct:15, low_acos:12, low_pct:15,
+    min_bid:0.20, max_bid:5.00, min_clicks:0, no_sale_clicks:0, priority:100, enabled:true
   });
   renderRulesPanel();
 }
@@ -1370,18 +1362,26 @@ function removeRule(idx) {
 }
 
 function saveRules() {
-  localStorage.setItem('ba_rules', JSON.stringify(rules));
   var st = document.getElementById('rulesSaveStatus');
-  st.textContent = 'Сохранено';
-  setTimeout(function(){ st.textContent = ''; }, 2000);
-  renderTable();
+  st.style.color = 'var(--green)';
+  st.textContent = 'Сохранение…';
+  fetch('/automation/bid-automation/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_type: acct, rules: rules })
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) { st.style.color = 'var(--accent)'; st.textContent = 'Ошибка: ' + d.error; return; }
+      st.textContent = 'Сохранено';
+      setTimeout(function(){ st.textContent = ''; }, 2000);
+      loadData();   // recompute recommendations server-side
+    })
+    .catch(function(e){ st.style.color = 'var(--accent)'; st.textContent = 'Ошибка: ' + e.message; });
 }
 
 function resetRules() {
-  rules = JSON.parse(JSON.stringify(DEFAULT_RULES));
-  localStorage.removeItem('ba_rules');
-  renderRulesPanel();
-  renderTable();
+  if (!confirm('Сбросить правила к стандартным? Сохранённые в БД заменятся после «Сохранить».')) return;
+  loadRules();
 }
 
 function toggleRules() {
@@ -1392,7 +1392,6 @@ function toggleRules() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
-renderRulesPanel();
 // Set default dates
 (function() {
   var today = new Date();
@@ -1402,6 +1401,7 @@ renderRulesPanel();
 })();
 
 loadPortfolios();
+loadRules();
 loadData();
 </script>
 </body>
