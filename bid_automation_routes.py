@@ -219,6 +219,14 @@ def ba_keywords():
           {upper_bound}
         GROUP BY s.keyword_id
     ),
+    -- lifetime clicks per ad group (proxy for the product's accumulated traffic /
+    -- "age"): the group's product ads are the ASIN(s), so total group clicks ≈ ASIN clicks
+    grp_clicks AS (
+        SELECT s.ad_group_id, SUM(s.clicks) AS group_total_clicks
+        FROM {stat_table} s
+        WHERE s.marketplace = '{safe_mkt}'
+        GROUP BY s.ad_group_id
+    ),
     prev_bid AS (
         SELECT
             cl.entity_id,
@@ -261,10 +269,12 @@ def ba_keywords():
                  THEN ROUND(COALESCE(st.cost,0) / st.sales * 100, 1)
                  ELSE NULL END AS acos,
             lc.last_change_date,
-            pv.prev_bid
+            pv.prev_bid,
+            COALESCE(gc.group_total_clicks, 0) AS group_total_clicks
         FROM kw
         INNER JOIN c  ON c.campaign_id  = kw.campaign_id  AND c.marketplace = kw.marketplace
         INNER JOIN g  ON g.ad_group_id  = kw.ad_group_id  AND g.marketplace = kw.marketplace
+        LEFT JOIN grp_clicks gc ON gc.ad_group_id = kw.ad_group_id
         LEFT JOIN {pf_table} pl
             ON pl.portfolio_id  = c.portfolio_id
             AND pl.marketplace  = c.marketplace
@@ -314,6 +324,7 @@ def ba_keywords():
                 'acos':           _cvt(r['acos']) if r['acos'] is not None else None,
                 'last_change_date': r['last_change_date'].isoformat() if r['last_change_date'] else None,
                 'prev_bid':       _cvt(r['prev_bid']) if r['prev_bid'] else None,
+                'group_total_clicks': r['group_total_clicks'],
             })
         return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
@@ -398,6 +409,84 @@ def ba_ad_groups():
         return jsonify({'rows': rows})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@bid_automation_bp.route('/automation/bid-automation/negatives')
+def ba_negatives():
+    """Существующие минус-слова и минус-продукты в группе (для подсветки).
+    Возвращает множества текстов (lowercase) и ASIN (upper)."""
+    args         = request.args
+    account_type = args.get('account_type', 'MERCH').upper()
+    marketplace  = args.get('marketplace', 'US').upper()
+    ad_group_id  = args.get('ad_group_id', '').strip()
+    if not ad_group_id:
+        return jsonify({'error': 'ad_group_id обязателен'}), 400
+
+    suffix      = _suffix(account_type)
+    camp_table  = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    pend_table  = f"`{PROJECT_ID}.{DATASET}.pending_changes_{suffix}`"
+    safe_mkt    = _safe(marketplace)
+    safe_agid   = _safe(ad_group_id)
+
+    # Current negatives synced from Amazon (dedup latest by synced_at)
+    sql = f"""
+    WITH neg_raw AS (
+        SELECT entity_type, keyword_text, targeting_expression,
+            CASE WHEN entity_type = 'negative_keyword' THEN keyword_state ELSE target_state END AS st,
+            ROW_NUMBER() OVER (
+                PARTITION BY COALESCE(keyword_id, target_id), marketplace
+                ORDER BY synced_at DESC
+            ) rn
+        FROM {camp_table}
+        WHERE entity_type IN ('negative_keyword', 'negative_product_targeting')
+          AND ad_group_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+    )
+    SELECT entity_type, keyword_text, targeting_expression
+    FROM neg_raw
+    WHERE rn = 1 AND (st IS NULL OR st != 'ARCHIVED')
+    """
+
+    texts = set()
+    asins = set()
+    try:
+        client = get_client()
+        for r in client.query(sql, job_config=_QJC).result():
+            if r['entity_type'] == 'negative_keyword' and r['keyword_text']:
+                texts.add(r['keyword_text'].strip().lower())
+            elif r['entity_type'] == 'negative_product_targeting' and r['targeting_expression']:
+                expr = r['targeting_expression']
+                # формат вида: asin="B0XXXXXXXX"
+                import re
+                m = re.search(r'(B0[0-9A-Z]{8})', expr.upper())
+                if m:
+                    asins.add(m.group(1))
+                else:
+                    asins.add(expr.strip().upper())
+
+        # Также учитываем ожидающие изменения (ещё не отправленные)
+        psql = f"""
+        SELECT entity_type, new_value
+        FROM {pend_table}
+        WHERE entity_id = '{safe_agid}'
+          AND marketplace = '{safe_mkt}'
+          AND entity_type IN ('negative_add', 'negative_product_add')
+          AND status IN ('PENDING', 'APPROVED', 'SENDING')
+        """
+        import json as _json
+        for r in client.query(psql, job_config=_QJC).result():
+            try:
+                v = _json.loads(r['new_value']) if r['new_value'] else {}
+            except Exception:
+                v = {}
+            if r['entity_type'] == 'negative_add' and v.get('text'):
+                texts.add(str(v['text']).strip().lower())
+            elif r['entity_type'] == 'negative_product_add' and v.get('asin'):
+                asins.add(str(v['asin']).strip().upper())
+
+        return jsonify({'texts': sorted(texts), 'asins': sorted(asins)})
+    except Exception as e:
+        return jsonify({'error': str(e), 'texts': [], 'asins': []}), 500
 
 
 @bid_automation_bp.route('/automation/bid-automation/search-terms')
