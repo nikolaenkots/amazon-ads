@@ -931,7 +931,7 @@ function renderKwTable() {
       '<td><button class="expand-btn" id="expbtn-' + origIdx + '" onclick="toggleExpand(' + origIdx + ')" title="Показать группы">' +
         '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
       '</button></td>' +
-      '<td><span class="n" style="font-size:12px">' + esc(row.search_term) + '</span></td>' +
+      '<td><input class="term-inp-inline kw-term" data-i="' + origIdx + '" type="text" value="' + esc(row.search_term) + '" style="min-width:180px" title="Можно отредактировать перед добавлением"></td>' +
       '<td>' + initiatorCell(row) + '</td>' +
       '<td>' + typeBadge + '</td>' +
       '<td class="r n gn">' + fmtNum(row.orders) + '</td>' +
@@ -1170,6 +1170,11 @@ function addKwToQueue(i) {
   var campId = radio.getAttribute('data-campid');
   var mkt = document.getElementById('mkt').value;
 
+  // Use the (possibly edited) term text from the inline input
+  var termInp = document.querySelector('.kw-term[data-i="' + i + '"]');
+  var termText = termInp && termInp.value.trim() ? termInp.value.trim() : row.search_term;
+  if (!termText) { toast('Пустой запрос', 'err'); return; }
+
   var payload = {
     account_type: acct,
     marketplace: mkt,
@@ -1179,7 +1184,7 @@ function addKwToQueue(i) {
     field_name: '—',
     old_value: '',
     new_value: JSON.stringify({
-      text: row.search_term,
+      text: termText,
       match_type: matchType,
       ad_group_id: agId,
       campaign_id: campId,
