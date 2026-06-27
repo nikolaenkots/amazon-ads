@@ -418,6 +418,13 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <span>Расходов: <b id="sbCost">—</b></span>
       <span>Продаж: <b id="sbSales">—</b></span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="color:var(--muted)">На странице:</span>
+        <select id="selPerPage" onchange="changePerPage()" style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:12px">
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+          <option value="1000">1000</option>
+        </select>
         <button class="btn btn-s" id="pgPrev" onclick="prevPage()" style="height:26px;padding:0 10px">‹</button>
         <span id="sbPage" style="min-width:120px;text-align:center"></span>
         <button class="btn btn-s" id="pgNext" onclick="nextPage()" style="height:26px;padding:0 10px">›</button>
@@ -438,9 +445,9 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       </div>
     </div>
     <div class="modal-row">
-      <div class="modal-label">Запросы (<span id="negTermCount">0</span>)</div>
+      <div class="modal-label">Запросы (<span id="negTermCount">0</span>) — по одному в строке, можно редактировать</div>
       <div id="negTypeNote" style="display:none;font-size:11px;color:var(--amber);margin-bottom:6px"></div>
-      <div class="terms-preview" id="negTermsPreview"></div>
+      <textarea id="negTermsArea" oninput="negCountUpdate()" style="width:100%;min-height:120px;max-height:300px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:8px;outline:none;resize:vertical"></textarea>
     </div>
     <div class="modal-row">
       <div class="modal-label">Группа</div>
@@ -635,6 +642,10 @@ function onPeriodMode() {
 // ── Data loading ───────────────────────────────────────────────────────────
 function prevPage() { if (page > 1) { page--; fetchRows(); } }
 function nextPage() { if (page < Math.ceil(totalRows / perPage)) { page++; fetchRows(); } }
+function changePerPage() {
+  perPage = parseInt(document.getElementById('selPerPage').value) || 100;
+  loadData();
+}
 
 function debounceLoad() {
   clearTimeout(debTimer);
@@ -726,6 +737,16 @@ function renderTable() {
       if (recFilter === 'changed') return Math.abs(effectiveNewBid(r) - (r.bid||0)) >= 0.01;
       return getRuleAction(r) === recFilter;
     });
+  }
+
+  // Reflect the filtered count in the table header
+  var thc = document.getElementById('thCount');
+  if (thc) {
+    if (visibleRows.length !== rows.length) thc.textContent = visibleRows.length.toLocaleString() + ' из ' + totalRows.toLocaleString();
+    else thc.textContent = totalRows.toLocaleString() + ' строк';
+  }
+  if (!visibleRows.length) {
+    document.getElementById('tableMsg').textContent = 'Нет строк под фильтр';
   }
 
   var html = '';
@@ -1162,6 +1183,31 @@ function stTab(i, which) {
 function openModal(id)  { document.getElementById(id).classList.add('op'); }
 function closeModal(id) { document.getElementById(id).classList.remove('op'); }
 
+var _negPanelIdx = null;
+
+function negCountUpdate() {
+  var terms = negTermsFromArea();
+  document.getElementById('negTermCount').textContent = terms.length;
+  var hasAsins = terms.some(isAsin);
+  var hasText  = terms.some(function(t){ return !isAsin(t); });
+  var note = document.getElementById('negTypeNote');
+  if (hasAsins && hasText) {
+    note.textContent = '⚠ Есть и ASIN, и текстовые запросы — добавятся как минус-продукты и минус-слова';
+    note.style.display = '';
+  } else if (hasAsins) {
+    note.textContent = 'Только ASIN — добавятся как минус-продукты';
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+function negTermsFromArea() {
+  var raw = document.getElementById('negTermsArea').value || '';
+  var terms = raw.split('\n').map(function(t){ return t.trim(); }).filter(function(t){ return t; });
+  return terms.filter(function(t,idx){ return terms.indexOf(t) === idx; });
+}
+
 function openNegModal(i) {
   var ctx = panelCtx[i];
   if (!ctx) return;
@@ -1170,39 +1216,22 @@ function openNegModal(i) {
   terms = terms.filter(function(t,idx){ return terms.indexOf(t) === idx; });
   if (!terms.length) { toast('Не выбрано ни одного запроса', true); return; }
 
-  _negTerms = terms;
-  _negCtx   = ctx;
+  _negCtx      = ctx;
+  _negPanelIdx = i;
 
-  var hasAsins = terms.some(isAsin);
-  var hasText  = terms.some(function(t){ return !isAsin(t); });
-
-  document.getElementById('negTermCount').textContent = terms.length;
-  document.getElementById('negTermsPreview').innerHTML = terms.map(function(t){
-    return '<span class="term-tag' + (isAsin(t) ? ' asin' : '') + '">' + esc(t) + '</span>';
-  }).join('');
-  document.getElementById('negMtRow').style.display = hasText ? '' : 'none';
-
-  var note = document.getElementById('negTypeNote');
-  if (hasAsins && hasText) {
-    note.textContent = '⚠ Выбраны и ASIN, и текстовые запросы — добавятся как минус-продукты и минус-слова';
-    note.style.display = '';
-  } else if (hasAsins) {
-    note.textContent = 'Выбраны ASIN — добавятся как минус-продукты';
-    note.style.display = '';
-  } else {
-    note.style.display = 'none';
-  }
-
+  document.getElementById('negTermsArea').value = terms.join('\n');
   document.getElementById('negGroupInfo').textContent = (ctx.campName || '') + ' / ' + (ctx.agName || '');
+  negCountUpdate();
   openModal('modalNeg');
 }
 
 function submitNeg() {
-  if (!_negCtx || !_negTerms.length) { closeModal('modalNeg'); return; }
+  var terms = negTermsFromArea();
+  if (!_negCtx || !terms.length) { closeModal('modalNeg'); return; }
   var mt = (document.querySelector('input[name="negMt"]:checked') || {}).value || 'EXACT';
   var ctx = _negCtx;
   var items = [];
-  _negTerms.forEach(function(term) {
+  terms.forEach(function(term) {
     if (isAsin(term)) {
       items.push({
         account_type: ctx.account, marketplace: ctx.mkt,
@@ -1226,11 +1255,17 @@ function submitNeg() {
       closeModal('modalNeg');
       if (d.error) { toast('Ошибка: ' + d.error, true); return; }
       toast('Добавлено ' + (d.inserted || items.length) + ' минус слов');
-      // mark added terms as existing in local context so re-render reflects it
-      _negTerms.forEach(function(t){
+      // mark added terms as existing in local context
+      terms.forEach(function(t){
         if (isAsin(t)) ctx.negAsins[t.toUpperCase()] = true;
         else ctx.negTexts[t.trim().toLowerCase()] = true;
       });
+      // uncheck the source checkboxes + select-all in that expand panel
+      if (_negPanelIdx != null) {
+        document.querySelectorAll('.stcb-' + _negPanelIdx).forEach(function(cb){ cb.checked = false; });
+        var selAll = document.querySelector('#stselall-' + _negPanelIdx + ' input[type=checkbox]');
+        if (selAll) selAll.checked = false;
+      }
     })
     .catch(function(e){ closeModal('modalNeg'); toast('Ошибка: ' + e.message, true); });
 }

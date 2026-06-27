@@ -64,7 +64,7 @@ def ba_keywords():
     sort_by           = args.get('sort_by', 'clicks')
     sort_dir          = args.get('sort_dir', 'DESC').upper()
     page              = max(1, int(args.get('page', 1)))
-    per_page          = min(200, max(1, int(args.get('per_page', 100))))
+    per_page          = min(2000, max(1, int(args.get('per_page', 100))))
 
     if account_type not in ('MERCH', 'KDP'):
         return jsonify({'error': 'Неверный account_type'}), 400
