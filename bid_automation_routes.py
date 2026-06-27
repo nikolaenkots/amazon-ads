@@ -58,6 +58,8 @@ def ba_keywords():
     targeting_type    = args.get('targeting_type', '')  # MANUAL | AUTO | ''
     name_filter       = args.get('name_filter', '').strip()
     state_filter      = args.get('state_filter', '')    # ENABLED | PAUSED | ''
+    camp_state_filter = args.get('camp_state', '')      # ENABLED | PAUSED | ''
+    from_last_change  = args.get('from_last_change', '') in ('1', 'true', 'yes')
     sort_by           = args.get('sort_by', 'clicks')
     sort_dir          = args.get('sort_dir', 'DESC').upper()
     page              = max(1, int(args.get('page', 1)))
@@ -74,11 +76,21 @@ def ba_keywords():
 
     safe_mkt = _safe(marketplace)
 
-    # Date filter for stats
+    # Date window for stats.
+    # fallback_start / upper_bound define the fixed window; when from_last_change
+    # is on, each entity's stats start at its last bid change date (fallback to the
+    # fixed window if it was never changed).
     if date_from and date_to:
-        date_cond = f"s.date >= '{_safe(date_from)}' AND s.date <= '{_safe(date_to)}'"
+        fallback_start = f"DATE('{_safe(date_from)}')"
+        upper_bound    = f"AND s.date <= '{_safe(date_to)}'"
     else:
-        date_cond = f"s.date >= DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)"
+        fallback_start = f"DATE_SUB(CURRENT_DATE(), INTERVAL {days} DAY)"
+        upper_bound    = ""
+
+    if from_last_change:
+        start_expr = f"COALESCE(DATE(lc.last_change_date), {fallback_start})"
+    else:
+        start_expr = fallback_start
 
     # Campaign-level filters
     camp_conds = [
@@ -108,6 +120,8 @@ def ba_keywords():
     camp_extra_conds = []
     if targeting_type in ('MANUAL', 'AUTO'):
         camp_extra_conds.append(f"targeting_type = '{targeting_type}'")
+    if camp_state_filter in ('ENABLED', 'PAUSED'):
+        camp_extra_conds.append(f"campaign_state = '{camp_state_filter}'")
     camp_filter = ('AND ' + ' AND '.join(camp_extra_conds)) if camp_extra_conds else ''
 
     allowed_sort = {
@@ -178,20 +192,8 @@ def ba_keywords():
         WHERE entity_type = 'ad_group' AND marketplace = '{safe_mkt}'
     ),
     g AS (SELECT * FROM g_raw WHERE rn = 1),
-    stats AS (
-        SELECT
-            s.keyword_id,
-            SUM(s.impressions)         AS impressions,
-            SUM(s.clicks)              AS clicks,
-            ROUND(SUM(s.cost), 2)      AS cost,
-            ROUND(SUM(s.sales_14d), 2) AS sales,
-            SUM(s.purchases_14d)       AS purchases
-        FROM {stat_table} s
-        WHERE s.marketplace = '{safe_mkt}'
-          AND {date_cond}
-        GROUP BY s.keyword_id
-    ),
-    -- last bid change from change_log
+    -- last bid change from change_log (defined before stats so the analysis
+    -- window can start at each entity's last change date)
     last_change AS (
         SELECT
             entity_id,
@@ -201,6 +203,21 @@ def ba_keywords():
           AND result = 'SUCCESS'
           AND entity_type IN ('keyword', 'target')
         GROUP BY entity_id
+    ),
+    stats AS (
+        SELECT
+            s.keyword_id,
+            SUM(s.impressions)         AS impressions,
+            SUM(s.clicks)              AS clicks,
+            ROUND(SUM(s.cost), 2)      AS cost,
+            ROUND(SUM(s.sales_14d), 2) AS sales,
+            SUM(s.purchases_14d)       AS purchases
+        FROM {stat_table} s
+        LEFT JOIN last_change lc ON lc.entity_id = s.keyword_id
+        WHERE s.marketplace = '{safe_mkt}'
+          AND s.date >= {start_expr}
+          {upper_bound}
+        GROUP BY s.keyword_id
     ),
     prev_bid AS (
         SELECT
@@ -299,6 +316,86 @@ def ba_keywords():
                 'prev_bid':       _cvt(r['prev_bid']) if r['prev_bid'] else None,
             })
         return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bid_automation_bp.route('/automation/bid-automation/campaigns')
+def ba_campaigns():
+    """Список кампаний для фильтра (актуальные, дедуп по synced_at)."""
+    args         = request.args
+    account_type = args.get('account_type', 'MERCH').upper()
+    marketplace  = args.get('marketplace', 'US').upper()
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({'error': 'Неверный account_type'}), 400
+
+    suffix     = _suffix(account_type)
+    camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    safe_mkt   = _safe(marketplace)
+
+    sql = f"""
+    WITH c_raw AS (
+        SELECT campaign_id, campaign_name, campaign_state, targeting_type,
+            ROW_NUMBER() OVER (PARTITION BY campaign_id, marketplace ORDER BY synced_at DESC) rn
+        FROM {camp_table}
+        WHERE entity_type = 'campaign' AND marketplace = '{safe_mkt}'
+    )
+    SELECT campaign_id, campaign_name, campaign_state, targeting_type
+    FROM c_raw WHERE rn = 1
+    ORDER BY CASE WHEN campaign_state = 'ENABLED' THEN 0 ELSE 1 END, campaign_name
+    """
+    try:
+        client = get_client()
+        rows = [{
+            'campaign_id':    r['campaign_id'],
+            'campaign_name':  r['campaign_name'],
+            'campaign_state': r['campaign_state'],
+            'targeting_type': r['targeting_type'],
+        } for r in client.query(sql, job_config=_QJC).result()]
+        return jsonify({'rows': rows})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bid_automation_bp.route('/automation/bid-automation/ad-groups')
+def ba_ad_groups():
+    """Список групп для выбранной кампании."""
+    args         = request.args
+    account_type = args.get('account_type', 'MERCH').upper()
+    marketplace  = args.get('marketplace', 'US').upper()
+    campaign_id  = args.get('campaign_id', '').strip()
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({'error': 'Неверный account_type'}), 400
+
+    suffix     = _suffix(account_type)
+    camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
+    safe_mkt   = _safe(marketplace)
+
+    conds = [f"entity_type = 'ad_group'", f"marketplace = '{safe_mkt}'"]
+    if campaign_id:
+        conds.append(f"campaign_id = '{_safe(campaign_id)}'")
+
+    sql = f"""
+    WITH g_raw AS (
+        SELECT ad_group_id, ad_group_name, ad_group_state, campaign_id,
+            ROW_NUMBER() OVER (PARTITION BY ad_group_id, marketplace ORDER BY synced_at DESC) rn
+        FROM {camp_table}
+        WHERE {' AND '.join(conds)}
+    )
+    SELECT ad_group_id, ad_group_name, ad_group_state, campaign_id
+    FROM g_raw WHERE rn = 1
+    ORDER BY CASE WHEN ad_group_state = 'ENABLED' THEN 0 ELSE 1 END, ad_group_name
+    LIMIT 1000
+    """
+    try:
+        client = get_client()
+        rows = [{
+            'ad_group_id':    r['ad_group_id'],
+            'ad_group_name':  r['ad_group_name'],
+            'ad_group_state': r['ad_group_state'],
+            'campaign_id':    r['campaign_id'],
+        } for r in client.query(sql, job_config=_QJC).result()]
+        return jsonify({'rows': rows})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -197,7 +197,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <option value="MERCH">MERCH</option>
       <option value="KDP">KDP</option>
     </select>
-    <select id="selMkt" onchange="loadData()">
+    <select id="selMkt" onchange="loadCampaigns(); loadData()">
       <option value="US">US</option>
       <option value="UK">UK</option>
       <option value="DE">DE</option>
@@ -213,12 +213,26 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <option value="MANUAL">MANUAL</option>
       <option value="AUTO">AUTO</option>
     </select>
-    <select id="selState" onchange="loadData()">
-      <option value="">Все статусы</option>
-      <option value="ENABLED">Активные</option>
-      <option value="PAUSED">Пауза</option>
+    <select id="selCampaign" onchange="onCampaignChange()" style="max-width:200px" title="Кампания">
+      <option value="">Все кампании</option>
+    </select>
+    <select id="selAdGroup" onchange="loadData()" style="max-width:180px" title="Группа">
+      <option value="">Все группы</option>
+    </select>
+    <select id="selCampState" onchange="loadData()" title="Статус кампании">
+      <option value="">Кампании: все</option>
+      <option value="ENABLED">Кампании: активные</option>
+      <option value="PAUSED">Кампании: пауза</option>
+    </select>
+    <select id="selState" onchange="loadData()" title="Статус таргета/ключа">
+      <option value="">Таргеты: все</option>
+      <option value="ENABLED">Таргеты: активные</option>
+      <option value="PAUSED">Таргеты: пауза</option>
     </select>
     <div class="sep"></div>
+    <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px" title="Аналитика считается с даты последнего изменения ставки каждого ключа">
+      <input type="checkbox" id="chkFromLastChange" onchange="loadData()" checked> С даты изменения
+    </label>
     <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px">
       <input type="checkbox" id="chkDateWindow" onchange="toggleDateWindow()"> Период анализа
     </label>
@@ -303,7 +317,11 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <span>Кликов: <b id="sbClicks">—</b></span>
       <span>Расходов: <b id="sbCost">—</b></span>
       <span>Продаж: <b id="sbSales">—</b></span>
-      <span id="sbPage"></span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <button class="btn btn-s" id="pgPrev" onclick="prevPage()" style="height:26px;padding:0 10px">‹</button>
+        <span id="sbPage" style="min-width:120px;text-align:center"></span>
+        <button class="btn btn-s" id="pgNext" onclick="nextPage()" style="height:26px;padding:0 10px">›</button>
+      </span>
     </div>
   </div>
 </div>
@@ -347,6 +365,9 @@ function fmtDate(s) {
   return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit' });
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Produce a single-quoted JS string literal safe to embed inside a double-quoted
+// HTML attribute (onclick="..."). JSON.stringify uses double quotes and breaks the attr.
+function q(s) { return "'" + String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;') + "'"; }
 
 function getAgeCategory(clicks) {
   if (clicks < 10) return 'new';
@@ -386,7 +407,53 @@ function calcNewBid(row) {
 }
 
 // ── Data loading ───────────────────────────────────────────────────────────
-function onAccountChange() { loadData(); }
+function onAccountChange() { loadCampaigns(); loadData(); }
+
+function loadCampaigns() {
+  var account = document.getElementById('selAccount').value;
+  var mkt     = document.getElementById('selMkt').value;
+  var sel = document.getElementById('selCampaign');
+  var ag  = document.getElementById('selAdGroup');
+  ag.innerHTML = '<option value="">Все группы</option>';
+  fetch('/automation/bid-automation/campaigns?account_type=' + account + '&marketplace=' + mkt)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.error || !d.rows) return;
+      var html = '<option value="">Все кампании</option>';
+      d.rows.forEach(function(c) {
+        var mark = c.campaign_state === 'ENABLED' ? '' : ' ⏸';
+        html += '<option value="' + esc(c.campaign_id) + '">' + esc(c.campaign_name) + mark + '</option>';
+      });
+      sel.innerHTML = html;
+    });
+}
+
+function onCampaignChange() {
+  var account = document.getElementById('selAccount').value;
+  var mkt     = document.getElementById('selMkt').value;
+  var campId  = document.getElementById('selCampaign').value;
+  var ag = document.getElementById('selAdGroup');
+  ag.innerHTML = '<option value="">Все группы</option>';
+  if (campId) {
+    fetch('/automation/bid-automation/ad-groups?account_type=' + account + '&marketplace=' + mkt + '&campaign_id=' + encodeURIComponent(campId))
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (d.error || !d.rows) { loadData(); return; }
+        var html = '<option value="">Все группы</option>';
+        d.rows.forEach(function(g) {
+          var mark = g.ad_group_state === 'ENABLED' ? '' : ' ⏸';
+          html += '<option value="' + esc(g.ad_group_id) + '">' + esc(g.ad_group_name) + mark + '</option>';
+        });
+        ag.innerHTML = html;
+        loadData();
+      });
+  } else {
+    loadData();
+  }
+}
+
+function prevPage() { if (page > 1) { page--; fetchRows(); } }
+function nextPage() { if (page < Math.ceil(totalRows / perPage)) { page++; fetchRows(); } }
 
 function debounceLoad() {
   clearTimeout(debTimer);
@@ -406,12 +473,16 @@ function loadData() {
 }
 
 function fetchRows() {
-  var account = document.getElementById('selAccount').value;
-  var mkt     = document.getElementById('selMkt').value;
-  var tgtType = document.getElementById('selTgtType').value;
-  var state   = document.getElementById('selState').value;
-  var filter  = document.getElementById('inpFilter').value.trim();
+  var account  = document.getElementById('selAccount').value;
+  var mkt      = document.getElementById('selMkt').value;
+  var tgtType  = document.getElementById('selTgtType').value;
+  var state    = document.getElementById('selState').value;
+  var campState= document.getElementById('selCampState').value;
+  var campId   = document.getElementById('selCampaign').value;
+  var agId     = document.getElementById('selAdGroup').value;
+  var filter   = document.getElementById('inpFilter').value.trim();
   var useDates = document.getElementById('chkDateWindow').checked;
+  var fromLast = document.getElementById('chkFromLastChange').checked;
 
   var params = new URLSearchParams({
     account_type: account,
@@ -421,9 +492,13 @@ function fetchRows() {
     page:         page,
     per_page:     perPage
   });
-  if (tgtType) params.set('targeting_type', tgtType);
-  if (state)   params.set('state_filter', state);
-  if (filter)  params.set('name_filter', filter);
+  if (tgtType)   params.set('targeting_type', tgtType);
+  if (state)     params.set('state_filter', state);
+  if (campState) params.set('camp_state', campState);
+  if (campId)    params.set('campaign_id', campId);
+  if (agId)      params.set('ad_group_id', agId);
+  if (filter)    params.set('name_filter', filter);
+  if (fromLast)  params.set('from_last_change', '1');
   if (useDates) {
     params.set('date_from', document.getElementById('dateFrom').value);
     params.set('date_to',   document.getElementById('dateTo').value);
@@ -491,11 +566,11 @@ function renderTable() {
     var matchType = normalizeMatch(r.match_type || r.keyword_type || '');
 
     html += '<tr class="main-row' + (isSelected ? ' selected' : '') + (isBlocked ? ' blocked' : '') + '" id="mr-' + rid + '">';
-    html += '<td><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="toggleRow(this,' + JSON.stringify(r.entity_id) + ')"></td>';
+    html += '<td><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="toggleRow(this,' + q(r.entity_id) + ')"></td>';
     html += '<td><span class="rule-dot" style="background:' + rColor + ';border-color:' + rColor + '22" title="' + actionLabel(action) + '"></span></td>';
     html += '<td>';
     html += '  <div style="display:flex;align-items:center;gap:6px">';
-    html += '    <button class="expand-btn" onclick="toggleExpand(' + i + ',' + JSON.stringify(r.entity_id) + ',' + JSON.stringify(r.entity_type) + ')" id="eb-' + i + '" style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:11px;flex-shrink:0">+</button>';
+    html += '    <button class="expand-btn" onclick="toggleExpand(' + i + ',' + q(r.entity_id) + ',' + q(r.entity_type) + ')" id="eb-' + i + '" style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:11px;flex-shrink:0">+</button>';
     html += '    <span class="dot ' + stateClass + '"></span>';
     html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
     html += '    <span class="badge badge-' + catLabel + '">' + (r.clicks||0) + ' кл.</span>';
@@ -506,11 +581,11 @@ function renderTable() {
     html += '<td class="mono">' + esc(matchType) + '</td>';
     html += '<td>';
     html += '  <div class="bid-wrap">';
-    html += '    <button class="bid-btn" onclick="openBidEdit(' + JSON.stringify(rid) + ')" id="bbt-' + rid + '">' + fmt2(r.bid) + '</button>';
+    html += '    <button class="bid-btn" onclick="openBidEdit(' + q(rid) + ')" id="bbt-' + rid + '">' + fmt2(r.bid) + '</button>';
     html += '    <div class="bid-edit" id="be-' + rid + '" data-eid="' + esc(r.entity_id) + '" data-etype="' + esc(r.entity_type) + '" data-oldbid="' + (r.bid||0) + '">';
     html += '      <input class="bid-inp" id="bi-' + rid + '" type="number" step="0.01" min="0.02" value="' + (r.bid||0.30) + '">';
-    html += '      <button class="bid-ok" onclick="saveKwBid(' + JSON.stringify(rid) + ')">OK</button>';
-    html += '      <button class="bid-cx" onclick="closeBidEdit(' + JSON.stringify(rid) + ')">×</button>';
+    html += '      <button class="bid-ok" onclick="saveKwBid(' + q(rid) + ')">OK</button>';
+    html += '      <button class="bid-cx" onclick="closeBidEdit(' + q(rid) + ')">×</button>';
     html += '    </div>';
     html += '  </div>';
     html += '</td>';
@@ -520,8 +595,8 @@ function renderTable() {
     html += '<td class="mono' + acosClass(r.acos) + '">' + fmtPct(r.acos) + '</td>';
     html += '<td class="mono" style="font-size:10px">' + fmtDate(r.last_change_date) + '</td>';
     html += '<td class="mono">' + (r.prev_bid != null ? fmt2(r.prev_bid) : '—') + '</td>';
-    html += '<td><input class="rec-inp" type="text" placeholder="Добавить заметку..." value="' + esc(rec) + '" oninput="saveRec(' + JSON.stringify(r.entity_id) + ',this.value)" title="Рекомендация"></td>';
-    html += '<td style="text-align:center"><input type="checkbox" ' + (isBlocked ? 'checked' : '') + ' onchange="toggleBlock(' + JSON.stringify(r.entity_id) + ',this.checked)" title="Заблокировать изменение ставки"></td>';
+    html += '<td><input class="rec-inp" type="text" placeholder="Добавить заметку..." value="' + esc(rec) + '" oninput="saveRec(' + q(r.entity_id) + ',this.value)" title="Рекомендация"></td>';
+    html += '<td style="text-align:center"><input type="checkbox" ' + (isBlocked ? 'checked' : '') + ' onchange="toggleBlock(' + q(r.entity_id) + ',this.checked)" title="Заблокировать изменение ставки"></td>';
     html += '</tr>';
     // Expand row placeholder
     html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="13"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
@@ -637,8 +712,8 @@ function loadExpandPanel(i, entityId, entityType, cont) {
         html += '<td>' + fmt2(st.sales) + '</td>';
         html += '<td>' + fmtPct(st.acos) + '</td>';
         html += '<td style="white-space:nowrap">';
-        html += '<button class="neg-btn" onclick="addNegative(' + JSON.stringify(st.search_term) + ',' + JSON.stringify(row.ad_group_id) + ',' + JSON.stringify(row.campaign_id) + ',' + JSON.stringify(account) + ',\'negativeExact\')" title="Добавить exact минус">− exact</button> ';
-        html += '<button class="neg-btn" onclick="addNegative(' + JSON.stringify(st.search_term) + ',' + JSON.stringify(row.ad_group_id) + ',' + JSON.stringify(row.campaign_id) + ',' + JSON.stringify(account) + ',\'negativePhrase\')" title="Добавить phrase минус">− phrase</button>';
+        html += '<button class="neg-btn" onclick="addNegative(' + q(st.search_term) + ',' + q(row.ad_group_id) + ',' + q(row.campaign_id) + ',' + q(account) + ',\'negativeExact\')" title="Добавить exact минус">− exact</button> ';
+        html += '<button class="neg-btn" onclick="addNegative(' + q(st.search_term) + ',' + q(row.ad_group_id) + ',' + q(row.campaign_id) + ',' + q(account) + ',\'negativePhrase\')" title="Добавить phrase минус">− phrase</button>';
         html += '</td>';
         html += '</tr>';
       });
@@ -858,8 +933,10 @@ function renderStatusBar() {
   document.getElementById('sbClicks').textContent = tc.toLocaleString();
   document.getElementById('sbCost').textContent   = '$' + tco.toFixed(2);
   document.getElementById('sbSales').textContent  = '$' + ts.toFixed(2);
-  var p = Math.ceil(totalRows / perPage);
-  document.getElementById('sbPage').textContent = p > 1 ? ('Страница ' + page + ' / ' + p) : '';
+  var p = Math.max(1, Math.ceil(totalRows / perPage));
+  document.getElementById('sbPage').textContent = 'Страница ' + page + ' / ' + p;
+  document.getElementById('pgPrev').disabled = page <= 1;
+  document.getElementById('pgNext').disabled = page >= p;
 }
 
 // ── Rules ──────────────────────────────────────────────────────────────────
@@ -937,6 +1014,7 @@ renderRulesPanel();
   document.getElementById('dateFields').style.display = 'none';
 })();
 
+loadCampaigns();
 loadData();
 </script>
 </body>
