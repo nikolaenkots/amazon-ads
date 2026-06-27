@@ -91,6 +91,9 @@ def negatives_candidates():
     portfolio_ids_raw = args.get('portfolio_ids', '')
     min_clicks   = max(0, int(args.get('min_clicks', 10)))
     min_acos     = float(args.get('min_acos', 40))
+    page         = max(1, int(args.get('page', 1)))
+    per_page     = min(2000, max(1, int(args.get('per_page', 500))))
+    offset       = (page - 1) * per_page
 
     st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
@@ -144,7 +147,8 @@ def negatives_candidates():
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
-        st.keyword_type, st.match_type, st.keyword, st.targeting
+        st.keyword_type, st.match_type, st.keyword, st.targeting,
+        COUNT(*) OVER() AS _total
     FROM st
     LEFT JOIN c ON c.campaign_id = st.campaign_id
     LEFT JOIN g ON g.ad_group_id = st.ad_group_id
@@ -155,14 +159,15 @@ def negatives_candidates():
     WHERE c.campaign_id IS NOT NULL
     {portfolio_cond}
     ORDER BY st.clicks DESC
-    LIMIT 500
+    LIMIT {per_page} OFFSET {offset}
     """
 
     try:
         client = get_client()
         rows = list(client.query(sql).result())
-        result = [{k: _cvt(v) for k, v in dict(r).items()} for r in rows]
-        return jsonify({'rows': result, 'total': len(result)})
+        total = rows[0]['_total'] if rows else 0
+        result = [{k: _cvt(v) for k, v in dict(r).items() if k != '_total'} for r in rows]
+        return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -234,6 +239,9 @@ def keywords_candidates():
     marketplace  = args.get('marketplace', 'US').upper()
     portfolio_ids_raw = args.get('portfolio_ids', '')
     min_orders   = max(0, int(args.get('min_orders', 1)))
+    page         = max(1, int(args.get('page', 1)))
+    per_page     = min(2000, max(1, int(args.get('per_page', 500))))
+    offset       = (page - 1) * per_page
 
     st_table   = f"`{PROJECT_ID}.{DATASET}.search_terms_{suffix}`"
     camp_table = f"`{PROJECT_ID}.{DATASET}.campaigns_{suffix}`"
@@ -286,7 +294,8 @@ def keywords_candidates():
         st.campaign_id, c.campaign_name, c.campaign_state, c.targeting_type,
         st.ad_group_id, g.ad_group_name, g.ad_group_state,
         COALESCE(pl.portfolio_name, c.portfolio_name) AS portfolio_name,
-        st.keyword_type, st.match_type, st.keyword, st.targeting
+        st.keyword_type, st.match_type, st.keyword, st.targeting,
+        COUNT(*) OVER() AS _total
     FROM st
     LEFT JOIN c ON c.campaign_id = st.campaign_id
     LEFT JOIN g ON g.ad_group_id = st.ad_group_id
@@ -297,14 +306,15 @@ def keywords_candidates():
     WHERE c.campaign_id IS NOT NULL
     {portfolio_cond}
     ORDER BY st.orders DESC
-    LIMIT 500
+    LIMIT {per_page} OFFSET {offset}
     """
 
     try:
         client = get_client()
         rows = list(client.query(sql).result())
-        result = [{k: _cvt(v) for k, v in dict(r).items()} for r in rows]
-        return jsonify({'rows': result, 'total': len(result)})
+        total = rows[0]['_total'] if rows else 0
+        result = [{k: _cvt(v) for k, v in dict(r).items() if k != '_total'} for r in rows]
+        return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

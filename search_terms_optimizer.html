@@ -83,6 +83,10 @@ td{padding:7px 11px;vertical-align:middle}
 .mbt{height:26px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .12s}
 .mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .sep{width:1px;height:18px;background:var(--border);margin:0 2px}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.pager select{height:28px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:12px;background:var(--surface)}
+.pager button{height:28px;padding:0 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:13px}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
 .n{font-family:'DM Mono',monospace;font-size:12px}
 td.r{text-align:right}
 .gn{color:var(--green)}.an{color:var(--accent)}.bn{color:var(--blue)}
@@ -385,6 +389,7 @@ tr.exp-row td{padding:0;background:var(--surface2)}
         </tbody>
       </table>
     </div>
+    <div class="pager" id="negPager" style="display:none"></div>
   </div>
 </div>
 
@@ -424,6 +429,7 @@ tr.exp-row td{padding:0;background:var(--surface2)}
         </tbody>
       </table>
     </div>
+    <div class="pager" id="kwPager" style="display:none"></div>
   </div>
 </div>
 
@@ -439,6 +445,8 @@ var selectedPortfolios = [];
 var negRows = [];
 var kwRows = [];
 var existingNegatives = [];
+var negPage = 1, negPerPage = 500, negTotal = 0;
+var kwPage = 1,  kwPerPage = 500,  kwTotal = 0;
 var activeTab = 'neg';
 var filterInitiator = '';
 var filterQueryType = '';
@@ -638,26 +646,86 @@ function loadAll() {
 
   var base = '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + periodParams();
 
-  // Load negatives candidates
-  document.getElementById('negBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
-  document.getElementById('kwBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
+  negPage = 1;
+  kwPage = 1;
   document.getElementById('negCount').textContent = '…';
   document.getElementById('kwCount').textContent = '…';
 
-  Promise.all([
-    fetch('/automation/search-terms/existing-negatives' + base).then(function(r){ return r.json(); }),
-    fetch('/automation/search-terms/negatives-candidates' + base + '&min_clicks=' + minClicks + '&min_acos=' + minAcos).then(function(r){ return r.json(); }),
-    fetch('/automation/search-terms/keywords-candidates' + base + '&min_orders=' + minOrders).then(function(r){ return r.json(); })
-  ]).then(function(results) {
-    existingNegatives = results[0].negatives || [];
-    negRows = results[1].rows || [];
-    kwRows = results[2].rows || [];
-    expandedRows = {}; // reset expansion state — rows changed (e.g. geo switch)
+  // existing negatives needed for the coverage check; load once then both tabs
+  fetch('/automation/search-terms/existing-negatives' + base)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ existingNegatives = d.negatives || []; expandedRows = {}; loadNeg(); loadKw(); })
+    .catch(function(e){ toast('Ошибка: ' + e.message, 'err'); });
+}
+
+function baseParams() {
+  var mkt = document.getElementById('mkt').value;
+  var pids = selectedPortfolios.join(',');
+  return '?account_type=' + acct + '&marketplace=' + mkt + '&portfolio_ids=' + encodeURIComponent(pids) + periodParams();
+}
+
+function loadNeg() {
+  var minClicks = document.getElementById('minClicks').value;
+  var minAcos = document.getElementById('minAcos').value || '40';
+  document.getElementById('negBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
+  var url = '/automation/search-terms/negatives-candidates' + baseParams() +
+    '&min_clicks=' + minClicks + '&min_acos=' + minAcos + '&page=' + negPage + '&per_page=' + negPerPage;
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if (d.error) { toast(d.error, 'err'); }
+    negRows = d.rows || [];
+    negTotal = d.total || 0;
+    expandedRows = {};
     renderNegTable();
-    renderKwTable();
-    if (results[1].error) toast(results[1].error, 'err');
-    if (results[2].error) toast(results[2].error, 'err');
+    renderPager('neg');
   }).catch(function(e){ toast('Ошибка: ' + e.message, 'err'); });
+}
+
+function loadKw() {
+  var minOrders = document.getElementById('minOrders').value;
+  document.getElementById('kwBody').innerHTML = '<tr><td colspan="12" class="te"><span class="sp"></span></td></tr>';
+  var url = '/automation/search-terms/keywords-candidates' + baseParams() +
+    '&min_orders=' + minOrders + '&page=' + kwPage + '&per_page=' + kwPerPage;
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if (d.error) { toast(d.error, 'err'); }
+    kwRows = d.rows || [];
+    kwTotal = d.total || 0;
+    expandedRows = {};
+    renderKwTable();
+    renderPager('kw');
+  }).catch(function(e){ toast('Ошибка: ' + e.message, 'err'); });
+}
+
+function renderPager(which) {
+  var isNeg = which === 'neg';
+  var total = isNeg ? negTotal : kwTotal;
+  var pg    = isNeg ? negPage  : kwPage;
+  var pp    = isNeg ? negPerPage : kwPerPage;
+  var el = document.getElementById(isNeg ? 'negPager' : 'kwPager');
+  if (!total) { el.style.display = 'none'; return; }
+  var pages = Math.max(1, Math.ceil(total / pp));
+  var from = (pg - 1) * pp + 1;
+  var to = Math.min(total, pg * pp);
+  el.style.display = 'flex';
+  el.innerHTML =
+    '<span>На странице:</span>' +
+    '<select onchange="setPerPage(\'' + which + '\', this.value)">' +
+      [100,200,500,1000,2000].map(function(n){ return '<option value="' + n + '"' + (n===pp?' selected':'') + '>' + n + '</option>'; }).join('') +
+    '</select>' +
+    '<span>' + from.toLocaleString() + '–' + to.toLocaleString() + ' из ' + total.toLocaleString() + '</span>' +
+    '<button ' + (pg<=1?'disabled':'') + ' onclick="gotoPage(\'' + which + '\',' + (pg-1) + ')">‹</button>' +
+    '<span>' + pg + ' / ' + pages + '</span>' +
+    '<button ' + (pg>=pages?'disabled':'') + ' onclick="gotoPage(\'' + which + '\',' + (pg+1) + ')">›</button>';
+}
+
+function gotoPage(which, p) {
+  if (which === 'neg') { negPage = p; loadNeg(); }
+  else { kwPage = p; loadKw(); }
+}
+
+function setPerPage(which, v) {
+  v = parseInt(v) || 500;
+  if (which === 'neg') { negPerPage = v; negPage = 1; loadNeg(); }
+  else { kwPerPage = v; kwPage = 1; loadKw(); }
 }
 
 // ── Negatives coverage check ──────────────────────────────
@@ -766,7 +834,7 @@ function renderNegTable() {
       '</tr>';
   });
   tbody.innerHTML = html || '<tr><td colspan="12" class="te">Нет данных по текущим фильтрам</td></tr>';
-  document.getElementById('negCount').textContent = shown + ' строк';
+  document.getElementById('negCount').textContent = negTotal.toLocaleString() + ' всего' + (shown !== negRows.length ? ' · показано ' + shown : '');
 }
 
 function badgeHtml(cov) {
@@ -877,7 +945,7 @@ function renderKwTable() {
       '</tr>' +
       '<tr class="exp-row" id="exp-' + origIdx + '" style="display:none"><td colspan="12"><div class="exp-panel" id="expp-' + origIdx + '"><span class="sp"></span></div></td></tr>';
   }).join('');
-  document.getElementById('kwCount').textContent = rows.length + ' строк';
+  document.getElementById('kwCount').textContent = kwTotal.toLocaleString() + ' всего';
 }
 
 // ── Expand row (keywords) ─────────────────────────────────
