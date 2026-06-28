@@ -39,9 +39,144 @@ def _safe(s):
     return str(s).replace("'", "''")
 
 
+RULES_TABLE = f"{PROJECT_ID}.{DATASET}.bid_rules"
+
+# Default rule set returned when the table is empty (also used to seed the UI).
+DEFAULT_RULES = [
+    {'name':'Новые',   'color':'#1a6fd4', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':0,  'age_to':10,   'high_acos':50, 'high_pct':10, 'low_acos':15, 'low_pct':10, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':0,  'no_sale_clicks':15, 'priority':100, 'enabled':True},
+    {'name':'Средние', 'color':'#b07800', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':10, 'age_to':50,   'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
+    {'name':'Зрелые',  'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':50, 'age_to':None, 'high_acos':35, 'high_pct':20, 'low_acos':10, 'low_pct':20, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':25, 'no_sale_clicks':30, 'priority':100, 'enabled':True},
+]
+
+_RULES_DDL = f"""
+CREATE TABLE IF NOT EXISTS `{RULES_TABLE}` (
+  account_type STRING, rule_id STRING, name STRING, color STRING,
+  scope STRING, portfolio_id STRING, targeting_type STRING,
+  use_age BOOL, age_from INT64, age_to INT64,
+  high_acos FLOAT64, high_pct FLOAT64, low_acos FLOAT64, low_pct FLOAT64,
+  min_bid FLOAT64, max_bid FLOAT64, min_clicks INT64, no_sale_clicks INT64,
+  priority INT64, enabled BOOL, updated_at TIMESTAMP
+)
+"""
+
+
+def _ensure_rules_table(client):
+    client.query(_RULES_DDL).result()
+
+
+def _fnum(v, default=None):
+    try:
+        if v is None or v == '':
+            return default
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _inum(v, default=None):
+    f = _fnum(v, None)
+    return int(f) if f is not None else default
+
+
 @bid_automation_bp.route('/automation/bid-automation')
 def bid_automation_page():
     return send_from_directory(BASE_DIR, 'bid_automation.html')
+
+
+@bid_automation_bp.route('/automation/bid-automation/rules')
+def ba_rules_get():
+    account_type = request.args.get('account_type', 'MERCH').upper()
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({'error': 'Неверный account_type'}), 400
+    try:
+        client = get_client()
+        _ensure_rules_table(client)
+        sql = f"""
+        SELECT name, color, scope, portfolio_id, targeting_type, use_age,
+               age_from, age_to, high_acos, high_pct, low_acos, low_pct,
+               min_bid, max_bid, min_clicks, no_sale_clicks, priority, enabled
+        FROM `{RULES_TABLE}`
+        WHERE account_type = '{_safe(account_type)}'
+        ORDER BY priority, scope DESC, name
+        """
+        rows = [{k: _cvt(v) for k, v in dict(r).items()} for r in client.query(sql, job_config=_QJC).result()]
+        if not rows:
+            # Seed the table with defaults so the server-side engine uses them too
+            _write_rules(client, account_type, DEFAULT_RULES)
+            rows = [dict(d) for d in DEFAULT_RULES]
+        return jsonify({'rules': rows})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _build_rule_rows(account_type, rules):
+    import uuid
+    from datetime import datetime, timezone
+    now = datetime.now(tz=timezone.utc).isoformat()
+    out = []
+    for r in rules:
+        tt = (r.get('targeting_type') or 'ANY').upper()
+        if tt not in ('ANY', 'AUTO', 'MANUAL'):
+            tt = 'ANY'
+        scope = (r.get('scope') or 'global').lower()
+        if scope not in ('global', 'portfolio'):
+            scope = 'global'
+        out.append({
+            'account_type':  account_type,
+            'rule_id':       str(uuid.uuid4()),
+            'name':          str(r.get('name') or '')[:80],
+            'color':         str(r.get('color') or '#888888')[:16],
+            'scope':         scope,
+            'portfolio_id':  str(r.get('portfolio_id') or ''),
+            'targeting_type': tt,
+            'use_age':       bool(r.get('use_age', True)),
+            'age_from':      _inum(r.get('age_from'), 0),
+            'age_to':        _inum(r.get('age_to'), None),
+            'high_acos':     _fnum(r.get('high_acos'), 40.0),
+            'high_pct':      _fnum(r.get('high_pct'), 15.0),
+            'low_acos':      _fnum(r.get('low_acos'), 12.0),
+            'low_pct':       _fnum(r.get('low_pct'), 15.0),
+            'min_bid':       _fnum(r.get('min_bid'), 0.20),
+            'max_bid':       _fnum(r.get('max_bid'), 5.00),
+            'min_clicks':    _inum(r.get('min_clicks'), 0),
+            'no_sale_clicks': _inum(r.get('no_sale_clicks'), 0),
+            'priority':      _inum(r.get('priority'), 100),
+            'enabled':       bool(r.get('enabled', True)),
+            'updated_at':    now,
+        })
+    return out
+
+
+def _write_rules(client, account_type, rules):
+    out = _build_rule_rows(account_type, rules)
+    _ensure_rules_table(client)
+    client.query(
+        f"DELETE FROM `{RULES_TABLE}` WHERE account_type = '{_safe(account_type)}'"
+    ).result()
+    if out:
+        job = client.load_table_from_json(
+            out, RULES_TABLE,
+            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_APPEND")
+        )
+        job.result()
+    return len(out)
+
+
+@bid_automation_bp.route('/automation/bid-automation/rules', methods=['POST'])
+def ba_rules_save():
+    data = request.get_json(silent=True) or {}
+    account_type = (data.get('account_type') or 'MERCH').upper()
+    rules = data.get('rules') or []
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({'error': 'Неверный account_type'}), 400
+    if len(rules) > 500:
+        return jsonify({'error': 'Слишком много правил'}), 400
+    try:
+        client = get_client()
+        n = _write_rules(client, account_type, rules)
+        return jsonify({'success': True, 'saved': n})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @bid_automation_bp.route('/automation/bid-automation/keywords')
@@ -61,6 +196,7 @@ def ba_keywords():
     camp_state_filter = args.get('camp_state', '')      # ENABLED | PAUSED | ''
     group_state_filter= args.get('group_state', '')     # ENABLED | PAUSED | ''
     from_last_change  = args.get('from_last_change', '') in ('1', 'true', 'yes')
+    rec_filter        = args.get('rec_filter', '')       # raise|lower|pause|hold|new|changed
     sort_by           = args.get('sort_by', 'clicks')
     sort_dir          = args.get('sort_dir', 'DESC').upper()
     page              = max(1, int(args.get('page', 1)))
@@ -122,6 +258,13 @@ def ba_keywords():
             f"LOWER(keyword_text) LIKE LOWER('%{sf}%')"
         )
     kw_extra = ('AND ' + ' AND '.join(kw_extra_conds)) if kw_extra_conds else ''
+
+    # Server-side recommendation filter
+    rec_where = ''
+    if rec_filter == 'changed':
+        rec_where = 'WHERE ABS(new_bid - bid) >= 0.01'
+    elif rec_filter in ('raise', 'lower', 'pause', 'hold', 'new'):
+        rec_where = f"WHERE action = '{rec_filter}'"
 
     camp_extra_conds = []
     if targeting_type in ('MANUAL', 'AUTO'):
@@ -305,16 +448,72 @@ def ba_keywords():
         LEFT JOIN stats  st ON st.keyword_id = kw.entity_id
         LEFT JOIN last_change lc ON lc.entity_id = kw.entity_id
         LEFT JOIN prev_bid    pv ON pv.entity_id = kw.entity_id
-    )
+    ),
+    rules AS (
+        SELECT scope, portfolio_id, targeting_type, use_age, age_from, age_to,
+               high_acos, high_pct, low_acos, low_pct, min_bid, max_bid,
+               min_clicks AS r_min_clicks, no_sale_clicks AS r_no_sale_clicks,
+               priority, name AS rule_name, color AS rule_color
+        FROM `{RULES_TABLE}`
+        WHERE account_type = '{account_type}' AND enabled = TRUE
+    ),
+    matched AS (
+        SELECT b.*,
+            r.high_acos, r.high_pct, r.low_acos, r.low_pct, r.min_bid, r.max_bid,
+            r.r_min_clicks, r.r_no_sale_clicks, r.rule_name, r.rule_color,
+            CASE
+                WHEN r.scope IS NULL THEN 999
+                WHEN r.scope = 'portfolio' AND r.targeting_type <> 'ANY' THEN 1
+                WHEN r.scope = 'portfolio' THEN 2
+                WHEN r.targeting_type <> 'ANY' THEN 3
+                ELSE 4
+            END AS match_score,
+            COALESCE(r.priority, 9999) AS rule_priority
+        FROM base b
+        LEFT JOIN rules r
+            ON (r.scope = 'global' OR (r.scope = 'portfolio' AND r.portfolio_id = b.portfolio_id))
+           AND (r.targeting_type = 'ANY' OR r.targeting_type = b.targeting_type)
+           AND (r.use_age = FALSE OR (b.group_total_clicks >= r.age_from
+                                      AND (r.age_to IS NULL OR b.group_total_clicks < r.age_to)))
+    ),
+    ranked AS (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY match_score, rule_priority) rn
+        FROM matched
+    ),
+    acted AS (
+        SELECT *,
+            CASE
+                WHEN rule_name IS NULL THEN 'hold'
+                WHEN clicks < r_min_clicks THEN 'hold'
+                WHEN acos IS NULL THEN
+                    CASE WHEN r_no_sale_clicks > 0 AND clicks >= r_no_sale_clicks THEN 'pause'
+                         WHEN clicks > 5 THEN 'hold' ELSE 'new' END
+                WHEN acos > high_acos THEN 'lower'
+                WHEN acos < low_acos THEN 'raise'
+                ELSE 'hold'
+            END AS action
+        FROM ranked WHERE rn = 1
+    ),
+    finalized AS (
+        SELECT *,
+            CASE action
+                WHEN 'raise' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 + low_pct/100), 2)))
+                WHEN 'lower' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 - high_pct/100), 2)))
+                ELSE bid
+            END AS new_bid
+        FROM acted
+    ),
+    filtered AS (SELECT * FROM finalized {rec_where})
     SELECT *,
         COUNT(*) OVER() AS _total
-    FROM base
+    FROM filtered
     ORDER BY {sort_by} {sort_dir} NULLS LAST
     LIMIT {per_page} OFFSET {offset}
     """
 
     try:
         client = get_client()
+        _ensure_rules_table(client)
         kw_args = _QJC if _QJC else None
         rows = list(client.query(sql, job_config=kw_args).result())
         total = rows[0]['_total'] if rows else 0
@@ -348,6 +547,10 @@ def ba_keywords():
                 'last_change_date': r['last_change_date'].isoformat() if r['last_change_date'] else None,
                 'prev_bid':       _cvt(r['prev_bid']) if r['prev_bid'] else None,
                 'group_total_clicks': r['group_total_clicks'],
+                'action':         r['action'],
+                'new_bid':        _cvt(r['new_bid']) if r['new_bid'] is not None else None,
+                'rule_name':      r['rule_name'],
+                'rule_color':     r['rule_color'],
             })
         return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
