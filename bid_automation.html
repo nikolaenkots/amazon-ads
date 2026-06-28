@@ -338,6 +338,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
         <option value="">Все</option>
         <option value="lower">Снизить</option>
         <option value="raise">Повысить</option>
+        <option value="boost">Разгон</option>
         <option value="pause">Выключить</option>
         <option value="hold">Удерживать</option>
         <option value="new">Новые (мало данных)</option>
@@ -387,6 +388,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th onclick="sortBy('keyword_text')">Ключ / Таргет <span class="sort-arrow" id="sa_keyword_text"></span></th>
             <th onclick="sortBy('match_type')" style="width:80px">Тип <span class="sort-arrow" id="sa_match_type"></span></th>
             <th onclick="sortBy('bid')" style="width:150px">Ставка → реком. <span class="sort-arrow" id="sa_bid"></span></th>
+            <th onclick="sortBy('impressions')" style="width:65px">Показы <span class="sort-arrow" id="sa_impressions"></span></th>
             <th onclick="sortBy('clicks')" style="width:60px">Клики <span class="sort-arrow" id="sa_clicks"></span></th>
             <th style="width:70px" title="Всего кликов на ASIN в группе (возраст товара)">ASIN кл.</th>
             <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
@@ -516,6 +518,7 @@ function getRuleColor(action) {
   if (action === 'raise') return '#1a8f5c';
   if (action === 'lower') return '#c0392b';
   if (action === 'pause') return '#7a1f1f';
+  if (action === 'boost') return '#6c3fc9';
   if (action === 'new')   return '#1a6fd4';
   return '#aaaab8';
 }
@@ -761,6 +764,7 @@ function renderTable() {
     }
     html += '  </div>';
     html += '</td>';
+    html += '<td class="mono">' + fmtN(r.impressions) + '</td>';
     html += '<td class="mono">' + fmtN(r.clicks) + '</td>';
     html += '<td class="mono" style="color:var(--muted)">' + fmtN(r.group_total_clicks) + '</td>';
     html += '<td class="mono">' + fmt2(r.cost) + '</td>';
@@ -772,7 +776,7 @@ function renderTable() {
     html += '<td style="text-align:center"><input type="checkbox" ' + (isBlocked ? 'checked' : '') + ' onchange="toggleBlock(' + q(r.entity_id) + ',this.checked)" title="Заблокировать изменение ставки"></td>';
     html += '</tr>';
     // Expand row placeholder
-    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="14"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
+    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="15"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
   }
   tb.innerHTML = html;
   updateSelectionUI();
@@ -802,6 +806,7 @@ function actionLabel(a) {
   if (a === 'raise') return 'Повысить ставку';
   if (a === 'lower') return 'Снизить ставку';
   if (a === 'pause') return 'Выключить (клики без продаж)';
+  if (a === 'boost') return 'Разгон (мало показов — поднять ставку)';
   if (a === 'new')   return 'Новый — мало данных';
   return 'Удерживать';
 }
@@ -1260,7 +1265,10 @@ var NUM_RULE_COLS = [
   { key:'min_bid',  label:'мин $' },
   { key:'max_bid',  label:'макс $' },
   { key:'min_clicks',   label:'мин кл. ключа' },
-  { key:'no_sale_clicks', label:'кл. без продаж→off' }
+  { key:'no_sale_clicks', label:'кл. без продаж→off' },
+  { key:'low_impr',     label:'разгон: показов ≤' },
+  { key:'boost_pct',    label:'разгон +%' },
+  { key:'boost_max',    label:'разгон макс $' }
 ];
 
 function loadRules() {
@@ -1351,7 +1359,8 @@ function addRule() {
     name:'Новое', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
     use_age:true, age_from:0, age_to:null,
     high_acos:40, high_pct:15, low_acos:12, low_pct:15,
-    min_bid:0.20, max_bid:5.00, min_clicks:0, no_sale_clicks:0, priority:100, enabled:true
+    min_bid:0.20, max_bid:5.00, min_clicks:0, no_sale_clicks:0,
+    low_impr:0, boost_pct:20, boost_max:2.00, priority:100, enabled:true
   });
   renderRulesPanel();
 }

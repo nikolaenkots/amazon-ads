@@ -42,10 +42,13 @@ def _safe(s):
 RULES_TABLE = f"{PROJECT_ID}.{DATASET}.bid_rules"
 
 # Default rule set returned when the table is empty (also used to seed the UI).
+# low_impr / boost_pct / boost_max drive the "Разгон" (boost) action: a target
+# below low_impr impressions gets its bid raised by boost_pct (capped at boost_max)
+# to win more auctions. low_impr=0 disables boost for that rule.
 DEFAULT_RULES = [
-    {'name':'Новые',   'color':'#1a6fd4', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':0,  'age_to':10,   'high_acos':50, 'high_pct':10, 'low_acos':15, 'low_pct':10, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':0,  'no_sale_clicks':15, 'priority':100, 'enabled':True},
-    {'name':'Средние', 'color':'#b07800', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':10, 'age_to':50,   'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
-    {'name':'Зрелые',  'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':50, 'age_to':None, 'high_acos':35, 'high_pct':20, 'low_acos':10, 'low_pct':20, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':25, 'no_sale_clicks':30, 'priority':100, 'enabled':True},
+    {'name':'Новые',   'color':'#1a6fd4', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':0,  'age_to':10,   'high_acos':50, 'high_pct':10, 'low_acos':15, 'low_pct':10, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':0,  'no_sale_clicks':15, 'low_impr':100, 'boost_pct':25, 'boost_max':2.00, 'priority':100, 'enabled':True},
+    {'name':'Средние', 'color':'#b07800', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':10, 'age_to':50,   'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'low_impr':0,   'boost_pct':20, 'boost_max':2.00, 'priority':100, 'enabled':True},
+    {'name':'Зрелые',  'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':50, 'age_to':None, 'high_acos':35, 'high_pct':20, 'low_acos':10, 'low_pct':20, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':25, 'no_sale_clicks':30, 'low_impr':0,   'boost_pct':20, 'boost_max':2.00, 'priority':100, 'enabled':True},
 ]
 
 _RULES_DDL = f"""
@@ -55,13 +58,26 @@ CREATE TABLE IF NOT EXISTS `{RULES_TABLE}` (
   use_age BOOL, age_from INT64, age_to INT64,
   high_acos FLOAT64, high_pct FLOAT64, low_acos FLOAT64, low_pct FLOAT64,
   min_bid FLOAT64, max_bid FLOAT64, min_clicks INT64, no_sale_clicks INT64,
+  low_impr INT64, boost_pct FLOAT64, boost_max FLOAT64,
   priority INT64, enabled BOOL, updated_at TIMESTAMP
 )
 """
 
+# Columns added after the first release — kept in sync on existing tables.
+_RULES_ALTERS = [
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS low_impr INT64",
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_pct FLOAT64",
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_max FLOAT64",
+]
+
 
 def _ensure_rules_table(client):
     client.query(_RULES_DDL).result()
+    for stmt in _RULES_ALTERS:
+        try:
+            client.query(stmt).result()
+        except Exception:
+            pass
 
 
 def _fnum(v, default=None):
@@ -94,7 +110,8 @@ def ba_rules_get():
         sql = f"""
         SELECT name, color, scope, portfolio_id, targeting_type, use_age,
                age_from, age_to, high_acos, high_pct, low_acos, low_pct,
-               min_bid, max_bid, min_clicks, no_sale_clicks, priority, enabled
+               min_bid, max_bid, min_clicks, no_sale_clicks,
+               low_impr, boost_pct, boost_max, priority, enabled
         FROM `{RULES_TABLE}`
         WHERE account_type = '{_safe(account_type)}'
         ORDER BY priority, scope DESC, name
@@ -140,6 +157,9 @@ def _build_rule_rows(account_type, rules):
             'max_bid':       _fnum(r.get('max_bid'), 5.00),
             'min_clicks':    _inum(r.get('min_clicks'), 0),
             'no_sale_clicks': _inum(r.get('no_sale_clicks'), 0),
+            'low_impr':      _inum(r.get('low_impr'), 0),
+            'boost_pct':     _fnum(r.get('boost_pct'), 20.0),
+            'boost_max':     _fnum(r.get('boost_max'), 2.00),
             'priority':      _inum(r.get('priority'), 100),
             'enabled':       bool(r.get('enabled', True)),
             'updated_at':    now,
@@ -263,7 +283,7 @@ def ba_keywords():
     rec_where = ''
     if rec_filter == 'changed':
         rec_where = 'WHERE ABS(new_bid - bid) >= 0.01'
-    elif rec_filter in ('raise', 'lower', 'pause', 'hold', 'new'):
+    elif rec_filter in ('raise', 'lower', 'pause', 'hold', 'new', 'boost'):
         rec_where = f"WHERE action = '{rec_filter}'"
 
     camp_extra_conds = []
@@ -453,6 +473,7 @@ def ba_keywords():
         SELECT scope, portfolio_id, targeting_type, use_age, age_from, age_to,
                high_acos, high_pct, low_acos, low_pct, min_bid, max_bid,
                min_clicks AS r_min_clicks, no_sale_clicks AS r_no_sale_clicks,
+               low_impr, boost_pct, boost_max,
                priority, name AS rule_name, color AS rule_color
         FROM `{RULES_TABLE}`
         WHERE account_type = '{account_type}' AND enabled = TRUE
@@ -460,7 +481,8 @@ def ba_keywords():
     matched AS (
         SELECT b.*,
             r.high_acos, r.high_pct, r.low_acos, r.low_pct, r.min_bid, r.max_bid,
-            r.r_min_clicks, r.r_no_sale_clicks, r.rule_name, r.rule_color,
+            r.r_min_clicks, r.r_no_sale_clicks, r.low_impr, r.boost_pct, r.boost_max,
+            r.rule_name, r.rule_color,
             CASE
                 WHEN r.scope IS NULL THEN 999
                 WHEN r.scope = 'portfolio' AND r.targeting_type <> 'ANY' THEN 1
@@ -484,9 +506,16 @@ def ba_keywords():
         SELECT *,
             CASE
                 WHEN rule_name IS NULL THEN 'hold'
-                WHEN clicks < r_min_clicks THEN 'hold'
+                WHEN clicks < r_min_clicks THEN
+                    -- not enough clicks: if also few impressions and bid below the
+                    -- boost ceiling → ramp the bid up to win auctions; otherwise hold
+                    CASE WHEN COALESCE(low_impr,0) > 0 AND impressions <= low_impr
+                              AND bid < boost_max THEN 'boost'
+                         ELSE 'hold' END
                 WHEN acos IS NULL THEN
                     CASE WHEN r_no_sale_clicks > 0 AND clicks >= r_no_sale_clicks THEN 'pause'
+                         WHEN COALESCE(low_impr,0) > 0 AND impressions <= low_impr
+                              AND bid < boost_max THEN 'boost'
                          WHEN clicks > 5 THEN 'hold' ELSE 'new' END
                 WHEN acos > high_acos THEN 'lower'
                 WHEN acos < low_acos THEN 'raise'
@@ -499,6 +528,7 @@ def ba_keywords():
             CASE action
                 WHEN 'raise' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 + low_pct/100), 2)))
                 WHEN 'lower' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 - high_pct/100), 2)))
+                WHEN 'boost' THEN LEAST(boost_max, GREATEST(min_bid, ROUND(bid * (1 + boost_pct/100), 2)))
                 ELSE bid
             END AS new_bid
         FROM acted
