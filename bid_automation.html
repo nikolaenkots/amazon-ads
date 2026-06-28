@@ -388,6 +388,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th onclick="sortBy('keyword_text')">Ключ / Таргет <span class="sort-arrow" id="sa_keyword_text"></span></th>
             <th onclick="sortBy('match_type')" style="width:80px">Тип <span class="sort-arrow" id="sa_match_type"></span></th>
             <th onclick="sortBy('bid')" style="width:150px">Ставка → реком. <span class="sort-arrow" id="sa_bid"></span></th>
+            <th onclick="sortBy('impressions')" style="width:65px">Показы <span class="sort-arrow" id="sa_impressions"></span></th>
             <th onclick="sortBy('clicks')" style="width:60px">Клики <span class="sort-arrow" id="sa_clicks"></span></th>
             <th style="width:70px" title="Всего кликов на ASIN в группе (возраст товара)">ASIN кл.</th>
             <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
@@ -763,6 +764,7 @@ function renderTable() {
     }
     html += '  </div>';
     html += '</td>';
+    html += '<td class="mono">' + fmtN(r.impressions) + '</td>';
     html += '<td class="mono">' + fmtN(r.clicks) + '</td>';
     html += '<td class="mono" style="color:var(--muted)">' + fmtN(r.group_total_clicks) + '</td>';
     html += '<td class="mono">' + fmt2(r.cost) + '</td>';
@@ -774,7 +776,7 @@ function renderTable() {
     html += '<td style="text-align:center"><input type="checkbox" ' + (isBlocked ? 'checked' : '') + ' onchange="toggleBlock(' + q(r.entity_id) + ',this.checked)" title="Заблокировать изменение ставки"></td>';
     html += '</tr>';
     // Expand row placeholder
-    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="14"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
+    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="15"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
   }
   tb.innerHTML = html;
   updateSelectionUI();
