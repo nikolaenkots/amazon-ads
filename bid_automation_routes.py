@@ -71,13 +71,21 @@ _RULES_ALTERS = [
 ]
 
 
+_rules_table_ready = False
+
 def _ensure_rules_table(client):
+    # Run CREATE/ALTER at most once per process — BigQuery rate-limits table
+    # metadata updates, so doing this on every request triggers 429s.
+    global _rules_table_ready
+    if _rules_table_ready:
+        return
     client.query(_RULES_DDL).result()
     for stmt in _RULES_ALTERS:
         try:
             client.query(stmt).result()
         except Exception:
             pass
+    _rules_table_ready = True
 
 
 def _fnum(v, default=None):
