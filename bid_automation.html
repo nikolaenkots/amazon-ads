@@ -344,7 +344,6 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
         <option value="new">Новые (мало данных)</option>
         <option value="changed">С изменением ставки</option>
       </select>
-      <button class="mbt att-filter-btn" id="attFilterBtn" onclick="toggleAttFilter()" title="Только строки с заметкой">Требует внимания</button>
       <div class="msep"></div>
       <input type="text" id="inpFilter" placeholder="Поиск по тексту..." style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px;width:180px" oninput="debounceLoad()">
       <span id="loadStatus" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
@@ -396,8 +395,6 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th onclick="sortBy('acos')" style="width:65px">ACoS <span class="sort-arrow" id="sa_acos"></span></th>
             <th onclick="sortBy('last_change_date')" style="width:95px">Посл. изм. <span class="sort-arrow" id="sa_last_change_date"></span></th>
             <th style="width:65px">Пред. ставка</th>
-            <th style="width:180px">Рекомендация</th>
-            <th style="width:55px">Блок</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -732,7 +729,6 @@ function renderTable() {
     html += '    <span class="dot ' + stateClass + '"></span>';
     html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
     html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Возраст товара по кликам ASIN (все кампании): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
-    if (rec) html += '    <span class="att-badge">!</span>';
     html += '  </div>';
     html += '  <div style="font-size:10px;color:var(--dim);margin-top:1px;padding-left:26px">' + esc(r.campaign_name||'') + ' / ' + esc(r.ad_group_name||'') + '</div>';
     html += '</td>';
@@ -772,11 +768,9 @@ function renderTable() {
     html += '<td class="mono' + acosClass(r.acos) + '">' + fmtPct(r.acos) + '</td>';
     html += '<td class="mono" style="font-size:10px">' + fmtDate(r.last_change_date) + '</td>';
     html += '<td class="mono">' + (r.prev_bid != null ? fmt2(r.prev_bid) : '—') + '</td>';
-    html += '<td><input class="rec-inp" type="text" placeholder="Добавить заметку..." value="' + esc(rec) + '" oninput="saveRec(' + q(r.entity_id) + ',this.value)" title="Рекомендация"></td>';
-    html += '<td style="text-align:center"><input type="checkbox" ' + (isBlocked ? 'checked' : '') + ' onchange="toggleBlock(' + q(r.entity_id) + ',this.checked)" title="Заблокировать изменение ставки"></td>';
     html += '</tr>';
     // Expand row placeholder
-    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="15"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
+    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="13"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
   }
   tb.innerHTML = html;
   updateSelectionUI();
