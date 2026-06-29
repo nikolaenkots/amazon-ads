@@ -693,10 +693,17 @@ def ba_negatives():
     safe_mkt    = _safe(marketplace)
     safe_agid   = _safe(ad_group_id)
 
+    def _norm_mt(mt):
+        m = (mt or '').lower()
+        if 'exact' in m:  return 'exact'
+        if 'phrase' in m: return 'phrase'
+        if 'broad' in m:  return 'broad'
+        return m or 'exact'
+
     # Current negatives synced from Amazon (dedup latest by synced_at)
     sql = f"""
     WITH neg_raw AS (
-        SELECT entity_type, keyword_text, targeting_expression,
+        SELECT entity_type, keyword_text, targeting_expression, match_type,
             CASE WHEN entity_type = 'negative_keyword' THEN keyword_state ELSE target_state END AS st,
             ROW_NUMBER() OVER (
                 PARTITION BY COALESCE(keyword_id, target_id), marketplace
@@ -707,18 +714,18 @@ def ba_negatives():
           AND ad_group_id = '{safe_agid}'
           AND marketplace = '{safe_mkt}'
     )
-    SELECT entity_type, keyword_text, targeting_expression
+    SELECT entity_type, keyword_text, targeting_expression, match_type
     FROM neg_raw
     WHERE rn = 1 AND (st IS NULL OR st != 'ARCHIVED')
     """
 
-    texts = set()
+    texts = {}   # lowercase text -> match type
     asins = set()
     try:
         client = get_client()
         for r in client.query(sql, job_config=_QJC).result():
             if r['entity_type'] == 'negative_keyword' and r['keyword_text']:
-                texts.add(r['keyword_text'].strip().lower())
+                texts[r['keyword_text'].strip().lower()] = _norm_mt(r['match_type'])
             elif r['entity_type'] == 'negative_product_targeting' and r['targeting_expression']:
                 expr = r['targeting_expression']
                 # формат вида: asin="B0XXXXXXXX"
@@ -745,11 +752,15 @@ def ba_negatives():
             except Exception:
                 v = {}
             if r['entity_type'] == 'negative_add' and v.get('text'):
-                texts.add(str(v['text']).strip().lower())
+                texts[str(v['text']).strip().lower()] = _norm_mt(v.get('match_type'))
             elif r['entity_type'] == 'negative_product_add' and v.get('asin'):
                 asins.add(str(v['asin']).strip().upper())
 
-        return jsonify({'texts': sorted(texts), 'asins': sorted(asins)})
+        return jsonify({
+            'texts': texts,                                  # {text: type}
+            'text_list': [{'text': t, 'type': ty} for t, ty in sorted(texts.items())],
+            'asins': sorted(asins)
+        })
     except Exception as e:
         return jsonify({'error': str(e), 'texts': [], 'asins': []}), 500
 
