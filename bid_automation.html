@@ -857,9 +857,9 @@ function loadExpandPanel(i, entityId, entityType, cont) {
     var histData = results[1];
     var negData  = results[2] || {};
 
-    var negTexts = {};
+    // negData.texts = { lowercase_text: match_type }
+    var negTexts = negData.texts || {};
     var negAsins = {};
-    (negData.texts || []).forEach(function(t){ negTexts[t] = true; });
     (negData.asins || []).forEach(function(a){ negAsins[a] = true; });
 
     // Store panel context for the modal
@@ -884,7 +884,8 @@ function loadExpandPanel(i, entityId, entityType, cont) {
     }
 
     // Search terms + negatives tabs
-    var negCount = (negData.texts || []).length + (negData.asins || []).length;
+    var negList = negData.text_list || [];
+    var negCount = negList.length + (negData.asins || []).length;
     html += '<div class="exp-section">';
     html += '<div class="exp-head" style="display:flex;align-items:center;gap:8px">';
     html += '  <button class="sttab-btn on" id="sttabb-q-' + i + '" onclick="stTab(' + i + ',\'q\')">Поисковые запросы</button>';
@@ -905,10 +906,13 @@ function loadExpandPanel(i, entityId, entityType, cont) {
       stData.rows.forEach(function(st) {
         var term = st.search_term || '';
         var isAsinTerm = /^[Bb]0[0-9A-Za-z]{8}$/.test(term);
-        var exists = isAsinTerm ? !!negAsins[term.toUpperCase()] : !!negTexts[term.trim().toLowerCase()];
+        var negType = isAsinTerm ? (negAsins[term.toUpperCase()] ? 'product' : null)
+                                 : (negTexts[term.trim().toLowerCase()] || null);
+        var exists = !!negType;
+        var badge = exists ? ' <span class="att-badge" style="background:var(--red-bg);color:var(--red);border-color:var(--red)">в минусах · ' + esc(negType) + '</span>' : '';
         html += '<tr' + (exists ? ' style="opacity:.55"' : '') + '>';
         html += '<td><input type="checkbox" class="stcb-' + i + '" value="' + esc(term) + '" ' + (exists ? 'disabled' : '') + '></td>';
-        html += '<td>' + esc(term) + (exists ? ' <span class="att-badge" style="background:var(--red-bg);color:var(--red);border-color:var(--red)">уже в минусах</span>' : '') + '</td>';
+        html += '<td>' + esc(term) + badge + '</td>';
         html += '<td>' + fmtN(st.clicks) + '</td>';
         html += '<td>' + fmt2(st.cost) + '</td>';
         html += '<td>' + fmt2(st.sales) + '</td>';
@@ -925,8 +929,8 @@ function loadExpandPanel(i, entityId, entityType, cont) {
       html += '<div style="padding:10px;color:var(--dim);font-size:12px">В этой группе нет минус-слов</div>';
     } else {
       html += '<div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">';
-      (negData.texts || []).forEach(function(t){ html += '<span class="term-tag">' + esc(t) + '</span>'; });
-      (negData.asins || []).forEach(function(a){ html += '<span class="term-tag asin">' + esc(a) + '</span>'; });
+      negList.forEach(function(o){ html += '<span class="term-tag">' + esc(o.text) + ' <span style="color:var(--dim);font-size:10px">' + esc(o.type) + '</span></span>'; });
+      (negData.asins || []).forEach(function(a){ html += '<span class="term-tag asin">' + esc(a) + ' <span style="color:var(--dim);font-size:10px">product</span></span>'; });
       html += '</div>';
     }
     html += '</div>';
@@ -1212,7 +1216,7 @@ function submitNeg() {
       // mark added terms as existing in local context
       terms.forEach(function(t){
         if (isAsin(t)) ctx.negAsins[t.toUpperCase()] = true;
-        else ctx.negTexts[t.trim().toLowerCase()] = true;
+        else ctx.negTexts[t.trim().toLowerCase()] = mt.toLowerCase();
       });
       // uncheck the source checkboxes + select-all in that expand panel
       if (_negPanelIdx != null) {
