@@ -2979,6 +2979,115 @@ function coverage(term, campaignId, adGroupId) {
 "negative_product_add": ("ad_group_id", "ad_group_name", "entity_type = 'ad_group'"),
 ```
 
+### Пагинация и редактирование (обновление, июнь 2026)
+- `negatives-candidates` и `keywords-candidates` получили `page` / `per_page`
+  (лимит 2000) с `LIMIT/OFFSET` и общим числом через `COUNT(*) OVER() AS _total`.
+  Раньше был жёсткий `LIMIT 500` — он убран.
+- Фронтенд: под каждой вкладкой панель пагинации `.pager` (на странице
+  100/200/500/1000/2000, диапазон «X–Y из N», ‹ ›). `loadAll` разделён на
+  `loadNeg()` / `loadKw()` — вкладки листаются независимо; `existing-negatives`
+  грузится один раз для проверки покрытия.
+- На вкладке «В ключевые слова» поисковый запрос — редактируемое поле
+  (`.term-inp-inline.kw-term`); `addKwToQueue` берёт отредактированный текст.
+
+---
+
+## Управление ставками `/automation/bid-automation` (июнь 2026)
+
+### Файлы
+| Файл | Blueprint | Описание |
+|---|---|---|
+| `bid_automation_routes.py` | `bid_automation_bp` | API + движок правил |
+| `bid_automation.html` | — | Фронтенд страницы |
+| Зарегистрирован в `app.py` | | `app.register_blueprint(bid_automation_bp)` |
+
+Карточка и пункт меню добавлены на `index.html` в секцию "Автоматизация".
+
+### Назначение
+Рекомендует изменение ставок ключей/таргетов по настраиваемым правилам
+(ACoS, клики, возраст товара, показы) и кладёт изменения в очередь
+`pending_changes → /control → send.py`. Режим только ручной: чекбоксы строк +
+«Поставить в очередь».
+
+### API эндпоинты
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/automation/bid-automation` | HTML страница |
+| `GET` | `/automation/bid-automation/keywords` | Список ключей/таргетов + рекомендация (серверный расчёт) |
+| `GET/POST` | `/automation/bid-automation/rules` | Чтение/перезапись правил (BigQuery) |
+| `GET` | `/automation/bid-automation/search-terms` | Поисковые запросы по keyword_id |
+| `GET` | `/automation/bid-automation/negatives` | Существующие минусы группы (подсветка) |
+| `GET` | `/automation/bid-automation/bid-history` | История изменений ставки |
+| `GET` | `/automation/bid-automation/campaigns`, `/ad-groups` | (вспомогательные списки) |
+
+### Данные строки (`/keywords`)
+- Ставка: `COALESCE(keyword_bid|target_bid, ad_group_default_bid)` — если у ключа
+  нет ставки, берётся ставка группы.
+- Возраст товара = **суммарные клики на ASIN по всем кампаниям** (из
+  `asin_stats`: `ad_group → advertised_asin → SUM(clicks)`), поле
+  `group_total_clicks`.
+- `last_change_date` / `prev_bid` — из `change_log` (последнее SUCCESS по `bid`).
+- Чекбокс «Учитывать последние изменения» (`from_last_change`) — статистика по
+  каждому ключу считается с даты его последнего изменения ставки (фоллбэк —
+  фиксированный период).
+- `entity_type` в campaigns: `keyword` и `product_targeting` (НЕ `target`).
+  Колонки различаются: keyword_text/keyword_bid/keyword_state vs
+  targeting_expression/target_bid/target_state.
+
+### Правила (таблица BigQuery `bid_rules`)
+Создаётся автоматически (`CREATE TABLE IF NOT EXISTS` + `ALTER ADD COLUMN IF NOT
+EXISTS`), **один раз за процесс** (флаг `_rules_table_ready` — иначе BigQuery
+отдаёт 429 «too many table update operations»). Сохранение = `DELETE` по
+`account_type` + `load_table_from_json` (WRITE_APPEND). При пустой таблице
+засевается `DEFAULT_RULES`.
+
+Колонки правила: `account_type`, `name`, `color`, `scope` (global/portfolio),
+`portfolio_id`, `targeting_type` (ANY/AUTO/MANUAL), `use_age`, `age_from`,
+`age_to`, `high_acos`, `high_pct`, `low_acos`, `low_pct`, `min_bid`, `max_bid`,
+`min_clicks`, `no_sale_clicks`, `low_impr`, `boost_pct`, `boost_max`,
+`priority`, `enabled`.
+
+- Правила **раздельные по аккаунту** (MERCH/KDP), **общие на все маркетплейсы**.
+- Разные min/max для AUTO и MANUAL → отдельные правила с targeting_type.
+- Портфолио-правило с `use_age=false` действует на всё портфолио независимо от
+  возраста (кейс «день рождения»: дорогие клики).
+
+### Выбор правила и действие (серверный SQL)
+Приоритет матча (ROW_NUMBER по `match_score`, затем `priority`):
+1. портфолио + конкретный таргетинг
+2. портфолио + ANY
+3. глобальное + таргетинг + возраст
+4. глобальное + ANY + возраст
+
+Действие (`action`) и `new_bid` считаются в SQL (CTE `matched`/`ranked`/`acted`/
+`finalized`), что позволяет фильтру рекомендаций и пагинации работать по всей
+выборке (`rec_filter`):
+```
+clicks < min_clicks:
+    low_impr>0 И impressions<=low_impr И bid<boost_max → boost  иначе hold
+acos IS NULL (нет продаж):
+    clicks>=no_sale_clicks → pause
+    low_impr>0 И impressions<=low_impr И bid<boost_max → boost
+    clicks>5 → hold  иначе new
+acos > high_acos → lower (× (1-high_pct/100))
+acos < low_acos  → raise (× (1+low_pct/100))
+иначе → hold
+boost → × (1+boost_pct/100), потолок boost_max
+raise/lower → коридор [min_bid, max_bid]
+```
+
+Действия: `raise` (зел.), `lower` (красн.), `pause` (тёмно-красн., статус→PAUSED),
+`boost` «Разгон» (фиол., мало показов → поднять ставку), `new` (син.), `hold`.
+
+### Применение
+- Серверный фильтр «Рекомендация» (`rec_filter`: raise/lower/boost/pause/hold/new/changed).
+- Новая ставка редактируется в строке (override на клиенте), при «Поставить в
+  очередь» уходит фактическая (override или по правилу); `pause` → state PAUSED.
+- Раскрытие строки: поисковые запросы (чекбоксы + модалка-textarea для минусовки,
+  подсветка уже добавленных), вкладка «Минусы группы», история ставок.
+- Пагинация (100/200/500/1000), колонки «Показы», «ASIN кл.», «Ставка → реком.».
+- Заметки и «Блок» были убраны (были только клиентскими, в рамках сессии).
+
 ---
 
 ## Каталог: коды маркетплейсов
