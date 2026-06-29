@@ -125,11 +125,12 @@ def ba_rules_get():
         ORDER BY priority, scope DESC, name
         """
         rows = [{k: _cvt(v) for k, v in dict(r).items()} for r in client.query(sql, job_config=_QJC).result()]
+        # Read-only: don't write on read (avoids hammering BigQuery's table-update
+        # quota). When empty, just return defaults for display; they get persisted
+        # only when the user clicks "Сохранить правила".
         if not rows:
-            # Seed the table with defaults so the server-side engine uses them too
-            _write_rules(client, account_type, DEFAULT_RULES)
             rows = [dict(d) for d in DEFAULT_RULES]
-        return jsonify({'rules': rows})
+        return jsonify({'rules': rows, 'seeded': False})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
