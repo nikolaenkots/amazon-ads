@@ -393,6 +393,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
             <th onclick="sortBy('sales')" style="width:70px">Продажи <span class="sort-arrow" id="sa_sales"></span></th>
             <th onclick="sortBy('acos')" style="width:65px">ACoS <span class="sort-arrow" id="sa_acos"></span></th>
+            <th style="width:60px" title="Средняя цена клика">CPC</th>
             <th onclick="sortBy('last_change_date')" style="width:95px">Посл. изм. <span class="sort-arrow" id="sa_last_change_date"></span></th>
             <th style="width:65px">Пред. ставка</th>
           </tr>
@@ -730,7 +731,9 @@ function renderTable() {
     html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
     html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Возраст товара по кликам ASIN (все кампании): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
     html += '  </div>';
-    html += '  <div style="font-size:10px;color:var(--dim);margin-top:1px;padding-left:26px">' + esc(r.campaign_name||'') + ' / ' + esc(r.ad_group_name||'') + '</div>';
+    var campDot = '<span class="dot ' + (r.campaign_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Кампания: ' + esc(r.campaign_state||'') + '"></span>';
+    var grpDot  = '<span class="dot ' + (r.ad_group_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Группа: ' + esc(r.ad_group_state||'') + '"></span>';
+    html += '  <div style="font-size:10px;color:var(--dim);margin-top:1px;padding-left:26px;display:flex;align-items:center;gap:4px">' + campDot + '<span>' + esc(r.campaign_name||'') + '</span><span>/</span>' + grpDot + '<span>' + esc(r.ad_group_name||'') + '</span></div>';
     html += '</td>';
     html += '<td class="mono">' + esc(matchType) + '</td>';
     html += '<td>';
@@ -766,11 +769,13 @@ function renderTable() {
     html += '<td class="mono">' + fmt2(r.cost) + '</td>';
     html += '<td class="mono">' + fmt2(r.sales) + '</td>';
     html += '<td class="mono' + acosClass(r.acos) + '">' + fmtPct(r.acos) + '</td>';
+    var cpc = (r.clicks && r.clicks > 0) ? (r.cost / r.clicks) : null;
+    html += '<td class="mono">' + (cpc != null ? fmt2(cpc) : '—') + '</td>';
     html += '<td class="mono" style="font-size:10px">' + fmtDate(r.last_change_date) + '</td>';
     html += '<td class="mono">' + (r.prev_bid != null ? fmt2(r.prev_bid) : '—') + '</td>';
     html += '</tr>';
     // Expand row placeholder
-    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="13"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
+    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="14"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
   }
   tb.innerHTML = html;
   updateSelectionUI();
