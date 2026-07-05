@@ -59,6 +59,7 @@ ALLOWED_OPS = {
     "product_ad_add":     ["—"],  # new_value = JSON {asin, campaign_id, ad_group_id?, ad_group_name?}
     "product_ad":         ["state"],
     "campaign_delete":    ["—"],   # entity_id = campaign_id, удаление кампании целиком
+    "bidding_adjustment": ["—"],   # entity_id = campaign_id, new_value = JSON {PLACEMENT: percentage}
 }
 
 LABELS = {
@@ -82,6 +83,9 @@ LABELS = {
     ("product_ad",  "state"):       lambda nv: "▶ Включить объявление" if nv == "ENABLED" else "⏸ Выключить объявление",
     ("product_ad_add","—"):         lambda nv: f'🖼 Объявление ASIN: {nv[:60]}',
     ("campaign_delete","—"):        lambda nv: '🗑️ Удалить кампанию',
+    ("bidding_adjustment","—"):     lambda nv: '📊 Плейсменты: ' + ', '.join(
+        {"TOP_OF_SEARCH":"Top","REST_OF_SEARCH":"Rest","PRODUCT_PAGE":"Prod"}.get(k, k) + f" {v}%"
+        for k, v in json.loads(nv).items()),
 }
 
 
