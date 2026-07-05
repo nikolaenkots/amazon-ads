@@ -71,6 +71,8 @@ def _get_table(account_type, report_type="spTargeting"):
         return f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
     if report_type == "spSearchTerm":
         return f"{PROJECT_ID}.{DATASET}.search_terms_{suffix}"
+    if report_type == "spCampaigns":
+        return f"{PROJECT_ID}.{DATASET}.placement_stats_{suffix}"
     return f"{PROJECT_ID}.{DATASET}.targets_stats_{suffix}"
 
 def _amz_token():
@@ -131,7 +133,31 @@ REPORT_CONFIGS = {
             "unitsSoldClicks1d", "unitsSoldClicks7d", "unitsSoldClicks14d"
         ]
     },
+    "spCampaigns": {
+        "label":   "Placement (плейсменты)",
+        "groupBy": ["campaignPlacement"],
+        "columns": [
+            "date", "campaignId", "campaignName", "placementClassification",
+            "impressions", "clicks", "cost", "purchases7d", "sales7d"
+        ]
+    },
 }
+
+def _map_placement_row(r, profile_id, marketplace):
+    return {
+        "date":          r.get("date"),
+        "profile_id":    str(profile_id),
+        "marketplace":   marketplace,
+        "campaign_id":   str(r.get("campaignId", "")),
+        "campaign_name": r.get("campaignName"),
+        "placement":     r.get("placementClassification"),
+        "impressions":   r.get("impressions"),
+        "clicks":        r.get("clicks"),
+        "cost":          float(r["cost"]) if r.get("cost") is not None else None,
+        "purchases_7d":  r.get("purchases7d"),
+        "sales_7d":      float(r["sales7d"]) if r.get("sales7d") is not None else None,
+        "loaded_at":     datetime.now(tz=timezone.utc).isoformat(),
+    }
 
 def _map_targeting_row(r, profile_id, marketplace):
     keyword_type = r.get("keywordType", "")
@@ -224,6 +250,8 @@ def _map_row(r, profile_id, marketplace, report_type):
         return _map_asin_row(r, profile_id, marketplace)
     if report_type == "spSearchTerm":
         return _map_search_term_row(r, profile_id, marketplace)
+    if report_type == "spCampaigns":
+        return _map_placement_row(r, profile_id, marketplace)
     return _map_targeting_row(r, profile_id, marketplace)
 
 

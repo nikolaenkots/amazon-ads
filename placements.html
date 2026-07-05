@@ -53,7 +53,7 @@ main{max-width:1200px;margin:0 auto;padding:32px}
 /* Table */
 .tbl{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .row{display:grid;grid-template-columns:28px 2.4fr repeat(8,1fr);gap:8px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px}
-.row.head{background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);position:sticky;top:52px;z-index:5}
+.row.head{background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
 .row.camp{cursor:pointer;font-weight:500}
 .row.camp:hover{background:var(--accent-bg)}
 .row.pl{background:#fafafb;font-size:12.5px;padding-left:16px}
@@ -138,6 +138,9 @@ main{max-width:1200px;margin:0 auto;padding:32px}
     <div class="fld"><label>С даты</label><input type="date" id="start"></div>
     <div class="fld"><label>По дату</label><input type="date" id="end"></div>
     <button class="btn" id="loadBtn" onclick="load()">Показать</button>
+    <div class="fld"><label>Портфолио</label><select id="fPortfolio" onchange="applyFilters()"><option value="all">Все</option></select></div>
+    <div class="fld"><label>Статус</label><select id="fState" onchange="applyFilters()"><option value="all">Все</option><option value="ENABLED">Активные</option><option value="PAUSED">На паузе</option></select></div>
+    <div class="fld"><label>Тип</label><select id="fType" onchange="applyFilters()"><option value="all">Все</option><option value="AUTO">Авто</option><option value="MANUAL">Ручной</option></select></div>
   </div>
 
   <div id="content"></div>
@@ -164,7 +167,7 @@ function acosCls(a){return a==null?'':(a>50?'acos-hi':(a<30?'acos-ok':''))}
   document.getElementById('start').value=start.toISOString().slice(0,10);
 })();
 
-var DATA=null;
+var DATA=null, VIEW=[];
 function load(){
   var mkt=document.getElementById('mkt').value;
   var s=document.getElementById('start').value, e=document.getElementById('end').value;
@@ -174,7 +177,7 @@ function load(){
     .then(function(r){return r.json()})
     .then(function(d){ btn.disabled=false; btn.textContent='Показать';
       if(d.error){document.getElementById('content').innerHTML='<div class="empty">Ошибка: '+d.error+'</div>';return}
-      DATA=d; render(d);
+      DATA=d; populatePortfolios(d); applyFilters();
     })
     .catch(function(err){ btn.disabled=false; btn.textContent='Показать';
       document.getElementById('content').innerHTML='<div class="empty">Ошибка сети: '+err+'</div>'});
@@ -193,14 +196,33 @@ function metricCells(m){
     '<div class="num">'+money(m.sales)+'</div><div class="num '+acosCls(m.acos)+'">'+pct(m.acos)+'</div>';
 }
 
-function render(d){
-  if(!d.campaigns.length){document.getElementById('content').innerHTML='<div class="empty">Нет данных за период. Убедитесь, что собрана статистика плейсментов (collect_placements.py).</div>';return}
+function populatePortfolios(d){
+  var sel=document.getElementById('fPortfolio'), cur=sel.value;
+  sel.innerHTML='<option value="all">Все</option>'+(d.portfolios||[]).map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>'}).join('');
+  sel.value=cur;
+}
+function applyFilters(){
+  if(!DATA)return;
+  var pf=document.getElementById('fPortfolio').value,
+      st=document.getElementById('fState').value,
+      tp=document.getElementById('fType').value;
+  VIEW=DATA.campaigns.filter(function(c){
+    if(pf!=='all' && String(c.portfolio_id)!==pf) return false;
+    if(st!=='all' && c.state!==st) return false;
+    if(tp!=='all' && (c.targeting_type||'')!==tp) return false;
+    return true;
+  });
+  render();
+}
+function render(){
+  if(!VIEW.length){document.getElementById('content').innerHTML='<div class="empty">Нет данных за период / по фильтрам. Проверьте, что собрана статистика плейсментов (collect_placements.py) и синхронизирована структура кампаний.</div>';return}
   var h=headRow();
-  d.campaigns.forEach(function(c,i){
+  VIEW.forEach(function(c,i){
     var st=c.state==='ENABLED'?'<span class="badge b-en">ACTIVE</span>':(c.state==='PAUSED'?'<span class="badge b-pa">PAUSED</span>':'');
+    var tp=c.targeting_type?'<span class="badge b-pa">'+c.targeting_type+'</span>':'';
     h+='<div class="row camp" id="c'+i+'" onclick="tog('+i+')">'+
        '<div class="chev">▶</div>'+
-       '<div class="cname">'+esc(c.campaign_name)+st+'</div>'+
+       '<div class="cname">'+esc(c.campaign_name)+st+tp+'</div>'+
        metricCells(c.totals)+'</div>';
     h+='<div id="d'+i+'" style="display:none"></div>';
   });
@@ -212,7 +234,7 @@ function tog(i){
   var c=document.getElementById('c'+i), box=document.getElementById('d'+i);
   c.classList.toggle('open');
   if(box.innerHTML){box.style.display=box.style.display==='none'?'block':'none';return}
-  var camp=DATA.campaigns[i], h='';
+  var camp=VIEW[i], h='';
   camp.placements.forEach(function(p){
     var inp = p.editable
       ? '<input class="pctinp" type="number" min="0" max="900" step="1" value="'+(p.adjustment_pct==null?0:p.adjustment_pct)+'" data-code="'+p.code+'">'
@@ -229,7 +251,7 @@ function tog(i){
 function resetC(i){ var box=document.getElementById('d'+i); box.innerHTML=''; box.style.display='none'; tog(i); }
 
 function queueC(i){
-  var camp=DATA.campaigns[i], box=document.getElementById('d'+i);
+  var camp=VIEW[i], box=document.getElementById('d'+i);
   var inputs=box.querySelectorAll('.pctinp[data-code]');
   var nv={}, ov={};
   camp.placements.forEach(function(p){ if(p.editable) ov[p.code]=(p.adjustment_pct==null?0:p.adjustment_pct); });

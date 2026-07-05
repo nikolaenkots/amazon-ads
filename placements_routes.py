@@ -7,7 +7,7 @@ placements_routes.py — страница оптимизации плейсме�
 
 Данные:
   • статистика  — placement_stats_{merch,kdp}  (отчёт spCampaigns / campaignPlacement)
-  • корректировки — campaigns_{merch,kdp}  (entity_type='bidding_adjustment')
+  • корректировки + мета кампаний — campaigns_{merch,kdp}
 
 Изменение % уходит в очередь (pending_changes, entity_type='bidding_adjustment')
 через существующий /control/add.
@@ -36,7 +36,6 @@ LABELS = {
     "PRODUCT_PAGE":   "Product pages",
     "OFF_AMAZON":     "Off Amazon",
 }
-# порядок вывода + какие редактируемы (у Off Amazon корректировки нет)
 ORDER    = ["TOP_OF_SEARCH", "REST_OF_SEARCH", "PRODUCT_PAGE", "OFF_AMAZON"]
 EDITABLE = {"TOP_OF_SEARCH", "REST_OF_SEARCH", "PRODUCT_PAGE"}
 
@@ -68,49 +67,71 @@ def placements_data():
     camp_tbl  = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
     client    = get_client()
 
-    params = [
+    cfg = bigquery.QueryJobConfig(query_parameters=[
         bigquery.ScalarQueryParameter("mkt",   "STRING", marketplace),
         bigquery.ScalarQueryParameter("start", "DATE",   start),
         bigquery.ScalarQueryParameter("end",   "DATE",   end),
-    ]
-    cfg = bigquery.QueryJobConfig(query_parameters=params)
+    ])
+    cfg_mkt = bigquery.QueryJobConfig(query_parameters=[
+        bigquery.ScalarQueryParameter("mkt", "STRING", marketplace),
+    ])
 
     # ── 1. статистика по плейсментам ─────────────────────────
     stats_sql = f"""
         SELECT campaign_id,
-               ANY_VALUE(campaign_name)     AS campaign_name,
-               ANY_VALUE(profile_id)        AS profile_id,
+               ANY_VALUE(campaign_name) AS campaign_name,
+               ANY_VALUE(profile_id)    AS profile_id,
                placement,
-               SUM(impressions)             AS impressions,
-               SUM(clicks)                  AS clicks,
-               SUM(cost)                    AS cost,
-               SUM(purchases_7d)            AS orders,
-               SUM(sales_7d)                AS sales
+               SUM(impressions)  AS impressions,
+               SUM(clicks)       AS clicks,
+               SUM(cost)         AS cost,
+               SUM(purchases_7d) AS orders,
+               SUM(sales_7d)     AS sales
         FROM `{stats_tbl}`
         WHERE marketplace = @mkt AND date BETWEEN @start AND @end
         GROUP BY campaign_id, placement
     """
 
-    # ── 2. текущие корректировки (последний синк) ────────────
+    # ── 2. текущие корректировки плейсментов ─────────────────
     adj_sql = f"""
-        SELECT campaign_id,
-               placement,
-               MAX(placement_percentage)  AS pct,
-               ANY_VALUE(campaign_name)   AS campaign_name,
-               ANY_VALUE(campaign_state)  AS state,
-               ANY_VALUE(bidding_strategy) AS strategy
+        SELECT campaign_id, placement, MAX(placement_percentage) AS pct
         FROM `{camp_tbl}`
         WHERE entity_type = 'bidding_adjustment' AND marketplace = @mkt
         GROUP BY campaign_id, placement
     """
 
+    # ── 3. мета кампаний (статус, тип таргетинга, портфолио) ──
+    meta_sql = f"""
+        SELECT campaign_id,
+               ANY_VALUE(campaign_name)   AS campaign_name,
+               ANY_VALUE(campaign_state)  AS state,
+               ANY_VALUE(targeting_type)  AS targeting_type,
+               ANY_VALUE(bidding_strategy) AS strategy,
+               ANY_VALUE(portfolio_id)    AS portfolio_id,
+               ANY_VALUE(portfolio_name)  AS portfolio_name
+        FROM `{camp_tbl}`
+        WHERE entity_type = 'campaign' AND marketplace = @mkt
+        GROUP BY campaign_id
+    """
+
     try:
         stats_rows = list(client.query(stats_sql, job_config=cfg).result())
-        adj_rows   = list(client.query(adj_sql,   job_config=cfg).result())
+        adj_rows   = list(client.query(adj_sql,   job_config=cfg_mkt).result())
+        meta_rows  = list(client.query(meta_sql,  job_config=cfg_mkt).result())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    # campaign_id → структура
+    meta = {}
+    for r in meta_rows:
+        meta[str(r["campaign_id"])] = {
+            "campaign_name":  r["campaign_name"],
+            "state":          r["state"],
+            "targeting_type": (r["targeting_type"] or "").upper() or None,
+            "strategy":       r["strategy"],
+            "portfolio_id":   r["portfolio_id"],
+            "portfolio_name": r["portfolio_name"],
+        }
+
     camps = {}
     profile_id = None
 
@@ -121,8 +142,14 @@ def placements_data():
 
     def _ensure(cid, name=None):
         if cid not in camps:
-            camps[cid] = {"campaign_id": cid, "campaign_name": name,
-                          "state": None, "strategy": None,
+            m = meta.get(cid, {})
+            camps[cid] = {"campaign_id": cid,
+                          "campaign_name": name or m.get("campaign_name"),
+                          "state":          m.get("state"),
+                          "strategy":       m.get("strategy"),
+                          "targeting_type": m.get("targeting_type"),
+                          "portfolio_id":   m.get("portfolio_id"),
+                          "portfolio_name": m.get("portfolio_name"),
                           "placements": {c: _blank(c) for c in ORDER}}
         elif name and not camps[cid]["campaign_name"]:
             camps[cid]["campaign_name"] = name
@@ -148,13 +175,11 @@ def placements_data():
     for r in adj_rows:
         cid  = str(r["campaign_id"])
         code = (r["placement"] or "").upper()
-        c    = _ensure(cid, r["campaign_name"])
-        if r["state"]:    c["state"]    = r["state"]
-        if r["strategy"]: c["strategy"] = r["strategy"]
-        if code in c["placements"] and r["pct"] is not None:
-            c["placements"][code]["adjustment_pct"] = float(r["pct"])
+        if cid in camps and code in camps[cid]["placements"] and r["pct"] is not None:
+            camps[cid]["placements"][code]["adjustment_pct"] = float(r["pct"])
 
-    # финализируем: считаем производные метрики + totals + сортируем плейсменты
+    # финализация
+    portfolios = {}
     result = []
     for c in camps.values():
         tot = {"impressions": 0, "clicks": 0, "cost": 0.0, "orders": 0, "sales": 0.0}
@@ -164,28 +189,33 @@ def placements_data():
             pl["ctr"]  = _pct(pl["clicks"], pl["impressions"])
             pl["cpc"]  = round(pl["cost"] / pl["clicks"], 2) if pl["clicks"] else None
             pl["acos"] = _pct(pl["cost"], pl["sales"])
+            tot["impressions"] += pl["impressions"]
+            tot["clicks"]      += pl["clicks"]
+            tot["orders"]      += pl["orders"]
+            tot["cost"]        += pl["cost"]
+            tot["sales"]       += pl["sales"]
             pl["cost"]  = round(pl["cost"], 2)
             pl["sales"] = round(pl["sales"], 2)
-            for k in tot:
-                tot[k] += c["placements"][code][k] if k in ("impressions", "clicks", "orders") else 0
-            tot["cost"]  += pl["cost"]
-            tot["sales"] += pl["sales"]
             pls.append(pl)
         tot["ctr"]  = _pct(tot["clicks"], tot["impressions"])
         tot["cpc"]  = round(tot["cost"] / tot["clicks"], 2) if tot["clicks"] else None
         tot["acos"] = _pct(tot["cost"], tot["sales"])
         tot["cost"]  = round(tot["cost"], 2)
         tot["sales"] = round(tot["sales"], 2)
+        if c["portfolio_id"]:
+            portfolios[str(c["portfolio_id"])] = c["portfolio_name"] or str(c["portfolio_id"])
         result.append({
-            "campaign_id":   c["campaign_id"],
-            "campaign_name": c["campaign_name"] or c["campaign_id"],
-            "state":         c["state"],
-            "strategy":      c["strategy"],
-            "totals":        tot,
-            "placements":    pls,
+            "campaign_id":    c["campaign_id"],
+            "campaign_name":  c["campaign_name"] or c["campaign_id"],
+            "state":          c["state"],
+            "strategy":       c["strategy"],
+            "targeting_type": c["targeting_type"],
+            "portfolio_id":   c["portfolio_id"],
+            "portfolio_name": c["portfolio_name"],
+            "totals":         tot,
+            "placements":     pls,
         })
 
-    # сортировка по расходу
     result.sort(key=lambda x: x["totals"]["cost"], reverse=True)
 
     return jsonify({
@@ -194,6 +224,7 @@ def placements_data():
         "profile_id":  profile_id,
         "start":       start,
         "end":         end,
+        "portfolios":  [{"id": k, "name": v} for k, v in sorted(portfolios.items(), key=lambda x: x[1])],
         "campaigns":   result,
         "total":       len(result),
     })
