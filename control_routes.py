@@ -59,6 +59,7 @@ ALLOWED_OPS = {
     "product_ad_add":     ["—"],  # new_value = JSON {asin, campaign_id, ad_group_id?, ad_group_name?}
     "product_ad":         ["state"],
     "campaign_delete":    ["—"],   # entity_id = campaign_id, удаление кампании целиком
+    "bidding_adjustment": ["—"],   # entity_id = campaign_id, new_value = JSON {PLACEMENT: percentage}
 }
 
 LABELS = {
@@ -82,6 +83,9 @@ LABELS = {
     ("product_ad",  "state"):       lambda nv: "▶ Включить объявление" if nv == "ENABLED" else "⏸ Выключить объявление",
     ("product_ad_add","—"):         lambda nv: f'🖼 Объявление ASIN: {nv[:60]}',
     ("campaign_delete","—"):        lambda nv: '🗑️ Удалить кампанию',
+    ("bidding_adjustment","—"):     lambda nv: '📊 Плейсменты: ' + ', '.join(
+        {"TOP_OF_SEARCH":"Top","REST_OF_SEARCH":"Rest","PRODUCT_PAGE":"Prod"}.get(k, k) + f" {v}%"
+        for k, v in json.loads(nv).items()),
 }
 
 
@@ -150,8 +154,29 @@ def add_change():
     bq = bigquery.Client(project=PROJECT_ID)
     table = PENDING_TABLES[account_type]
 
+    # bidding_adjustment: одна PENDING-запись на кампанию — обновляем существующую
+    # (new_value несёт полное состояние всех плейсментов, поэтому перезапись корректна)
+    if entity_type == 'bidding_adjustment':
+        existing = list(bq.query(f"""
+            SELECT id FROM `{table}`
+            WHERE entity_id = '{entity_id}' AND entity_type = 'bidding_adjustment'
+              AND status = 'PENDING'
+            ORDER BY created_at DESC LIMIT 1
+        """).result())
+        if existing:
+            row_id  = existing[0].id
+            safe_nv = new_value.replace("'", "''")
+            safe_ov = old_value.replace("'", "''")
+            bq.query(f"""
+                UPDATE `{table}`
+                SET new_value='{safe_nv}', old_value='{safe_ov}', created_at=CURRENT_TIMESTAMP()
+                WHERE id='{row_id}'
+            """).result()
+            return jsonify({"success": True, "id": row_id, "updated": True,
+                            "label": get_label(entity_type, field_name, new_value)})
+
     # Для операций добавления разрешаем несколько записей (несколько минусов/ключей в одну группу)
-    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add', 'campaign_delete'}
+    NO_DUP_CHECK = {'keyword_add', 'negative_add', 'negative_product_add', 'ad_group_add', 'product_ad_add', 'campaign_delete', 'bidding_adjustment'}
     if entity_type not in NO_DUP_CHECK:
         fn_clause = f"AND field_name = '{field_name}'" if field_name != '—' else ''
         dup_sql = f"""

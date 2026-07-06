@@ -3136,3 +3136,96 @@ raise/lower → коридор [min_bid, max_bid]
 Маппинг в `campaign_copy_routes.py`: `MKT_CATALOG = {'UK': 'GB'}`.
 Маппинг в `_get_profile_id`: пробует оба варианта UK и GB.
 
+
+---
+
+## Оптимизация плейсментов `/automation/placements` (июль 2026)
+
+Страница-аналог таблицы «Bid adjustments» Amazon: список кампаний → раскрытие →
+плейсменты (Top of search / Rest of search / Product pages / Off Amazon) со
+статистикой за период и **редактируемой корректировкой ставки (%)**. Изменения
+уходят в очередь (`pending_changes`, тип `bidding_adjustment`) → Одобрить →
+Отправить в Amazon.
+
+### Файлы
+| Файл | Назначение |
+|---|---|
+| `placements.html` | страница: фильтр-бар (как в аналитике кампаний), таблица, инлайн-редактирование % |
+| `placements_routes.py` | `/automation/placements` и `/automation/placements/data` |
+| `collect_placements.py` | CLI-сбор отчёта плейсментов → `placement_stats_*` |
+| `placement_stats_schema.sql` | DDL таблиц статистики |
+
+### Данные — отчёт плейсментов (важно!)
+Для Sponsored Products **отдельного placement-отчёта нет**. Данные берутся из
+отчёта `spCampaigns` с группировкой по плейсменту:
+```json
+{"adProduct":"SPONSORED_PRODUCTS","reportTypeId":"spCampaigns",
+ "groupBy":["campaignPlacement"], "timeUnit":"DAILY", "format":"GZIP_JSON",
+ "columns":["date","campaignId","campaignName","placementClassification",
+            "impressions","clicks","cost","purchases7d","sales7d"]}
+```
+- **groupBy обязательно `campaignPlacement`** (не `placement` — вернёт 400
+  `invalid groupBy values`).
+- Метка плейсмента — колонка **`placementClassification`** (без правильного
+  groupBy колонка тоже отклоняется как invalid).
+- Лимит диапазона отчёта — **31 день**, хранение данных — **60 дней**.
+
+### Значения placementClassification ↔ коды корректировок
+| Отчёт (`placementClassification`) | Код (`placement` в настройках / API) | Редактируемо |
+|---|---|---|
+| Top of Search on-Amazon | `TOP_OF_SEARCH` | да |
+| Detail Page on-Amazon | `PRODUCT_PAGE` | да |
+| Other on-Amazon | `REST_OF_SEARCH` | да |
+| Off Amazon | — | нет (только статистика) |
+
+### Таблицы `placement_stats_{merch,kdp}`
+Партиционированы по `date`, кластер по `profile_id, campaign_id`. Колонки:
+`date, profile_id, marketplace, campaign_id, campaign_name, placement,
+impressions, clicks, cost, purchases_7d, sales_7d, loaded_at`.
+Заполняются `collect_placements.py` (CLI) **или** через веб-импорт (тип отчёта
+«Placement» в `/ads`). Загрузка идемпотентна: `DELETE ... WHERE date BETWEEN ...
+AND profile_id` затем append.
+
+### Веб-импорт
+В `ads_routes.py` добавлен тип отчёта `spCampaigns` (label «Placement
+(плейсменты)»): `_get_table` → `placement_stats_*`, `_map_placement_row`,
+пункт в выпадашке `ads.html`. Работает как остальные отчёты (Targeting/ASIN/
+Search Term), пишет в `placement_stats_*`.
+
+### Отправка корректировок в Amazon
+- Новый тип изменения `bidding_adjustment` в `control_routes.py` (ALLOWED_OPS +
+  подпись «📊 Плейсменты: Top X% …»).
+- `entity_id = campaign_id`, `new_value = JSON {"TOP_OF_SEARCH":x,
+  "REST_OF_SEARCH":y,"PRODUCT_PAGE":z}` — **всегда все три плейсмента** (чтобы
+  Amazon не обнулил нередактированные).
+- `send.py`: `group_changes` направляет `bidding_adjustment` в
+  `update_campaigns`; `send_update_campaigns` собирает
+  `optimizations.bidSettings.bidAdjustments.placementBidAdjustments`.
+- **Upsert в очереди**: одна PENDING-запись на кампанию — повторная правка любого
+  плейсмента обновляет её (`/control/add` для `bidding_adjustment` делает UPDATE
+  существующей PENDING вместо новой строки; тип добавлен в `NO_DUP_CHECK`).
+
+### Страница
+- Фильтр-бар как в аналитике кампаний: аккаунт (Merch/KDP), даты, маркетплейс,
+  **портфолио** (дропдаун с поиском — названия из `/portfolios/list`, фильтр по
+  `account_type`), статус (Активные/Пауза), тип (Авто/Ручной). Статус/тип/
+  портфолио фильтруют на клиенте без перезагрузки.
+- Раскрытие кампании → строки плейсментов. У редактируемых `%` — инлайн как на
+  ключевых словах: кнопка-значение → поле + `✓`/`✕`, Enter/Escape.
+
+### Решённые проблемы (июль 2026)
+- **`send.py` не запускался из веба** (`ModuleNotFound: google`): дочерний
+  процесс `send.py` вызывался жёстко `"python3"` (системный, без пакетов). Чинится
+  заменой на `sys.executable` в `control_routes.py` (запуск тем же интерпретатором,
+  что и приложение / venv).
+- **spCampaigns placement**: корректный groupBy — `campaignPlacement`, метка —
+  `placementClassification` (см. выше).
+- **Единое nav-меню**: массовая вставка пункта меню через `sed` по всем `*.html`
+  зацепила ссылку `/automation/bid-automation` **в карточке главной**, сломав
+  `index.html`. Вывод: при sed-правках nav исключать секцию карточек / проверять
+  `index.html` отдельно.
+- **Большие аккаунты / обрывы связи**: при синхронизации структуры и сборе на
+  тяжёлых аккаунтах Amazon рвёт соединение (`Connection reset by peer`) из-за
+  всплеска запросов с нового IP. В `_paginate` (`campaigns_routes.py`) добавлены
+  повторы с паузой и таймаут; помогает пауза между страницами. Память крупной
+  синхронизации (структура ~1.9 ГБ) — держать в RAM (≥2 ГБ) или своп.

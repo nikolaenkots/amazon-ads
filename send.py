@@ -261,6 +261,8 @@ def group_changes(changes):
         fn = c.get("field_name", "")
         if et == "campaign" and fn in ("state", "name", "daily_budget", "portfolio_id", "end_date"):
             groups["update_campaigns"].append(c)
+        elif et == "bidding_adjustment":
+            groups["update_campaigns"].append(c)   # корректировки плейсментов — через update/campaigns
         elif et == "ad_group" and fn in ("state", "name", "default_bid"):
             groups["update_ad_groups"].append(c)
         elif et in ("keyword", "target") and fn in ("bid", "state"):
@@ -316,7 +318,20 @@ def send_update_campaigns(endpoint, headers, changes, dry_run=False):
         merged[eid]["indices"].append(orig_idx)
 
         item = merged[eid]["item"]
-        if fn == "state":
+        et = change.get("entity_type", "")
+        if et == "bidding_adjustment":
+            # new_value = JSON {"TOP_OF_SEARCH": 15, "REST_OF_SEARCH": 0, "PRODUCT_PAGE": 50}
+            try:
+                adj = json.loads(val) if val else {}
+            except Exception:
+                adj = {}
+            item.setdefault("optimizations", {}).setdefault("bidSettings", {})["bidAdjustments"] = {
+                "placementBidAdjustments": [
+                    {"placement": p, "percentage": int(round(float(pv)))}
+                    for p, pv in adj.items()
+                ]
+            }
+        elif fn == "state":
             item["state"] = val
         elif fn == "name":
             item["name"] = val

@@ -204,6 +204,7 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
   <div class="nav-drop-menu">
     <a href="/automation/search-terms" class="nav-link">Оптимизация запросов</a>
     <a href="/automation/bid-automation" class="nav-link">Управление ставками</a>
+    <a href="/automation/placements" class="nav-link">Плейсменты</a>
   </div>
 </div>
 </div>
@@ -241,6 +242,7 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
           <option value="spTargeting">Targeting (ключевые слова)</option>
           <option value="spAdvertisedProduct">Advertised Product (по ASIN)</option>
           <option value="spSearchTerm">Search Term (поисковые запросы)</option>
+          <option value="spCampaigns">Placement (плейсменты)</option>
         </select>
       </div>
       <div class="field"><label>Дата начала</label><input type="date" id="startDate"></div>
@@ -301,6 +303,7 @@ const REPORT_LABELS={
   spTargeting:"Targeting",
   spAdvertisedProduct:"ASIN",
   spSearchTerm:"Search Term",
+  spCampaigns:"Placement",
 };
 
 let sel={type:'MERCH',marketplace:'US',profileId:'2418854071638725'};

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Плейсменты · Amazon Ads Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
+  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
+  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--red:#c0392b;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.header-right{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:99px}
+main{max-width:1240px;margin:0 auto;padding:28px 32px}
+.hero{margin-bottom:20px}
+.hero-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:8px}
+.hero-title{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.hero-sub{font-size:13px;color:var(--muted);margin-top:6px}
+/* Nav */
+.nav-bar{display:flex;align-items:center;gap:2px}
+.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none}
+.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-drop{position:relative;display:inline-flex;align-items:center}
+.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif}
+.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop-btn svg{transition:transform .2s}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
+.nav-drop.open .nav-drop-menu{display:block}
+.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none}
+.nav-link:hover{background:var(--surface2)}
+.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+/* Filters */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.fg select,.fg input{height:34px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--surface);color:var(--text)}
+.at{display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+.atb{height:34px;padding:0 16px;border:none;background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer}
+.atb.on{background:var(--accent);color:#fff}
+.btn{height:34px;padding:0 18px;border:none;border-radius:7px;background:var(--accent);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.pdw{position:relative}
+.pdt{height:34px;min-width:150px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:13px;background:var(--surface)}
+.pda{color:var(--dim);font-size:10px}
+.pdd{display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:230px;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 32px rgba(0,0,0,.12);padding:6px;z-index:600}
+.pdw.open .pdd{display:block}
+.pds{width:100%;height:30px;padding:0 8px;border:1px solid var(--border2);border-radius:6px;font-size:12px;margin-bottom:6px;font-family:'DM Sans',sans-serif}
+.pdi{padding:6px 8px;border-radius:6px;font-size:12.5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdi:hover{background:var(--surface2)}
+.pdi.sel{background:var(--accent-bg);color:var(--accent)}
+/* Table */
+.tbl{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.row{display:grid;grid-template-columns:26px 2.5fr repeat(8,1fr);gap:8px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.row.head{background:var(--surface2);font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.row.camp{cursor:pointer;font-weight:500}
+.row.camp:hover{background:var(--accent-bg)}
+.row.pl{background:#fafafb;font-size:12.5px}
+.row:last-child{border-bottom:none}
+.num{font-family:'DM Mono',monospace;text-align:right}
+.cname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.plname{padding-left:22px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.chev{color:var(--dim)}
+.camp.open .chev{transform:rotate(90deg)}
+.badge{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:99px}
+.b-en{background:var(--green-bg);color:var(--green)}
+.b-pa{background:var(--surface2);color:var(--muted)}
+.acos-hi{color:var(--red)}.acos-ok{color:var(--green)}
+/* inline % edit (как на ключевых словах) */
+.bid-btn{background:none;border:1px solid transparent;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);padding:1px 6px;border-radius:4px}
+.bid-btn:hover{background:var(--accent-bg);border-color:var(--accent-bd)}
+.bid-btn.zero{color:var(--dim)}
+.bid-edit{display:none;align-items:center;gap:4px}
+.bid-edit.on{display:inline-flex}
+.bid-inp{width:56px;height:26px;border:1px solid var(--accent);border-radius:5px;font-family:'DM Mono',monospace;font-size:12px;padding:0 6px;outline:none;background:var(--surface);color:var(--text)}
+.bid-ok{height:26px;min-width:26px;padding:0 7px;border:none;border-radius:5px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer}
+.bid-cx{height:26px;min-width:24px;padding:0 6px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer}
+.plfix{color:var(--dim);font-family:'DM Mono',monospace;font-size:11px}
+.empty{padding:48px;text-align:center;color:var(--muted);font-size:14px}
+.hint{font-size:12px;color:var(--muted);margin-top:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.2);opacity:0;transition:opacity .2s;z-index:999}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>Amazon Ads Automation</div>
+  <div class="nav-bar">
+    <a href="/" class="nav-home">Главная</a>
+    <div class="nav-drop" id="navA"><button class="nav-drop-btn" onclick="ddl('navA')">Аналитика <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/analytics/campaigns" class="nav-link">Кампании</a>
+        <a href="/analytics/products" class="nav-link">Продукты</a>
+        <a href="/targets" class="nav-link">Таргеты</a>
+        <a href="/search-terms" class="nav-link">Поисковые запросы</a>
+        <a href="/sales-comparison" class="nav-link">Сравнение продаж</a>
+        <a href="/budget-analysis" class="nav-link">Бюджет</a>
+      </div></div>
+    <div class="nav-drop" id="navM"><button class="nav-drop-btn" onclick="ddl('navM')">Управление <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/control" class="nav-link">Очередь изменений</a>
+        <a href="/portfolios" class="nav-link">Портфолио</a>
+        <a href="/asin-merge" class="nav-link">Слияние ASIN</a>
+        <a href="/campaign-builder" class="nav-link">Campaign Builder</a>
+        <a href="/campaign-copy" class="nav-link">Копирование кампаний</a>
+        <a href="/negatives" class="nav-link">Минус слова</a>
+      </div></div>
+    <div class="nav-drop" id="navI"><button class="nav-drop-btn" onclick="ddl('navI')">Импорт <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/catalog" class="nav-link">Каталог Merch</a>
+        <a href="/ads" class="nav-link">Импорт рекламы</a>
+        <a href="/earnings-kdp" class="nav-link">Продажи KDP</a>
+        <a href="/earnings" class="nav-link">Продажи Merch</a>
+        <a href="/campaigns" class="nav-link">Кампании SP API</a>
+      </div></div>
+    <div class="nav-drop" id="navAu"><button class="nav-drop-btn" onclick="ddl('navAu')">Автоматизация <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="nav-drop-menu">
+        <a href="/automation/search-terms" class="nav-link">Оптимизация запросов</a>
+        <a href="/automation/bid-automation" class="nav-link">Управление ставками</a>
+        <a href="/automation/placements" class="nav-link active">Плейсменты</a>
+      </div></div>
+  </div>
+  <span class="header-right">Плейсменты</span>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-label">Bid adjustments</div>
+    <div class="hero-title">Оптимизация плейсментов</div>
+    <div class="hero-sub">Статистика по плейсментам и корректировка ставок Top of search / Rest of search / Product pages</div>
+  </div>
+
+  <div class="fp"><div class="fr">
+    <div class="fg"><span class="fl">Аккаунт</span>
+      <div class="at"><button class="atb on" id="tabM" onclick="setAcc('MERCH')">Merch</button><button class="atb" id="tabK" onclick="setAcc('KDP')">KDP</button></div>
+    </div>
+    <div class="fg"><span class="fl">Дата от</span><input type="date" id="start"></div>
+    <div class="fg"><span class="fl">Дата до</span><input type="date" id="end"></div>
+    <div class="fg"><span class="fl">Маркетплейс</span>
+      <select id="mkt"><option>US</option><option>CA</option><option>UK</option><option>DE</option><option>FR</option><option>IT</option><option>ES</option><option>AU</option></select>
+    </div>
+    <div class="fg"><span class="fl">Портфолио</span>
+      <div class="pdw" id="pdw"><div class="pdt" onclick="togPd()"><span id="pdLabel">Все</span><span class="pda">▾</span></div>
+        <div class="pdd"><input class="pds" id="pdSearch" placeholder="Поиск..." oninput="renderPd(this.value)"><div id="pdList"></div></div>
+      </div>
+    </div>
+    <div class="fg"><span class="fl">Статус</span>
+      <select id="fState" onchange="applyFilters()"><option value="all">Все</option><option value="ENABLED">Активные</option><option value="PAUSED">На паузе</option></select>
+    </div>
+    <div class="fg"><span class="fl">Тип</span>
+      <select id="fType" onchange="applyFilters()"><option value="all">Все</option><option value="AUTO">Авто</option><option value="MANUAL">Ручной</option></select>
+    </div>
+    <button class="btn" id="loadBtn" onclick="load()">Показать</button>
+  </div></div>
+
+  <div id="content"></div>
+  <div class="hint">Правки уходят в <a href="/control">очередь изменений</a> (Ожидают → Одобрить → Отправить в Amazon). При сохранении одного плейсмента в изменение записываются все три (Top / Rest / Product) — Amazon не сбрасывает остальные. Off Amazon — только статистика.</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var ACC='MERCH', PF='all', PF_LIST=[], DATA=null, VIEW=[], CBID={};
+function ddl(id){var d=document.getElementById(id);document.querySelectorAll('.nav-drop').forEach(function(x){if(x!==d)x.classList.remove('open')});d.classList.toggle('open')}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2200)}
+function esc(s){return (s||'').replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
+function fmt(n){return n==null?'—':Number(n).toLocaleString('en-US')}
+function money(n){return n==null?'—':'$'+Number(n).toFixed(2)}
+function pct(n){return n==null?'—':Number(n).toFixed(1)+'%'}
+function acosCls(a){return a==null?'':(a>50?'acos-hi':(a<30?'acos-ok':''))}
+
+(function(){
+  var end=new Date(); end.setDate(end.getDate()-1);
+  var start=new Date(end); start.setDate(start.getDate()-13);
+  document.getElementById('end').value=end.toISOString().slice(0,10);
+  document.getElementById('start').value=start.toISOString().slice(0,10);
+})();
+
+function setAcc(a){ACC=a;document.getElementById('tabM').classList.toggle('on',a==='MERCH');document.getElementById('tabK').classList.toggle('on',a==='KDP');PF='all';document.getElementById('pdLabel').textContent='Все';loadPortfolios()}
+
+// ── Портфолио (названия из /portfolios/list) ──────────────
+function loadPortfolios(){
+  fetch('/portfolios/list').then(function(r){return r.json()}).then(function(d){
+    PF_LIST=(d.portfolios||[]).filter(function(p){return p.account_type===ACC})
+      .map(function(p){return {id:String(p.portfolio_id),name:p.portfolio_name||String(p.portfolio_id)}});
+    renderPd('');
+  }).catch(function(){PF_LIST=[]});
+}
+function togPd(){document.getElementById('pdw').classList.toggle('open');if(document.getElementById('pdw').classList.contains('open')){document.getElementById('pdSearch').focus();renderPd(document.getElementById('pdSearch').value)}}
+function renderPd(q){
+  q=(q||'').toLowerCase();
+  var items=[{id:'all',name:'Все'}].concat(PF_LIST.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0}));
+  document.getElementById('pdList').innerHTML=items.map(function(p){
+    return '<div class="pdi'+(PF===p.id?' sel':'')+'" onclick="pickPd(\''+p.id+'\')">'+esc(p.name)+'</div>';
+  }).join('');
+}
+function pickPd(id){
+  PF=id;
+  var name=id==='all'?'Все':(PF_LIST.find(function(p){return p.id===id})||{}).name||id;
+  document.getElementById('pdLabel').textContent=name;
+  document.getElementById('pdw').classList.remove('open');
+  applyFilters();
+}
+
+// ── Загрузка данных ───────────────────────────────────────
+function load(){
+  var mkt=document.getElementById('mkt').value;
+  var s=document.getElementById('start').value, e=document.getElementById('end').value;
+  var btn=document.getElementById('loadBtn'); btn.disabled=true; btn.textContent='Загрузка…';
+  document.getElementById('content').innerHTML='<div class="empty">Загружаем…</div>';
+  fetch('/automation/placements/data?account='+ACC+'&marketplace='+mkt+'&start='+s+'&end='+e)
+    .then(function(r){return r.json()})
+    .then(function(d){ btn.disabled=false; btn.textContent='Показать';
+      if(d.error){document.getElementById('content').innerHTML='<div class="empty">Ошибка: '+d.error+'</div>';return}
+      DATA=d; CBID={}; d.campaigns.forEach(function(c){CBID[c.campaign_id]=c}); applyFilters();
+    })
+    .catch(function(err){ btn.disabled=false; btn.textContent='Показать';
+      document.getElementById('content').innerHTML='<div class="empty">Ошибка сети: '+err+'</div>'});
+}
+
+function applyFilters(){
+  if(!DATA)return;
+  var st=document.getElementById('fState').value, tp=document.getElementById('fType').value;
+  VIEW=DATA.campaigns.filter(function(c){
+    if(PF!=='all' && String(c.portfolio_id)!==PF) return false;
+    if(st!=='all' && c.state!==st) return false;
+    if(tp!=='all' && (c.targeting_type||'')!==tp) return false;
+    return true;
+  });
+  render();
+}
+
+function headRow(){
+  return '<div class="row head"><div></div><div>Кампания / плейсмент</div>'+
+    '<div class="num">Показы</div><div class="num">Клики</div><div class="num">CTR</div>'+
+    '<div class="num">Расход</div><div class="num">CPC</div><div class="num">Заказы</div>'+
+    '<div class="num">Продажи</div><div class="num">ACOS</div></div>';
+}
+function metricCells(m){
+  return '<div class="num">'+fmt(m.impressions)+'</div><div class="num">'+fmt(m.clicks)+'</div>'+
+    '<div class="num">'+pct(m.ctr)+'</div><div class="num">'+money(m.cost)+'</div>'+
+    '<div class="num">'+money(m.cpc)+'</div><div class="num">'+fmt(m.orders)+'</div>'+
+    '<div class="num">'+money(m.sales)+'</div><div class="num '+acosCls(m.acos)+'">'+pct(m.acos)+'</div>';
+}
+function render(){
+  if(!VIEW.length){document.getElementById('content').innerHTML='<div class="empty">Нет данных за период / по фильтрам. Проверьте, что собрана статистика плейсментов и синхронизирована структура кампаний.</div>';return}
+  var h=headRow();
+  VIEW.forEach(function(c,i){
+    var st=c.state==='ENABLED'?'<span class="badge b-en">ACTIVE</span>':(c.state==='PAUSED'?'<span class="badge b-pa">PAUSED</span>':'');
+    var tp=c.targeting_type?'<span class="badge b-pa">'+c.targeting_type+'</span>':'';
+    h+='<div class="row camp" id="c'+i+'" onclick="tog('+i+')"><div class="chev">▶</div>'+
+       '<div class="cname">'+esc(c.campaign_name)+st+tp+'</div>'+metricCells(c.totals)+'</div>';
+    h+='<div id="d'+i+'" style="display:none"></div>';
+  });
+  document.getElementById('content').innerHTML='<div class="tbl">'+h+'</div>';
+}
+
+function tog(i){
+  var c=document.getElementById('c'+i), box=document.getElementById('d'+i);
+  c.classList.toggle('open');
+  if(box.innerHTML){box.style.display=box.style.display==='none'?'block':'none';return}
+  var camp=VIEW[i], h='';
+  camp.placements.forEach(function(p){
+    var edit;
+    if(p.editable){
+      var cur=p.adjustment_pct==null?0:p.adjustment_pct;
+      var beId='be_'+camp.campaign_id+'_'+p.code;
+      edit='<span id="'+beId+'">'+
+        '<button class="bid-btn'+(cur===0?' zero':'')+'" onclick="event.stopPropagation();openEdit(\''+beId+'\')">'+cur+'%</button>'+
+        '<span class="bid-edit"><input class="bid-inp" type="number" min="0" max="900" step="1" value="'+cur+'" '+
+          'onclick="event.stopPropagation()" '+
+          'onkeydown="if(event.key===\'Enter\'){event.stopPropagation();saveEdit(\''+camp.campaign_id+'\',\''+p.code+'\')} if(event.key===\'Escape\')closeEdit(\''+beId+'\')">'+
+        '<button class="bid-ok" onclick="event.stopPropagation();saveEdit(\''+camp.campaign_id+'\',\''+p.code+'\')">✓</button>'+
+        '<button class="bid-cx" onclick="event.stopPropagation();closeEdit(\''+beId+'\')">✕</button></span></span>';
+    } else {
+      edit='<span class="plfix">—</span>';
+    }
+    h+='<div class="row pl"><div></div><div class="plname">'+p.label+' '+edit+'</div>'+metricCells(p)+'</div>';
+  });
+  box.innerHTML=h; box.style.display='block';
+}
+
+// ── Инлайн-редактирование % ───────────────────────────────
+function openEdit(id){var w=document.getElementById(id);if(!w)return;w.querySelector('.bid-btn').style.display='none';var e=w.querySelector('.bid-edit');e.classList.add('on');var inp=w.querySelector('.bid-inp');inp.focus();inp.select();}
+function closeEdit(id){var w=document.getElementById(id);if(!w)return;w.querySelector('.bid-btn').style.display='';w.querySelector('.bid-edit').classList.remove('on');}
+function saveEdit(cid,code){
+  var beId='be_'+cid+'_'+code, w=document.getElementById(beId);
+  var nv=Number(w.querySelector('.bid-inp').value||0);
+  if(isNaN(nv)||nv<0||nv>900){toast('Диапазон 0–900%');return;}
+  var camp=CBID[cid];
+  var newObj={}, oldObj={};
+  ['TOP_OF_SEARCH','REST_OF_SEARCH','PRODUCT_PAGE'].forEach(function(k){
+    var p=camp.placements.find(function(x){return x.code===k});
+    var cur=(p&&p.adjustment_pct!=null)?p.adjustment_pct:0;
+    oldObj[k]=cur; newObj[k]=(k===code)?nv:cur;
+  });
+  fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_type:ACC,entity_type:'bidding_adjustment',entity_id:cid,
+      profile_id:DATA.profile_id||'',marketplace:DATA.marketplace,field_name:'—',
+      old_value:JSON.stringify(oldObj),new_value:JSON.stringify(newObj)})
+  }).then(function(r){return r.json()}).then(function(res){
+    if(res.error){toast('Ошибка: '+res.error);return;}
+    var p=camp.placements.find(function(x){return x.code===code}); if(p)p.adjustment_pct=nv;
+    var btn=w.querySelector('.bid-btn'); btn.textContent=nv+'% ✓'; btn.classList.toggle('zero',nv===0);
+    closeEdit(beId);
+    toast('В очередь: '+esc(camp.campaign_name));
+  }).catch(function(){toast('Ошибка сети')});
+}
+
+window.addEventListener('click',function(e){
+  if(!e.target.closest('.nav-drop')) document.querySelectorAll('.nav-drop').forEach(function(x){x.classList.remove('open')});
+  if(!e.target.closest('#pdw')) document.getElementById('pdw').classList.remove('open');
+});
+loadPortfolios(); load();
+</script>
+</body>
+</html>
