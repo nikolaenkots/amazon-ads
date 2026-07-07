@@ -96,6 +96,86 @@ def build_edit_url(design_id, listing_id, mp):
     except:
         return None
 
+# ── Productor xlsx export ─────────────────────────────────
+def _clean(v):
+    """Значение ячейки xlsx → str; None и литерал 'None' → пустая строка."""
+    if v is None:
+        return ""
+    s = str(v).strip()
+    return "" if s == "None" else s
+
+def _norm_pt(pt):
+    """'Standard T-Shirt' → 'STANDARD_T_SHIRT' (формат старого импорта,
+    по нему джойнится копирование кампаний)."""
+    return re.sub(r'[^A-Z0-9]+', '_', pt.upper()).strip('_')
+
+def parse_productor_dt(v):
+    """Created из Productor: datetime-ячейка или строка '04/30/2024 6:36 AM'."""
+    if isinstance(v, datetime):
+        return v.replace(tzinfo=timezone.utc).isoformat()
+    s = _clean(v)
+    if not s:
+        return None
+    for fmt in ("%m/%d/%Y %I:%M %p", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc).isoformat()
+        except ValueError:
+            pass
+    return None
+
+def process_productor_row(rec):
+    """rec — dict {заголовок: значение} строки Productor-экспорта."""
+    asin = _clean(rec.get("Asin"))
+    mp   = _clean(rec.get("Marketplace"))
+    did  = _clean(rec.get("DesignId"))
+    pt   = _norm_pt(_clean(rec.get("ProductType")))
+    if not asin or not mp or not did or not pt:
+        return None
+    ad_asin = _clean(rec.get("Default Color Asin (Variation for ADs)"))
+    if not ad_asin and pt == "STANDARD_T_SHIRT":
+        ad_asin = asin
+    price = _clean(rec.get("Price"))
+    try:
+        price = float(price) if price else None
+    except ValueError:
+        price = None
+    return {
+        "listing_id":        f"{did}_{pt}_{mp}",
+        "asin":              asin,
+        "marketplace":       mp,
+        "design_id":         did,
+        "brand":             _clean(rec.get("Brand")) or None,
+        "title":             _clean(rec.get("Title")) or None,
+        "product_type":      pt,
+        "price":             price,
+        "status":            _clean(rec.get("Status")) or None,
+        "bullet_point_1":    _clean(rec.get("Bullet Points 1")) or None,
+        "bullet_point_2":    _clean(rec.get("Bullet Points 2")) or None,
+        "ad_asin":           ad_asin or None,
+        "image_url":         _clean(rec.get("Mockup Url")) or None,
+        "live_url":          _clean(rec.get("Live Url")) or f"https://www.amazon.com/dp/{asin}",
+        "edit_url":          _clean(rec.get("Edit Url")) or build_edit_url(did, f"{did}_{pt}_{mp}", mp),
+        "created_at_amazon": parse_productor_dt(rec.get("Created")),
+        "imported_at":       datetime.now(tz=timezone.utc).isoformat(),
+    }
+
+def iter_productor_rows(filepath):
+    """Читает Productor xlsx, отдаёт dict'ы {заголовок: значение}."""
+    try:
+        import openpyxl
+    except ImportError:
+        raise RuntimeError("Для импорта .xlsx нужен пакет openpyxl (pip install openpyxl)")
+    wb = openpyxl.load_workbook(filepath, read_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = ws.iter_rows(values_only=True)
+    header = [(_clean(h)) for h in next(rows, [])]
+    if "Asin" not in header or "DesignId" not in header:
+        raise RuntimeError("Не похоже на экспорт Productor: нет колонок Asin / DesignId")
+    for r in rows:
+        yield dict(zip(header, r))
+    wb.close()
+
+
 def process_catalog_row(row):
     if len(row) < 17: return None
     asin = row[0].strip()
@@ -158,16 +238,26 @@ def run_catalog_import(filepath, job_id):
         emit(job_id, "step", {"step": 1, "msg": "Пересоздаём staging таблицу..."})
         recreate_staging(client, staging_ref)
 
-        emit(job_id, "step", {"step": 2, "msg": "Загружаем данные в staging..."})
+        is_xlsx = filepath.lower().endswith('.xlsx')
+        emit(job_id, "step", {"step": 2, "msg": f"Загружаем данные в staging ({'Productor xlsx' if is_xlsx else 'CSV'})..."})
         total = inserted = err_count = 0
         chunk = []
 
-        with open(filepath, 'r', encoding='utf-8', newline='') as f:
-            reader = csv.reader(f)
-            next(reader, None)
-            for row in reader:
-                if not row or len(row) < 17: continue
-                rec = process_catalog_row(row)
+        def _records():
+            """Генератор готовых записей staging-схемы из файла любого формата."""
+            if is_xlsx:
+                for rec in iter_productor_rows(filepath):
+                    yield process_productor_row(rec)
+            else:
+                with open(filepath, 'r', encoding='utf-8', newline='') as f:
+                    reader = csv.reader(f)
+                    next(reader, None)
+                    for row in reader:
+                        if not row or len(row) < 17:
+                            continue
+                        yield process_catalog_row(row)
+
+        for rec in _records():
                 if rec:
                     chunk.append(rec)
                     total += 1
@@ -252,7 +342,8 @@ def upload():
     if not f:
         return jsonify({"error": "Файл не найден"}), 400
     job_id   = datetime.now().strftime('%Y%m%d%H%M%S%f')
-    filepath = os.path.join(UPLOAD_FOLDER, f'catalog_{job_id}.csv')
+    ext      = '.xlsx' if (f.filename or '').lower().endswith('.xlsx') else '.csv'
+    filepath = os.path.join(UPLOAD_FOLDER, f'catalog_{job_id}{ext}')
     f.save(filepath)
     ps = _get_progress_store()
     ps[job_id] = []

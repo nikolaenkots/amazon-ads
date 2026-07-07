@@ -471,7 +471,7 @@ input[type=file] { display: none; }
 <main>
   <div>
     <div class="panel-title">Загрузка каталога</div>
-    <div class="panel-sub">Экспорт из Productor или MBA · CSV файл · MERGE без перезаписи тегов</div>
+    <div class="panel-sub">Экспорт из Productor (.xlsx) или старый CSV · MERGE без перезаписи тегов</div>
 
     <div class="drop-zone" id="dropZone"
          onclick="document.getElementById('fi').click()"
@@ -481,10 +481,10 @@ input[type=file] { display: none; }
       <div class="drop-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
-      <div class="drop-title">Перетащи CSV сюда</div>
-      <div class="drop-hint">или нажми чтобы выбрать · только .csv</div>
+      <div class="drop-title">Перетащи файл сюда</div>
+      <div class="drop-hint">или нажми чтобы выбрать · .xlsx или .csv</div>
     </div>
-    <input type="file" id="fi" accept=".csv" onchange="onFile(this)">
+    <input type="file" id="fi" accept=".csv,.xlsx" onchange="onFile(this)">
 
     <div class="file-info" id="fileInfo">
       <div class="file-ico">
@@ -588,7 +588,7 @@ function onLeave()  { document.getElementById('dropZone').classList.remove('over
 function onDrop(e)  {
   e.preventDefault(); onLeave();
   const f = e.dataTransfer.files[0];
-  if (f && f.name.endsWith('.csv')) setFile(f);
+  if (f && (f.name.endsWith('.csv') || f.name.endsWith('.xlsx'))) setFile(f);
 }
 function onFile(input) { if (input.files[0]) setFile(input.files[0]); }
 
