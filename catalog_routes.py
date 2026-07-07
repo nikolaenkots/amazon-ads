@@ -104,9 +104,40 @@ def _clean(v):
     s = str(v).strip()
     return "" if s == "None" else s
 
-def _norm_pt(pt):
-    """'Standard T-Shirt' → 'STANDARD_T_SHIRT' (формат старого импорта,
-    по нему джойнится копирование кампаний)."""
+# Отображаемое имя ProductType → внутренний токен Productor.
+# Токены обязаны совпадать со старым каталогом (listing_id, product_type),
+# иначе MERGE задвоит строки, а копирование кампаний перестанет матчиться.
+# Первичный источник токена — колонка fileName ({Title}-{TOKEN}-{ASIN}-productor.png),
+# эта таблица — fallback, если fileName не распарсился.
+PT_MAP = {
+    "Standard T-Shirt":          "STANDARD_TSHIRT",
+    "Premium T-Shirt":           "PREMIUM_TSHIRT",
+    "V-neck T-Shirt":            "VNECK",
+    "Long Sleeve T-Shirt":       "STANDARD_LONG_SLEEVE",
+    "Sweatshirt":                "STANDARD_SWEATSHIRT",
+    "Pullover Hoodie":           "STANDARD_PULLOVER_HOODIE",
+    "Zip Hoodie":                "ZIP_HOODIE",
+    "Tank Top":                  "TANK_TOP",
+    "Raglan":                    "RAGLAN",
+    "Mug":                       "MUG",
+    "Tumbler":                   "TUMBLER",
+    "Water Bottle":              "WATER_BOTTLE",
+    "OVERSIZED_TSHIRT":          "OVERSIZED_TSHIRT",
+    "PERFORMANCE_TSHIRT":        "PERFORMANCE_TSHIRT",
+    "COMFORT_COLORS_SWEATSHIRT": "COMFORT_COLORS_SWEATSHIRT",
+}
+
+def _pt_token(rec):
+    """Токен типа продукта: из fileName → из PT_MAP → эвристика."""
+    fn   = _clean(rec.get("fileName"))
+    asin = _clean(rec.get("Asin"))
+    if fn and asin:
+        m = re.search(r'-([A-Z0-9_]+)-' + re.escape(asin) + r'-productor\.png$', fn)
+        if m:
+            return m.group(1)
+    pt = _clean(rec.get("ProductType"))
+    if pt in PT_MAP:
+        return PT_MAP[pt]
     return re.sub(r'[^A-Z0-9]+', '_', pt.upper()).strip('_')
 
 def parse_productor_dt(v):
@@ -128,11 +159,11 @@ def process_productor_row(rec):
     asin = _clean(rec.get("Asin"))
     mp   = _clean(rec.get("Marketplace"))
     did  = _clean(rec.get("DesignId"))
-    pt   = _norm_pt(_clean(rec.get("ProductType")))
+    pt   = _pt_token(rec)
     if not asin or not mp or not did or not pt:
         return None
     ad_asin = _clean(rec.get("Default Color Asin (Variation for ADs)"))
-    if not ad_asin and pt == "STANDARD_T_SHIRT":
+    if not ad_asin and pt == "STANDARD_TSHIRT":
         ad_asin = asin
     price = _clean(rec.get("Price"))
     try:
