@@ -675,6 +675,18 @@ function buildCampaignPayload() {
     'MANUAL':            'Fixed bid',
   };
 
+  // Замена ASIN исходного гео на ASIN целевого в текстах (названия групп/кампании).
+  // Берём соответствие из asinMap (каталог + ручные правки); для группы дополнительно
+  // fallback на её собственную пару srcAsin→dstAsin. Неизвестные ASIN не трогаем.
+  const ASIN_TOKEN_RE = /\bB[0-9A-Z]{9}\b/g;
+  const mapAsinsInText = (text, srcAsin, dstAsin) =>
+    String(text || '').replace(ASIN_TOKEN_RE, tok => {
+      if (at === 'KDP') return tok;                        // KDP: ASIN одинаковые на всех гео
+      if (asinMap[tok]) return asinMap[tok];
+      if (srcAsin && tok === srcAsin && dstAsin) return dstAsin;
+      return tok;
+    });
+
   const groups = (structure.groups || []).map(g => {
     // Resolve target ASIN
     const srcAsin = g.asins[0] ? g.asins[0].asin : '';
@@ -689,7 +701,7 @@ function buildCampaignPayload() {
     const negatives = (g.negatives || []).filter(kw => kw.state !== 'ARCHIVED').map(kw => kw.text);
 
     return {
-      name:      g.name,
+      name:      mapAsinsInText(g.name, srcAsin, dstAsin),
       asin:      dstAsin,
       bid:       applyBid(g.bid, grpBidMode, grpBidVal),
       keywords,
@@ -704,7 +716,7 @@ function buildCampaignPayload() {
 
   return {
     type:        c.targeting_type === 'AUTO' ? 'auto' : 'manual',
-    name:        prefix + c.name + suffix,
+    name:        prefix + mapAsinsInText(c.name) + suffix,
     budget:      budget,
     bidStrategy: BID_STRATEGY_DISPLAY[c.bid_strategy] || 'Dynamic bids - down only',
     bidadj:      0,
