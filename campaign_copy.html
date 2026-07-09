@@ -687,9 +687,12 @@ function buildCampaignPayload() {
       return tok;
     });
 
-  const groups = (structure.groups || []).map(g => {
+  const allGroups = (structure.groups || []).map(g => {
     // Resolve target ASIN
     const srcAsin = g.asins[0] ? g.asins[0].asin : '';
+    // MERCH: если соответствие не найдено в каталоге и не введено вручную —
+    // группу пропускаем (нельзя создавать её с ASIN исходного гео)
+    const unmapped = at !== 'KDP' && srcAsin && !asinMap[srcAsin];
     const dstAsin = at === 'KDP' ? srcAsin : (asinMap[srcAsin] || srcAsin);
 
     const keywords = (g.keywords || []).filter(kw => kw.state !== 'ARCHIVED').map(kw => ({
@@ -709,8 +712,12 @@ function buildCampaignPayload() {
       // pass extra data for preview
       _srcAsin:  srcAsin,
       _targets:  g.targets,
+      _skip:     unmapped,
     };
   });
+  const groups  = allGroups.filter(g => !g._skip);
+  const skipped = allGroups.filter(g => g._skip)
+                           .map(g => ({name: g.name, srcAsin: g._srcAsin}));
 
   const budget = applyBid(c.budget, budgetMode, budgetVal);
 
@@ -724,6 +731,7 @@ function buildCampaignPayload() {
     start:       '',
     end:         '',
     groups,
+    _skipped:    skipped,
   };
 }
 
@@ -764,6 +772,16 @@ function renderPreview() {
     </div>`;
   }
 
+  if (payload._skipped.length) {
+    html += `<div style="padding:10px 0;border-top:1px dashed var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:6px">
+        ⚠ Будут пропущены (нет ASIN для ${esc(dstMkt)}): ${payload._skipped.length}
+      </div>
+      ${payload._skipped.map(s => `<div style="font-size:12px;color:var(--dim);padding:2px 0;text-decoration:line-through">${esc(s.name)} <span style="font-family:'DM Mono',monospace;font-size:10px">(${esc(s.srcAsin)})</span></div>`).join('')}
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Чтобы включить группу — вернитесь на шаг 3 и укажите ASIN вручную.</div>
+    </div>`;
+  }
+
   html += '</div></div></div>';
   document.getElementById('previewWrap').innerHTML = html;
 }
@@ -773,9 +791,15 @@ async function submitCopy() {
   const at     = document.getElementById('srcAcct').value;
   const dstMkt = document.getElementById('dstMkt').value;
   const payload = buildCampaignPayload();
+  const skippedCount = payload._skipped.length;
+  if (!payload.groups.length) {
+    showErr('errSubmit', 'Все группы пропущены: ни для одного ASIN нет соответствия в ' + dstMkt + '. Укажите ASIN вручную на шаге 3.');
+    return;
+  }
+  delete payload._skipped;
   // Strip internal preview fields
   payload.groups = payload.groups.map(g => {
-    const { _srcAsin, _targets, ...clean } = g;
+    const { _srcAsin, _targets, _skip, ...clean } = g;
     return clean;
   });
 
@@ -799,7 +823,8 @@ async function submitCopy() {
     document.getElementById('submitFoot').style.display = 'none';
     document.getElementById('successBox').style.display = '';
     document.getElementById('successMsg').textContent =
-      `Кампания «${payload.name}» добавлена в очередь для ${dstMkt}. Групп: ${payload.groups.length}.`;
+      `Кампания «${payload.name}» добавлена в очередь для ${dstMkt}. Групп: ${payload.groups.length}.` +
+      (skippedCount ? ` Пропущено без ASIN: ${skippedCount}.` : '');
   } catch(e) {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Отправить в очередь';
