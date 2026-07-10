@@ -1279,9 +1279,10 @@ var OPT_RULE_COLS = [
   { key:'no_sale_clicks', label:'кл. без продаж→off' }
 ];
 var BOOST_RULE_COLS = [
-  { key:'low_impr',  label:'показов ≤' },
-  { key:'boost_pct', label:'+%' },
-  { key:'boost_max', label:'макс $' }
+  { key:'low_impr',     label:'показов ≤' },
+  { key:'boost_clicks', label:'кликов ≤' },
+  { key:'boost_pct',    label:'+%' },
+  { key:'boost_max',    label:'макс $' }
 ];
 
 function loadRules() {
@@ -1326,7 +1327,7 @@ function renderRulesPanel() {
     'По кликам ключа и ACOS: клики ≥ «мин кл. ключа» → корректировка по ACOS; «кл. без продаж» без единой продажи → выключить. Две ступени снижения: ACoS выше первого порога → −%, выше второго (ACoS≫) → −−%. Пустое ACoS≫ = одна ступень.',
     OPT_RULE_COLS);
   html += rulesTableHtml('boost', 'Разгон',
-    'По показам: показов ≤ порога и ставка ниже «макс $» → поднять ставку на +%. Не применяется, если сработала оптимизация.',
+    'Показов ≤ порога, кликов ≤ порога (пустое = 7) и ставка ниже «макс $» → поднять ставку на +%. Порог кликов не даёт разгонять ключи, уже накопившие клики без продаж. Не применяется, если сработала оптимизация.',
     BOOST_RULE_COLS);
   document.getElementById('rulesGrid').innerHTML = html;
 }
@@ -1377,7 +1378,7 @@ function addRule(type) {
   if (type === 'boost') {
     rules.push({
       rule_type:'boost', name:'Разгон', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
-      low_impr:500, boost_pct:20, boost_max:0.60, priority:100, enabled:true
+      low_impr:500, boost_clicks:7, boost_pct:20, boost_max:0.60, priority:100, enabled:true
     });
   } else {
     rules.push({
