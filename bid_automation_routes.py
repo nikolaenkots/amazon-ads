@@ -52,7 +52,7 @@ RULES_TABLE = f"{PROJECT_ID}.{DATASET}.bid_rules"
 # group_total_clicks is returned for analysis only.
 DEFAULT_RULES = [
     {'rule_type':'opt',   'name':'Оптимизация', 'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'high_acos':30, 'high_pct':10, 'high_acos2':50, 'high_pct2':20, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
-    {'rule_type':'boost', 'name':'Разгон',      'color':'#6c3fc9', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'low_impr':500, 'boost_pct':20, 'boost_max':0.60, 'priority':100, 'enabled':True},
+    {'rule_type':'boost', 'name':'Разгон',      'color':'#6c3fc9', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'low_impr':500, 'boost_clicks':7, 'boost_pct':20, 'boost_max':0.60, 'priority':100, 'enabled':True},
 ]
 
 _RULES_DDL = f"""
@@ -77,6 +77,9 @@ _RULES_ALTERS = [
     # (сильнее, чем базовое high_pct); NULL = ступень выключена
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS high_acos2 FLOAT64",
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS high_pct2 FLOAT64",
+    # потолок кликов для разгона: boost только если кликов <= boost_clicks
+    # (иначе автоматизация разгоняет ключи, уже накопившие клики без продаж)
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_clicks INT64",
 ]
 
 
@@ -129,7 +132,7 @@ def ba_rules_get():
                name, color, scope, portfolio_id, targeting_type,
                high_acos, high_pct, high_acos2, high_pct2, low_acos, low_pct,
                min_bid, max_bid, min_clicks, no_sale_clicks,
-               low_impr, boost_pct, boost_max, priority, enabled
+               low_impr, boost_clicks, boost_pct, boost_max, priority, enabled
         FROM `{RULES_TABLE}`
         WHERE account_type = '{_safe(account_type)}'
         ORDER BY rule_type, priority, scope DESC, name
@@ -185,6 +188,7 @@ def _build_rule_rows(account_type, rules):
             'min_clicks':    _inum(r.get('min_clicks'), 0),
             'no_sale_clicks': _inum(r.get('no_sale_clicks'), 0),
             'low_impr':      _inum(r.get('low_impr'), 0),
+            'boost_clicks':  _inum(r.get('boost_clicks'), 7),
             'boost_pct':     _fnum(r.get('boost_pct'), 20.0),
             'boost_max':     _fnum(r.get('boost_max'), 0.60),
             'priority':      _inum(r.get('priority'), 100),
@@ -511,7 +515,7 @@ def ba_keywords():
     ),
     boost_rules AS (
         SELECT scope, portfolio_id, targeting_type,
-               low_impr, boost_pct, boost_max,
+               low_impr, boost_clicks, boost_pct, boost_max,
                priority, name AS boost_name, color AS boost_color
         FROM `{RULES_TABLE}`
         WHERE account_type = '{account_type}' AND enabled = TRUE
@@ -542,7 +546,7 @@ def ba_keywords():
     ),
     boost_matched AS (
         SELECT b.entity_id AS b_entity_id,
-            r.low_impr, r.boost_pct, r.boost_max, r.boost_name, r.boost_color,
+            r.low_impr, r.boost_clicks, r.boost_pct, r.boost_max, r.boost_name, r.boost_color,
             CASE
                 WHEN r.scope = 'portfolio' AND r.targeting_type <> 'ANY' THEN 1
                 WHEN r.scope = 'portfolio' THEN 2
@@ -563,7 +567,7 @@ def ba_keywords():
     ),
     acted AS (
         SELECT m.* EXCEPT(rn),
-            bb.low_impr, bb.boost_pct, bb.boost_max, bb.boost_name, bb.boost_color,
+            bb.low_impr, bb.boost_clicks, bb.boost_pct, bb.boost_max, bb.boost_name, bb.boost_color,
             CASE
                 -- пауза: правило оптимизации, клики без продаж превысили порог
                 WHEN m.rule_name IS NOT NULL AND m.acos IS NULL
@@ -573,8 +577,10 @@ def ba_keywords():
                      AND m.clicks >= COALESCE(m.r_min_clicks, 0) AND m.acos > m.high_acos THEN 'lower'
                 WHEN m.rule_name IS NOT NULL AND m.acos IS NOT NULL
                      AND m.clicks >= COALESCE(m.r_min_clicks, 0) AND m.acos < m.low_acos THEN 'raise'
-                -- разгон: мало показов и ставка ниже потолка разгона
+                -- разгон: мало показов, мало кликов (иначе разгоняем ключ,
+                -- уже накопивший клики без продаж) и ставка ниже потолка
                 WHEN bb.boost_name IS NOT NULL AND m.impressions <= bb.low_impr
+                     AND m.clicks <= COALESCE(bb.boost_clicks, 7)
                      AND m.bid < bb.boost_max THEN 'boost'
                 WHEN m.rule_name IS NOT NULL AND m.acos IS NULL AND m.clicks <= 5 THEN 'new'
                 ELSE 'hold'
