@@ -1262,8 +1262,10 @@ function renderStatusBar() {
 // Два независимых набора правил: оптимизация (клики ключа + ACOS)
 // и разгон (показы). Возраст ASIN в правилах не используется.
 var OPT_RULE_COLS = [
-  { key:'high_acos',label:'ACoS> сниз.' },
-  { key:'high_pct', label:'−%' },
+  { key:'high_acos', label:'ACoS> сниз.' },
+  { key:'high_pct',  label:'−%' },
+  { key:'high_acos2',label:'ACoS≫ сниз.' },
+  { key:'high_pct2', label:'−−%' },
   { key:'low_acos', label:'ACoS< повыс.' },
   { key:'low_pct',  label:'+%' },
   { key:'min_bid',  label:'мин $' },
@@ -1316,7 +1318,7 @@ function rulesTableHtml(type, title, subtitle, cols) {
 
 function renderRulesPanel() {
   var html = rulesTableHtml('opt', 'Оптимизация',
-    'По кликам ключа и ACOS: клики ≥ «мин кл. ключа» → корректировка по ACOS; «кл. без продаж» без единой продажи → выключить.',
+    'По кликам ключа и ACOS: клики ≥ «мин кл. ключа» → корректировка по ACOS; «кл. без продаж» без единой продажи → выключить. Две ступени снижения: ACoS выше первого порога → −%, выше второго (ACoS≫) → −−%. Пустое ACoS≫ = одна ступень.',
     OPT_RULE_COLS);
   html += rulesTableHtml('boost', 'Разгон',
     'По показам: показов ≤ порога и ставка ниже «макс $» → поднять ставку на +%. Не применяется, если сработала оптимизация.',
@@ -1361,7 +1363,8 @@ function ruleEdit(idx, key, val) {
     rules[idx][key] = val;
     if (key === 'scope') renderRulesPanel();   // toggle portfolio select
   } else {
-    rules[idx][key] = parseFloat(val);
+    var f = parseFloat(val);
+    rules[idx][key] = isNaN(f) ? null : f;   // пустое поле = ступень/параметр выключен
   }
 }
 
@@ -1374,7 +1377,7 @@ function addRule(type) {
   } else {
     rules.push({
       rule_type:'opt', name:'Новое', color:'#1a8f5c', scope:'global', portfolio_id:'', targeting_type:'ANY',
-      high_acos:40, high_pct:15, low_acos:12, low_pct:15,
+      high_acos:30, high_pct:10, high_acos2:50, high_pct2:20, low_acos:12, low_pct:15,
       min_bid:0.20, max_bid:5.00, min_clicks:10, no_sale_clicks:25,
       priority:100, enabled:true
     });

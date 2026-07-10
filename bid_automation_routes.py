@@ -51,7 +51,7 @@ RULES_TABLE = f"{PROJECT_ID}.{DATASET}.bid_rules"
 # optimization rule (and vice versa). ASIN age is NOT part of matching anymore —
 # group_total_clicks is returned for analysis only.
 DEFAULT_RULES = [
-    {'rule_type':'opt',   'name':'Оптимизация', 'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
+    {'rule_type':'opt',   'name':'Оптимизация', 'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'high_acos':30, 'high_pct':10, 'high_acos2':50, 'high_pct2':20, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
     {'rule_type':'boost', 'name':'Разгон',      'color':'#6c3fc9', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'low_impr':500, 'boost_pct':20, 'boost_max':0.60, 'priority':100, 'enabled':True},
 ]
 
@@ -73,6 +73,10 @@ _RULES_ALTERS = [
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_pct FLOAT64",
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_max FLOAT64",
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS rule_type STRING",
+    # вторая ступень снижения: ACOS выше high_acos2 → снижение на high_pct2
+    # (сильнее, чем базовое high_pct); NULL = ступень выключена
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS high_acos2 FLOAT64",
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS high_pct2 FLOAT64",
 ]
 
 
@@ -123,7 +127,7 @@ def ba_rules_get():
         sql = f"""
         SELECT COALESCE(rule_type, 'opt') AS rule_type,
                name, color, scope, portfolio_id, targeting_type,
-               high_acos, high_pct, low_acos, low_pct,
+               high_acos, high_pct, high_acos2, high_pct2, low_acos, low_pct,
                min_bid, max_bid, min_clicks, no_sale_clicks,
                low_impr, boost_pct, boost_max, priority, enabled
         FROM `{RULES_TABLE}`
@@ -172,6 +176,8 @@ def _build_rule_rows(account_type, rules):
             'age_to':        None,
             'high_acos':     _fnum(r.get('high_acos'), 40.0),
             'high_pct':      _fnum(r.get('high_pct'), 15.0),
+            'high_acos2':    _fnum(r.get('high_acos2'), None),
+            'high_pct2':     _fnum(r.get('high_pct2'), None),
             'low_acos':      _fnum(r.get('low_acos'), 12.0),
             'low_pct':       _fnum(r.get('low_pct'), 15.0),
             'min_bid':       _fnum(r.get('min_bid'), 0.20),
@@ -495,7 +501,8 @@ def ba_keywords():
     -- Возраст ASIN в матчинге не участвует.
     opt_rules AS (
         SELECT scope, portfolio_id, targeting_type,
-               high_acos, high_pct, low_acos, low_pct, min_bid, max_bid,
+               high_acos, high_pct, high_acos2, high_pct2,
+               low_acos, low_pct, min_bid, max_bid,
                min_clicks AS r_min_clicks, no_sale_clicks AS r_no_sale_clicks,
                priority, name AS rule_name, color AS rule_color
         FROM `{RULES_TABLE}`
@@ -512,7 +519,8 @@ def ba_keywords():
     ),
     matched AS (
         SELECT b.*,
-            r.high_acos, r.high_pct, r.low_acos, r.low_pct, r.min_bid, r.max_bid,
+            r.high_acos, r.high_pct, r.high_acos2, r.high_pct2,
+            r.low_acos, r.low_pct, r.min_bid, r.max_bid,
             r.r_min_clicks, r.r_no_sale_clicks,
             r.rule_name, r.rule_color,
             CASE
@@ -579,7 +587,12 @@ def ba_keywords():
         SELECT *,
             CASE action
                 WHEN 'raise' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 + low_pct/100), 2)))
-                WHEN 'lower' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 - high_pct/100), 2)))
+                -- ступенчатое снижение: ACOS выше второго порога → сильный %,
+                -- иначе базовый % (вторая ступень выключена, если поля пустые)
+                WHEN 'lower' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 -
+                    CASE WHEN high_acos2 IS NOT NULL AND high_pct2 IS NOT NULL
+                              AND acos > high_acos2
+                         THEN high_pct2 ELSE high_pct END / 100), 2)))
                 WHEN 'boost' THEN LEAST(boost_max, ROUND(bid * (1 + boost_pct/100), 2))
                 ELSE bid
             END AS new_bid
