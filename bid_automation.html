@@ -90,6 +90,11 @@ thead th{position:sticky;top:0;background:var(--surface2);border-bottom:1px soli
 thead th:hover{color:var(--text)}
 thead th.sorted{color:var(--accent)}
 thead th .sort-arrow{font-size:9px;margin-left:2px;opacity:.6}
+/* перетаскиваемая граница колонки */
+.col-resizer{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:12}
+.col-resizer::after{content:'';position:absolute;top:20%;bottom:20%;right:3px;width:1px;background:transparent}
+.col-resizer:hover::after,.col-resizer.active::after{background:var(--accent)}
+body.col-resizing{cursor:col-resize;user-select:none}
 tbody tr.main-row{border-bottom:1px solid var(--border)}
 tbody tr.main-row:hover td{background:var(--surface2)}
 tbody tr.main-row.selected td{background:var(--accent-bg)}
@@ -1420,6 +1425,58 @@ function toggleRules() {
   lbl.textContent = body.classList.contains('open') ? 'свернуть' : 'развернуть';
 }
 
+// ── Column resize (ширина колонок, сохраняется в localStorage) ─────────────
+function initColResize() {
+  var table = document.getElementById('mainTable');
+  var ths   = table.querySelectorAll('thead th');
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('baColWidths') || '{}'); } catch(e) {}
+
+  function persist() {
+    var widths = {};
+    table.querySelectorAll('thead th').forEach(function(th, i){
+      if (th.style.width) widths[i] = parseInt(th.style.width, 10);
+    });
+    try { localStorage.setItem('baColWidths', JSON.stringify(widths)); } catch(e) {}
+  }
+
+  ths.forEach(function(th, i){
+    if (saved[i]) { th.style.width = saved[i] + 'px'; th.style.minWidth = saved[i] + 'px'; }
+
+    var h = document.createElement('div');
+    h.className = 'col-resizer';
+    h.title = 'Потянуть — изменить ширину, двойной клик — сбросить';
+    // не даём клику по ручке запускать сортировку колонки
+    h.addEventListener('click', function(e){ e.stopPropagation(); });
+    h.addEventListener('dblclick', function(e){
+      e.stopPropagation();
+      th.style.width = ''; th.style.minWidth = '';
+      persist();
+    });
+    h.addEventListener('mousedown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var startX = e.pageX, startW = th.offsetWidth;
+      h.classList.add('active');
+      document.body.classList.add('col-resizing');
+      function mv(ev){
+        var w = Math.max(30, startW + (ev.pageX - startX));
+        th.style.width = w + 'px';
+        th.style.minWidth = w + 'px';
+      }
+      function up(){
+        document.removeEventListener('mousemove', mv);
+        document.removeEventListener('mouseup', up);
+        h.classList.remove('active');
+        document.body.classList.remove('col-resizing');
+        persist();
+      }
+      document.addEventListener('mousemove', mv);
+      document.addEventListener('mouseup', up);
+    });
+    th.appendChild(h);
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 // Set default dates
 (function() {
@@ -1432,6 +1489,7 @@ function toggleRules() {
 loadPortfolios();
 loadRules();
 loadData();
+initColResize();
 </script>
 </body>
 </html>
