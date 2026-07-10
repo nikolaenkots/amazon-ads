@@ -359,7 +359,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
       <span style="margin-left:auto;font-size:11px;color:var(--dim)" id="rulesToggleLabel">развернуть</span>
     </div>
     <div class="rules-body" id="rulesBody">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Правила хранятся в базе и применяются на сервере. Приоритет: портфолио+таргетинг → портфолио → глобальное+таргетинг → глобальное. Правило с выключенным «возрастом» действует на всё портфолио независимо от кликов ASIN.</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Правила хранятся в базе и применяются на сервере. Два независимых набора: <b>Оптимизация</b> — по кликам ключа и ACOS (при достаточной статистике), <b>Разгон</b> — по показам (только для таргетов с малым числом показов). Наборы не перекрывают друг друга: оптимизация имеет приоритет, разгон срабатывает когда данных мало. Приоритет области: портфолио+таргетинг → портфолио → глобальное+таргетинг → глобальное.</div>
       <div class="rules-grid" id="rulesGrid">
         <!-- filled by JS -->
       </div>
@@ -390,7 +390,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac
             <th onclick="sortBy('bid')" style="width:150px">Ставка → реком. <span class="sort-arrow" id="sa_bid"></span></th>
             <th onclick="sortBy('impressions')" style="width:65px">Показы <span class="sort-arrow" id="sa_impressions"></span></th>
             <th onclick="sortBy('clicks')" style="width:60px">Клики <span class="sort-arrow" id="sa_clicks"></span></th>
-            <th style="width:70px" title="Всего кликов на ASIN в группе (возраст товара)">ASIN кл.</th>
+            <th style="width:70px" title="Всего кликов на ASIN по всем кампаниям — для анализа, в правилах не участвует">ASIN кл.</th>
             <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
             <th onclick="sortBy('sales')" style="width:70px">Продажи <span class="sort-arrow" id="sa_sales"></span></th>
             <th onclick="sortBy('acos')" style="width:65px">ACoS <span class="sort-arrow" id="sa_acos"></span></th>
@@ -730,7 +730,7 @@ function renderTable() {
     html += '    <button class="expand-btn" onclick="toggleExpand(' + i + ',' + q(r.entity_id) + ',' + q(r.entity_type) + ')" id="eb-' + i + '" style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:11px;flex-shrink:0">+</button>';
     html += '    <span class="dot ' + stateClass + '"></span>';
     html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
-    html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Возраст товара по кликам ASIN (все кампании): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
+    html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Правило · кликов на ASIN по всем кампаниям (для анализа): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
     html += '  </div>';
     var campDot = '<span class="dot ' + (r.campaign_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Кампания: ' + esc(r.campaign_state||'') + '"></span>';
     var grpDot  = '<span class="dot ' + (r.ad_group_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Группа: ' + esc(r.ad_group_state||'') + '"></span>';
@@ -1259,9 +1259,9 @@ function renderStatusBar() {
 }
 
 // ── Rules (stored in BigQuery) ──────────────────────────────────────────────
-var NUM_RULE_COLS = [
-  { key:'age_from', label:'ASIN кл. от', age:true },
-  { key:'age_to',   label:'до',          age:true },
+// Два независимых набора правил: оптимизация (клики ключа + ACOS)
+// и разгон (показы). Возраст ASIN в правилах не используется.
+var OPT_RULE_COLS = [
   { key:'high_acos',label:'ACoS> сниз.' },
   { key:'high_pct', label:'−%' },
   { key:'low_acos', label:'ACoS< повыс.' },
@@ -1269,10 +1269,12 @@ var NUM_RULE_COLS = [
   { key:'min_bid',  label:'мин $' },
   { key:'max_bid',  label:'макс $' },
   { key:'min_clicks',   label:'мин кл. ключа' },
-  { key:'no_sale_clicks', label:'кл. без продаж→off' },
-  { key:'low_impr',     label:'разгон: показов ≤' },
-  { key:'boost_pct',    label:'разгон +%' },
-  { key:'boost_max',    label:'разгон макс $' }
+  { key:'no_sale_clicks', label:'кл. без продаж→off' }
+];
+var BOOST_RULE_COLS = [
+  { key:'low_impr',  label:'показов ≤' },
+  { key:'boost_pct', label:'+%' },
+  { key:'boost_max', label:'макс $' }
 ];
 
 function loadRules() {
@@ -1281,6 +1283,7 @@ function loadRules() {
     .then(function(d){
       if (d.error) { toast('Правила: ' + d.error, true); rules = []; }
       else rules = d.rules || [];
+      rules.forEach(function(r){ if (r.rule_type !== 'boost') r.rule_type = 'opt'; });
       renderRulesPanel();
     })
     .catch(function(e){ toast('Правила: ' + e.message, true); });
@@ -1294,24 +1297,37 @@ function pfOptionsHtml(selected) {
   return h;
 }
 
-function renderRulesPanel() {
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1100px">';
+function rulesTableHtml(type, title, subtitle, cols) {
+  var html = '<div style="margin-bottom:14px">';
+  html += '<div style="font-size:12px;font-weight:600;margin-bottom:2px">' + title + '</div>';
+  html += '<div style="font-size:10px;color:var(--muted);margin-bottom:6px">' + subtitle + '</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">';
   html += '<thead><tr>';
-  var heads = ['', 'Название', 'Область', 'Портфолио', 'Таргетинг', 'Возраст'];
+  var heads = ['', 'Название', 'Область', 'Портфолио', 'Таргетинг'];
   heads.forEach(function(l){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + l + '</th>'; });
-  NUM_RULE_COLS.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
+  cols.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
   html += '<th></th></tr></thead><tbody>';
-  rules.forEach(function(r, idx){ html += ruleRowHtml(r, idx); });
+  rules.forEach(function(r, idx){ if ((r.rule_type||'opt') === type) html += ruleRowHtml(r, idx, cols); });
   html += '</tbody></table>';
-  html += '<div style="margin-top:10px"><button class="btn btn-s" onclick="addRule()" style="height:28px;font-size:12px">+ Добавить правило</button></div>';
+  html += '<div style="margin-top:8px"><button class="btn btn-s" onclick="addRule(\'' + type + '\')" style="height:28px;font-size:12px">+ Добавить правило</button></div>';
+  html += '</div>';
+  return html;
+}
+
+function renderRulesPanel() {
+  var html = rulesTableHtml('opt', 'Оптимизация',
+    'По кликам ключа и ACOS: клики ≥ «мин кл. ключа» → корректировка по ACOS; «кл. без продаж» без единой продажи → выключить.',
+    OPT_RULE_COLS);
+  html += rulesTableHtml('boost', 'Разгон',
+    'По показам: показов ≤ порога и ставка ниже «макс $» → поднять ставку на +%. Не применяется, если сработала оптимизация.',
+    BOOST_RULE_COLS);
   document.getElementById('rulesGrid').innerHTML = html;
 }
 
-function ruleRowHtml(r, idx) {
+function ruleRowHtml(r, idx, cols) {
   var inpStyle = 'width:100%;height:26px;padding:0 6px;border:1px solid var(--border);border-radius:5px;font-family:\'DM Mono\',monospace;font-size:11px;background:var(--surface)';
   var selStyle = 'height:26px;padding:0 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface)';
   var isPf = r.scope === 'portfolio';
-  var useAge = r.use_age !== false;
   var h = '<tr data-ridx="' + idx + '">';
   // color
   h += '<td style="padding:3px 4px"><input type="color" value="' + (r.color||'#888888') + '" onchange="ruleEdit(' + idx + ',\'color\',this.value)" style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0"></td>';
@@ -1329,14 +1345,10 @@ function ruleRowHtml(r, idx) {
   h += '<td style="padding:3px 4px"><select onchange="ruleEdit(' + idx + ',\'targeting_type\',this.value)" style="' + selStyle + '">' +
        ['ANY','AUTO','MANUAL'].map(function(t){ return '<option value="' + t + '"' + ((r.targeting_type||'ANY')===t?' selected':'') + '>' + t + '</option>'; }).join('') +
        '</select></td>';
-  // use_age
-  h += '<td style="padding:3px 4px;text-align:center"><input type="checkbox"' + (useAge?' checked':'') + ' onchange="ruleEdit(' + idx + ',\'use_age\',this.checked)" title="Учитывать возраст"></td>';
   // numeric columns
-  NUM_RULE_COLS.forEach(function(c){
+  cols.forEach(function(c){
     var v = r[c.key]; if (v == null) v = '';
-    var dis = (c.age && !useAge) ? ' disabled style="' + inpStyle + ';opacity:.4" ' : ' style="' + inpStyle + '" ';
-    var ph = (c.key === 'age_to') ? '∞' : '';
-    h += '<td style="padding:3px 4px"><input type="number" value="' + esc(v) + '" placeholder="' + ph + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)"' + dis + '></td>';
+    h += '<td style="padding:3px 4px"><input type="number" value="' + esc(v) + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)" style="' + inpStyle + '"></td>';
   });
   h += '<td style="padding:3px 4px;text-align:center"><button class="btn btn-s" onclick="removeRule(' + idx + ')" style="height:24px;width:24px;padding:0;font-size:13px;color:var(--red)" title="Удалить">×</button></td>';
   h += '</tr>';
@@ -1348,24 +1360,25 @@ function ruleEdit(idx, key, val) {
   if (key === 'name' || key === 'color' || key === 'scope' || key === 'portfolio_id' || key === 'targeting_type') {
     rules[idx][key] = val;
     if (key === 'scope') renderRulesPanel();   // toggle portfolio select
-  } else if (key === 'use_age') {
-    rules[idx][key] = val;
-    renderRulesPanel();
-  } else if (key === 'age_to' && (val === '' || val == null)) {
-    rules[idx][key] = null;
   } else {
     rules[idx][key] = parseFloat(val);
   }
 }
 
-function addRule() {
-  rules.push({
-    name:'Новое', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
-    use_age:true, age_from:0, age_to:null,
-    high_acos:40, high_pct:15, low_acos:12, low_pct:15,
-    min_bid:0.20, max_bid:5.00, min_clicks:0, no_sale_clicks:0,
-    low_impr:0, boost_pct:20, boost_max:2.00, priority:100, enabled:true
-  });
+function addRule(type) {
+  if (type === 'boost') {
+    rules.push({
+      rule_type:'boost', name:'Разгон', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
+      low_impr:500, boost_pct:20, boost_max:0.60, priority:100, enabled:true
+    });
+  } else {
+    rules.push({
+      rule_type:'opt', name:'Новое', color:'#1a8f5c', scope:'global', portfolio_id:'', targeting_type:'ANY',
+      high_acos:40, high_pct:15, low_acos:12, low_pct:15,
+      min_bid:0.20, max_bid:5.00, min_clicks:10, no_sale_clicks:25,
+      priority:100, enabled:true
+    });
+  }
   renderRulesPanel();
 }
 

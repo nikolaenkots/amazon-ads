@@ -3054,40 +3054,57 @@ EXISTS`), **один раз за процесс** (флаг `_rules_table_ready`
 `account_type` + `load_table_from_json` (WRITE_APPEND). При пустой таблице
 засевается `DEFAULT_RULES`.
 
-Колонки правила: `account_type`, `name`, `color`, `scope` (global/portfolio),
-`portfolio_id`, `targeting_type` (ANY/AUTO/MANUAL), `use_age`, `age_from`,
-`age_to`, `high_acos`, `high_pct`, `low_acos`, `low_pct`, `min_bid`, `max_bid`,
+Колонки правила: `account_type`, `rule_type` (opt/boost), `name`, `color`,
+`scope` (global/portfolio), `portfolio_id`, `targeting_type` (ANY/AUTO/MANUAL),
+`high_acos`, `high_pct`, `low_acos`, `low_pct`, `min_bid`, `max_bid`,
 `min_clicks`, `no_sale_clicks`, `low_impr`, `boost_pct`, `boost_max`,
-`priority`, `enabled`.
+`priority`, `enabled`. Колонки `use_age`, `age_from`, `age_to` остались в схеме
+для совместимости, но **не используются** (пишутся выключенными).
 
 - Правила **раздельные по аккаунту** (MERCH/KDP), **общие на все маркетплейсы**.
 - Разные min/max для AUTO и MANUAL → отдельные правила с targeting_type.
-- Портфолио-правило с `use_age=false` действует на всё портфолио независимо от
-  возраста (кейс «день рождения»: дорогие клики).
+
+### Два типа правил (переработано, июль 2026)
+Раньше возраст ASIN (`use_age`/`age_from`/`age_to` по суммарным кликам ASIN) был
+условием матчинга, а разгон (`low_impr`/`boost_pct`/`boost_max`) жил внутри
+каждого правила — правила перекрывали друг друга (ключ матчится только одним
+правилом, и разгон чужого правила не срабатывал). Теперь:
+
+- **`rule_type='opt'` (Оптимизация)** — по кликам ключа и ACOS:
+  `min_clicks` (порог кликов ключа), `no_sale_clicks` (клики без продаж → off),
+  пороги ACOS, коридор `[min_bid, max_bid]`.
+- **`rule_type='boost'` (Разгон)** — только по показам:
+  `low_impr` (показов ≤), `boost_pct` (+%), `boost_max` (потолок $).
+- Наборы матчатся **независимо** (у каждого ключа — своё лучшее opt-правило и
+  своё лучшее boost-правило), поэтому не перекрываются.
+- **Возраст ASIN исключён из правил**; суммарные клики ASIN
+  (`group_total_clicks`, колонка «ASIN кл.») остались в выдаче для анализа.
+- Строки без `rule_type` (старые) читаются как `opt`; после переработки нужно
+  один раз проверить правила на странице и пересохранить (старое правило
+  «разгон» из таблицы оптимизации удалить и создать в секции «Разгон»).
 
 ### Выбор правила и действие (серверный SQL)
-Приоритет матча (ROW_NUMBER по `match_score`, затем `priority`):
+Приоритет матча внутри каждого набора (ROW_NUMBER по `match_score`, затем `priority`):
 1. портфолио + конкретный таргетинг
 2. портфолио + ANY
-3. глобальное + таргетинг + возраст
-4. глобальное + ANY + возраст
+3. глобальное + таргетинг
+4. глобальное + ANY
 
-Действие (`action`) и `new_bid` считаются в SQL (CTE `matched`/`ranked`/`acted`/
-`finalized`), что позволяет фильтру рекомендаций и пагинации работать по всей
-выборке (`rec_filter`):
+Действие (`action`) и `new_bid` считаются в SQL (CTE `matched`/`ranked`/
+`boost_matched`/`boost_best`/`acted`/`finalized`), что позволяет фильтру
+рекомендаций и пагинации работать по всей выборке (`rec_filter`).
+Порядок проверок (оптимизация приоритетнее разгона):
 ```
-clicks < min_clicks:
-    low_impr>0 И impressions<=low_impr И bid<boost_max → boost  иначе hold
-acos IS NULL (нет продаж):
-    clicks>=no_sale_clicks → pause
-    low_impr>0 И impressions<=low_impr И bid<boost_max → boost
-    clicks>5 → hold  иначе new
-acos > high_acos → lower (× (1-high_pct/100))
-acos < low_acos  → raise (× (1+low_pct/100))
+1) opt: acos IS NULL И clicks>=no_sale_clicks           → pause
+2) opt: acos IS NOT NULL И clicks>=min_clicks И acos>high_acos → lower
+3) opt: acos IS NOT NULL И clicks>=min_clicks И acos<low_acos  → raise
+4) boost: impressions<=low_impr И bid<boost_max          → boost
+5) opt: acos IS NULL И clicks<=5                         → new
 иначе → hold
 boost → × (1+boost_pct/100), потолок boost_max
 raise/lower → коридор [min_bid, max_bid]
 ```
+Для действия `boost` в выдаче показываются имя/цвет boost-правила.
 
 Действия: `raise` (зел.), `lower` (красн.), `pause` (тёмно-красн., статус→PAUSED),
 `boost` «Разгон» (фиол., мало показов → поднять ставку), `new` (син.), `hold`.
