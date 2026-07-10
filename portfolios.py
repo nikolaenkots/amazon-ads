@@ -77,9 +77,9 @@ def portfolios_bulk_update():
 def portfolios_list():
     try:
         client = get_client()
-        sql = """
+        sql = f"""
         SELECT portfolio_id, account_type, marketplace, portfolio_name
-        FROM `amazon-ads-api-494412.amazon_ads.portfolio_labels`
+        FROM `{PROJECT_ID}.{DATASET}.portfolio_labels`
         ORDER BY account_type, marketplace, portfolio_name
         """
         rows = [dict(r) for r in client.query(sql).result()]

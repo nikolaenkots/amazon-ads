@@ -42,13 +42,17 @@ def _safe(s):
 RULES_TABLE = f"{PROJECT_ID}.{DATASET}.bid_rules"
 
 # Default rule set returned when the table is empty (also used to seed the UI).
-# low_impr / boost_pct / boost_max drive the "Разгон" (boost) action: a target
-# below low_impr impressions gets its bid raised by boost_pct (capped at boost_max)
-# to win more auctions. low_impr=0 disables boost for that rule.
+# Two independent rule kinds (rule_type):
+#   'opt'   — оптимизация: acts on the keyword's own clicks + ACOS
+#             (min_clicks gate, no_sale_clicks → pause, ACOS thresholds → raise/lower)
+#   'boost' — разгон: acts on the keyword's impressions only
+#             (impressions <= low_impr and bid < boost_max → raise by boost_pct)
+# They are matched separately, so a разгон rule can never be shadowed by an
+# optimization rule (and vice versa). ASIN age is NOT part of matching anymore —
+# group_total_clicks is returned for analysis only.
 DEFAULT_RULES = [
-    {'name':'Новые',   'color':'#1a6fd4', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':0,  'age_to':10,   'high_acos':50, 'high_pct':10, 'low_acos':15, 'low_pct':10, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':0,  'no_sale_clicks':15, 'low_impr':100, 'boost_pct':25, 'boost_max':2.00, 'priority':100, 'enabled':True},
-    {'name':'Средние', 'color':'#b07800', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':10, 'age_to':50,   'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'low_impr':0,   'boost_pct':20, 'boost_max':2.00, 'priority':100, 'enabled':True},
-    {'name':'Зрелые',  'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'use_age':True,  'age_from':50, 'age_to':None, 'high_acos':35, 'high_pct':20, 'low_acos':10, 'low_pct':20, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':25, 'no_sale_clicks':30, 'low_impr':0,   'boost_pct':20, 'boost_max':2.00, 'priority':100, 'enabled':True},
+    {'rule_type':'opt',   'name':'Оптимизация', 'color':'#1a8f5c', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'high_acos':40, 'high_pct':15, 'low_acos':12, 'low_pct':15, 'min_bid':0.20, 'max_bid':5.00, 'min_clicks':10, 'no_sale_clicks':25, 'priority':100, 'enabled':True},
+    {'rule_type':'boost', 'name':'Разгон',      'color':'#6c3fc9', 'scope':'global', 'portfolio_id':'', 'targeting_type':'ANY', 'low_impr':500, 'boost_pct':20, 'boost_max':0.60, 'priority':100, 'enabled':True},
 ]
 
 _RULES_DDL = f"""
@@ -68,6 +72,7 @@ _RULES_ALTERS = [
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS low_impr INT64",
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_pct FLOAT64",
     f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS boost_max FLOAT64",
+    f"ALTER TABLE `{RULES_TABLE}` ADD COLUMN IF NOT EXISTS rule_type STRING",
 ]
 
 
@@ -116,13 +121,14 @@ def ba_rules_get():
         client = get_client()
         _ensure_rules_table(client)
         sql = f"""
-        SELECT name, color, scope, portfolio_id, targeting_type, use_age,
-               age_from, age_to, high_acos, high_pct, low_acos, low_pct,
+        SELECT COALESCE(rule_type, 'opt') AS rule_type,
+               name, color, scope, portfolio_id, targeting_type,
+               high_acos, high_pct, low_acos, low_pct,
                min_bid, max_bid, min_clicks, no_sale_clicks,
                low_impr, boost_pct, boost_max, priority, enabled
         FROM `{RULES_TABLE}`
         WHERE account_type = '{_safe(account_type)}'
-        ORDER BY priority, scope DESC, name
+        ORDER BY rule_type, priority, scope DESC, name
         """
         rows = [{k: _cvt(v) for k, v in dict(r).items()} for r in client.query(sql, job_config=_QJC).result()]
         # Read-only: don't write on read (avoids hammering BigQuery's table-update
@@ -147,17 +153,23 @@ def _build_rule_rows(account_type, rules):
         scope = (r.get('scope') or 'global').lower()
         if scope not in ('global', 'portfolio'):
             scope = 'global'
+        rt = (r.get('rule_type') or 'opt').lower()
+        if rt not in ('opt', 'boost'):
+            rt = 'opt'
         out.append({
             'account_type':  account_type,
             'rule_id':       str(uuid.uuid4()),
+            'rule_type':     rt,
             'name':          str(r.get('name') or '')[:80],
             'color':         str(r.get('color') or '#888888')[:16],
             'scope':         scope,
             'portfolio_id':  str(r.get('portfolio_id') or ''),
             'targeting_type': tt,
-            'use_age':       bool(r.get('use_age', True)),
-            'age_from':      _inum(r.get('age_from'), 0),
-            'age_to':        _inum(r.get('age_to'), None),
+            # Возраст ASIN больше не участвует в правилах — колонки остаются в
+            # схеме таблицы для совместимости, пишутся выключенными.
+            'use_age':       False,
+            'age_from':      0,
+            'age_to':        None,
             'high_acos':     _fnum(r.get('high_acos'), 40.0),
             'high_pct':      _fnum(r.get('high_pct'), 15.0),
             'low_acos':      _fnum(r.get('low_acos'), 12.0),
@@ -168,7 +180,7 @@ def _build_rule_rows(account_type, rules):
             'no_sale_clicks': _inum(r.get('no_sale_clicks'), 0),
             'low_impr':      _inum(r.get('low_impr'), 0),
             'boost_pct':     _fnum(r.get('boost_pct'), 20.0),
-            'boost_max':     _fnum(r.get('boost_max'), 2.00),
+            'boost_max':     _fnum(r.get('boost_max'), 0.60),
             'priority':      _inum(r.get('priority'), 100),
             'enabled':       bool(r.get('enabled', True)),
             'updated_at':    now,
@@ -478,19 +490,30 @@ def ba_keywords():
         LEFT JOIN last_change lc ON lc.entity_id = kw.entity_id
         LEFT JOIN prev_bid    pv ON pv.entity_id = kw.entity_id
     ),
-    rules AS (
-        SELECT scope, portfolio_id, targeting_type, use_age, age_from, age_to,
+    -- Два независимых набора правил: оптимизация (клики ключа + ACOS)
+    -- и разгон (показы). Матчатся отдельно, поэтому не перекрывают друг друга.
+    -- Возраст ASIN в матчинге не участвует.
+    opt_rules AS (
+        SELECT scope, portfolio_id, targeting_type,
                high_acos, high_pct, low_acos, low_pct, min_bid, max_bid,
                min_clicks AS r_min_clicks, no_sale_clicks AS r_no_sale_clicks,
-               low_impr, boost_pct, boost_max,
                priority, name AS rule_name, color AS rule_color
         FROM `{RULES_TABLE}`
         WHERE account_type = '{account_type}' AND enabled = TRUE
+          AND COALESCE(rule_type, 'opt') = 'opt'
+    ),
+    boost_rules AS (
+        SELECT scope, portfolio_id, targeting_type,
+               low_impr, boost_pct, boost_max,
+               priority, name AS boost_name, color AS boost_color
+        FROM `{RULES_TABLE}`
+        WHERE account_type = '{account_type}' AND enabled = TRUE
+          AND rule_type = 'boost' AND COALESCE(low_impr, 0) > 0
     ),
     matched AS (
         SELECT b.*,
             r.high_acos, r.high_pct, r.low_acos, r.low_pct, r.min_bid, r.max_bid,
-            r.r_min_clicks, r.r_no_sale_clicks, r.low_impr, r.boost_pct, r.boost_max,
+            r.r_min_clicks, r.r_no_sale_clicks,
             r.rule_name, r.rule_color,
             CASE
                 WHEN r.scope IS NULL THEN 999
@@ -501,43 +524,63 @@ def ba_keywords():
             END AS match_score,
             COALESCE(r.priority, 9999) AS rule_priority
         FROM base b
-        LEFT JOIN rules r
+        LEFT JOIN opt_rules r
             ON (r.scope = 'global' OR (r.scope = 'portfolio' AND r.portfolio_id = b.portfolio_id))
            AND (r.targeting_type = 'ANY' OR r.targeting_type = b.targeting_type)
-           AND (r.use_age = FALSE OR (b.group_total_clicks >= r.age_from
-                                      AND (r.age_to IS NULL OR b.group_total_clicks < r.age_to)))
     ),
     ranked AS (
         SELECT *, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY match_score, rule_priority) rn
         FROM matched
     ),
-    acted AS (
-        SELECT *,
+    boost_matched AS (
+        SELECT b.entity_id AS b_entity_id,
+            r.low_impr, r.boost_pct, r.boost_max, r.boost_name, r.boost_color,
             CASE
-                WHEN rule_name IS NULL THEN 'hold'
-                WHEN clicks < r_min_clicks THEN
-                    -- not enough clicks: if also few impressions and bid below the
-                    -- boost ceiling → ramp the bid up to win auctions; otherwise hold
-                    CASE WHEN COALESCE(low_impr,0) > 0 AND impressions <= low_impr
-                              AND bid < boost_max THEN 'boost'
-                         ELSE 'hold' END
-                WHEN acos IS NULL THEN
-                    CASE WHEN r_no_sale_clicks > 0 AND clicks >= r_no_sale_clicks THEN 'pause'
-                         WHEN COALESCE(low_impr,0) > 0 AND impressions <= low_impr
-                              AND bid < boost_max THEN 'boost'
-                         WHEN clicks > 5 THEN 'hold' ELSE 'new' END
-                WHEN acos > high_acos THEN 'lower'
-                WHEN acos < low_acos THEN 'raise'
+                WHEN r.scope = 'portfolio' AND r.targeting_type <> 'ANY' THEN 1
+                WHEN r.scope = 'portfolio' THEN 2
+                WHEN r.targeting_type <> 'ANY' THEN 3
+                ELSE 4
+            END AS b_score,
+            COALESCE(r.priority, 9999) AS b_priority
+        FROM base b
+        JOIN boost_rules r
+            ON (r.scope = 'global' OR (r.scope = 'portfolio' AND r.portfolio_id = b.portfolio_id))
+           AND (r.targeting_type = 'ANY' OR r.targeting_type = b.targeting_type)
+    ),
+    boost_best AS (
+        SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY b_entity_id ORDER BY b_score, b_priority) bn
+            FROM boost_matched
+        ) WHERE bn = 1
+    ),
+    acted AS (
+        SELECT m.* EXCEPT(rn),
+            bb.low_impr, bb.boost_pct, bb.boost_max, bb.boost_name, bb.boost_color,
+            CASE
+                -- пауза: правило оптимизации, клики без продаж превысили порог
+                WHEN m.rule_name IS NOT NULL AND m.acos IS NULL
+                     AND m.r_no_sale_clicks > 0 AND m.clicks >= m.r_no_sale_clicks THEN 'pause'
+                -- оптимизация по ACOS: достаточно кликов ключа и есть продажи
+                WHEN m.rule_name IS NOT NULL AND m.acos IS NOT NULL
+                     AND m.clicks >= COALESCE(m.r_min_clicks, 0) AND m.acos > m.high_acos THEN 'lower'
+                WHEN m.rule_name IS NOT NULL AND m.acos IS NOT NULL
+                     AND m.clicks >= COALESCE(m.r_min_clicks, 0) AND m.acos < m.low_acos THEN 'raise'
+                -- разгон: мало показов и ставка ниже потолка разгона
+                WHEN bb.boost_name IS NOT NULL AND m.impressions <= bb.low_impr
+                     AND m.bid < bb.boost_max THEN 'boost'
+                WHEN m.rule_name IS NOT NULL AND m.acos IS NULL AND m.clicks <= 5 THEN 'new'
                 ELSE 'hold'
             END AS action
-        FROM ranked WHERE rn = 1
+        FROM ranked m
+        LEFT JOIN boost_best bb ON bb.b_entity_id = m.entity_id
+        WHERE m.rn = 1
     ),
     finalized AS (
         SELECT *,
             CASE action
                 WHEN 'raise' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 + low_pct/100), 2)))
                 WHEN 'lower' THEN LEAST(max_bid, GREATEST(min_bid, ROUND(bid * (1 - high_pct/100), 2)))
-                WHEN 'boost' THEN LEAST(boost_max, GREATEST(min_bid, ROUND(bid * (1 + boost_pct/100), 2)))
+                WHEN 'boost' THEN LEAST(boost_max, ROUND(bid * (1 + boost_pct/100), 2))
                 ELSE bid
             END AS new_bid
         FROM acted
@@ -588,8 +631,8 @@ def ba_keywords():
                 'group_total_clicks': r['group_total_clicks'],
                 'action':         r['action'],
                 'new_bid':        _cvt(r['new_bid']) if r['new_bid'] is not None else None,
-                'rule_name':      r['rule_name'],
-                'rule_color':     r['rule_color'],
+                'rule_name':      r['boost_name']  if r['action'] == 'boost' else r['rule_name'],
+                'rule_color':     r['boost_color'] if r['action'] == 'boost' else r['rule_color'],
             })
         return jsonify({'rows': result, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
