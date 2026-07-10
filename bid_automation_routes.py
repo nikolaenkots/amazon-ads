@@ -267,8 +267,8 @@ def ba_keywords():
 
     # Date window for stats.
     # fallback_start / upper_bound define the fixed window; when from_last_change
-    # is on, each entity's stats start at its last bid change date (fallback to the
-    # fixed window if it was never changed).
+    # is on, each entity's stats start at its last bid change date, but never
+    # earlier than the fixed window (whichever is shorter wins).
     if date_from and date_to:
         fallback_start = f"DATE('{_safe(date_from)}')"
         upper_bound    = f"AND s.date <= '{_safe(date_to)}'"
@@ -277,7 +277,10 @@ def ba_keywords():
         upper_bound    = ""
 
     if from_last_change:
-        start_expr = f"COALESCE(DATE(lc.last_change_date), {fallback_start})"
+        # Берём то, что короче: позднейшую из дат (последнее изменение ставки /
+        # начало периода). Изменение внутри периода → окно с даты изменения;
+        # изменение старше периода → окно не расширяется, остаётся период.
+        start_expr = f"GREATEST(COALESCE(DATE(lc.last_change_date), {fallback_start}), {fallback_start})"
     else:
         start_expr = fallback_start
 
