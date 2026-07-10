@@ -678,7 +678,10 @@ function buildCampaignPayload() {
   // Замена ASIN исходного гео на ASIN целевого в текстах (названия групп/кампании).
   // Берём соответствие из asinMap (каталог + ручные правки); для группы дополнительно
   // fallback на её собственную пару srcAsin→dstAsin. Неизвестные ASIN не трогаем.
-  const ASIN_TOKEN_RE = /\bB[0-9A-Z]{9}\b/g;
+  // Токен ASIN: B + 9 символов [0-9A-Z]. Разделителем считаем любой не-алфанумерик,
+  // включая '_' (в \b подчёркивание — часть слова, поэтому \b здесь не годится —
+  // ASIN в именах вида BXXXXXXXXX_VINTAGE_LABEL не матчился и не заменялся).
+  const ASIN_TOKEN_RE = /(?<![A-Z0-9])B[0-9A-Z]{9}(?![A-Z0-9])/g;
   const mapAsinsInText = (text, srcAsin, dstAsin) =>
     String(text || '').replace(ASIN_TOKEN_RE, tok => {
       if (at === 'KDP') return tok;                        // KDP: ASIN одинаковые на всех гео
