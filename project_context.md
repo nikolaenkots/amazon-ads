@@ -3072,7 +3072,9 @@ EXISTS`), **один раз за процесс** (флаг `_rules_table_ready`
 
 - **`rule_type='opt'` (Оптимизация)** — по кликам ключа и ACOS:
   `min_clicks` (порог кликов ключа), `no_sale_clicks` (клики без продаж → off),
-  пороги ACOS, коридор `[min_bid, max_bid]`.
+  пороги ACOS, коридор `[min_bid, max_bid]`. Снижение **двухступенчатое**:
+  `acos > high_acos` → −`high_pct`%; `acos > high_acos2` → −`high_pct2`%
+  (сильнее; NULL = вторая ступень выключена). Пример: 30→−10%, 50→−20%.
 - **`rule_type='boost'` (Разгон)** — только по показам:
   `low_impr` (показов ≤), `boost_pct` (+%), `boost_max` (потолок $).
 - Наборы матчатся **независимо** (у каждого ключа — своё лучшее opt-правило и
@@ -3097,6 +3099,7 @@ EXISTS`), **один раз за процесс** (флаг `_rules_table_ready`
 ```
 1) opt: acos IS NULL И clicks>=no_sale_clicks           → pause
 2) opt: acos IS NOT NULL И clicks>=min_clicks И acos>high_acos → lower
+   (процент: acos>high_acos2 → high_pct2, иначе high_pct)
 3) opt: acos IS NOT NULL И clicks>=min_clicks И acos<low_acos  → raise
 4) boost: impressions<=low_impr И bid<boost_max          → boost
 5) opt: acos IS NULL И clicks<=5                         → new
