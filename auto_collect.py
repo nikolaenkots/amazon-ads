@@ -38,6 +38,7 @@ DAYS_BACK   = 14      # период отчёта: последние 14 дне�
 POLL_EVERY  = 30      # секунд между проверками статусов
 MAX_WAIT    = 120 * 60  # общий лимит ожидания готовности отчётов
 BQ_CHUNK    = 50_000
+LOAD_RETRIES = 3      # попыток скачать/загрузить готовый отчёт
 LOG_KEEP    = 500     # сколько записей хранить в файле истории
 
 
@@ -226,14 +227,32 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
                 d      = check_report(token, task["profile"], task["report_id"])
                 status = d.get("status")
                 if status == "COMPLETED":
-                    tasks.remove(task)
                     name = f"{task['profile'].get('name')} {task['report_type']}"
                     print(f"  ↓ {name}: скачиваем...")
-                    rows     = download_rows(d["url"])
-                    inserted = load_to_bq(rows, task["profile"], task["report_type"],
-                                          start_date, end_date)
+                    try:
+                        rows     = download_rows(d["url"])
+                        inserted = load_to_bq(rows, task["profile"], task["report_type"],
+                                              start_date, end_date)
+                    except Exception as e:
+                        # скачивание/загрузка сорвались — оставляем задачу на повтор,
+                        # после LOAD_RETRIES попыток закрываем её как ERROR
+                        task["load_tries"] = task.get("load_tries", 0) + 1
+                        if task["load_tries"] >= LOAD_RETRIES:
+                            tasks.remove(task)
+                            log_update(task["entry_id"], {
+                                "status": "ERROR", "error": f"load: {e}",
+                                "finished_at": _now_iso(),
+                                "duration_sec": int(time.time() - task["t0"]),
+                            })
+                            print(f"  ✗ {name}: не удалось загрузить ({e})")
+                        else:
+                            log_update(task["entry_id"], {"error": f"load (попытка {task['load_tries']}): {e}"})
+                            print(f"  ! {name}: {e} — повтор в следующем цикле")
+                        continue
+                    tasks.remove(task)
                     log_update(task["entry_id"], {
                         "status": "LOADED", "rows": len(rows), "inserted": inserted,
+                        "error": None,
                         "finished_at": _now_iso(),
                         "duration_sec": int(time.time() - task["t0"]),
                     })
