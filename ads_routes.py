@@ -42,10 +42,12 @@ def _read_log():
     except:
         return []
 
+LOG_KEEP = 500   # сколько записей хранить в файле лога
+
 def _write_log(entries):
     with _log_lock:
         with open(REPORTS_LOG, 'w') as f:
-            json.dump(entries, f, indent=2, default=str)
+            json.dump(entries[:LOG_KEEP], f, indent=2, default=str)
 
 def _update_log_entry(entry_id, updates):
     with _log_lock:
@@ -268,18 +270,60 @@ def ads_profiles():
 def ads_reports_log():
     return jsonify(_read_log())
 
+def _read_auto_log():
+    try:
+        with open(AUTO_LOG) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+# Статусы, при которых отчёт уже отработал и место ему в истории, а не в очереди
+DONE_STATUSES = {"LOADED", "EMPTY", "TIMEOUT"}
+
+def _norm_hist(e, default_source):
+    """Привести запись любого из двух логов к единому виду для истории."""
+    acct = e.get("account_type", "")
+    mkt  = e.get("marketplace", "")
+    return {
+        "id":           e.get("id"),
+        "source":       e.get("source", default_source),
+        "profile_name": e.get("profile_name") or f"{acct} {mkt}".strip(),
+        "account_type": acct,
+        "marketplace":  mkt,
+        "report_type":  e.get("report_type", "spTargeting"),
+        "start_date":   e.get("start_date"),
+        "end_date":     e.get("end_date"),
+        "status":       e.get("status"),
+        "rows":         e.get("rows"),
+        "inserted":     e.get("inserted"),
+        "note":         e.get("note"),
+        "error":        e.get("error"),
+        "created_at":   e.get("created_at"),
+        "finished_at":  e.get("finished_at") or e.get("loaded_at"),
+        "duration_sec": e.get("duration_sec"),
+    }
+
+@ads_bp.route('/ads/history', methods=['GET'])
+def ads_history():
+    """Единая история загрузок: автосбор + отработавшие ручные отчёты."""
+    try:
+        limit = int(request.args.get('limit', 200))
+    except ValueError:
+        limit = 200
+
+    items = [_norm_hist(e, "auto") for e in _read_auto_log()]
+    items += [_norm_hist(e, "manual") for e in _read_log()
+              if (e.get("status") or "").upper() in DONE_STATUSES]
+    items.sort(key=lambda x: (x["finished_at"] or x["created_at"] or ""), reverse=True)
+    return jsonify(items[:limit])
+
 @ads_bp.route('/ads/auto_log', methods=['GET'])
 def ads_auto_log():
     try:
         limit = int(request.args.get('limit', 50))
     except ValueError:
         limit = 50
-    try:
-        with open(AUTO_LOG) as f:
-            entries = json.load(f)
-    except Exception:
-        entries = []
-    return jsonify(entries[:limit])
+    return jsonify(_read_auto_log()[:limit])
 
 @ads_bp.route('/ads/create_report', methods=['POST'])
 def ads_create_report():
@@ -314,6 +358,7 @@ def ads_create_report():
         report_id = r.json()["reportId"]
         entry = {
             "id":           datetime.now().strftime('%Y%m%d%H%M%S%f'),
+            "source":       "manual",
             "report_id":    report_id, "report_type": report_type,
             "account_type": account_type, "marketplace": marketplace,
             "profile_id":   str(profile["id"]), "profile_name": profile["name"],

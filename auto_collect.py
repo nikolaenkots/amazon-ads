@@ -197,6 +197,7 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
             entry = {
                 "id":           entry_id,
                 "run_id":       run_id,
+                "source":       "auto",
                 "account_type": profile["type"],
                 "marketplace":  profile["marketplace"],
                 "profile_name": profile.get("name", f"{profile['type']} {profile['marketplace']}"),

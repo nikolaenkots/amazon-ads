@@ -108,6 +108,9 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .al-td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
 .al-mono{font-family:'DM Mono',monospace;font-size:11px}
 .al-err{color:var(--red);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.src-b{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid;letter-spacing:.04em;white-space:nowrap}
+.src-auto{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.src-man{background:var(--surface2);color:var(--muted);border-color:var(--border)}
 .al-note{color:var(--muted);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
 
 /* Info */
@@ -270,39 +273,42 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
       </div>
     </div>
     <div id="queueList"><div class="queue-empty">Нет отчётов в очереди</div></div>
+    <div style="padding:8px 16px;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--dim)">
+      Ручные отчёты, ожидающие скачивания и загрузки. После загрузки в BigQuery отчёт уходит в историю ниже.
+    </div>
   </div>
 
-  <!-- History -->
+  <!-- History (из файлов логов: автосбор + отработавшие ручные) -->
   <div class="hist-wrap">
     <div class="hist-hdr">
       <span class="tt">История загрузок</span>
-      <button class="btn btn-s" style="height:28px;font-size:11px" onclick="clearHistory()">Очистить</button>
-    </div>
-    <div id="historyList"><div class="hist-empty">Нет загрузок</div></div>
-  </div>
-
-  <!-- Auto collect history -->
-  <div class="hist-wrap" style="margin-top:14px">
-    <div class="hist-hdr">
-      <span class="tt">Автосбор (утренняя задача)</span>
-      <button class="btn btn-s" style="height:28px;font-size:11px" onclick="loadAutoLog()">Обновить</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="ab-seg" id="histSrcSel">
+          <button class="ab-btn on" onclick="setHistSrc('',event)">Все</button>
+          <button class="ab-btn" onclick="setHistSrc('auto',event)">Авто</button>
+          <button class="ab-btn" onclick="setHistSrc('manual',event)">Ручные</button>
+        </div>
+        <span id="histCount" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)"></span>
+        <button class="btn btn-s" style="height:28px;font-size:11px" onclick="loadHistory()">Обновить</button>
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr>
-            <th class="al-th">Создано</th>
+            <th class="al-th">Время</th>
+            <th class="al-th">Источник</th>
             <th class="al-th">Профиль</th>
             <th class="al-th">Тип</th>
             <th class="al-th">Период</th>
             <th class="al-th">Статус</th>
             <th class="al-th" style="text-align:right">Строк</th>
-            <th class="al-th" style="text-align:right">Время</th>
+            <th class="al-th" style="text-align:right">Длит.</th>
             <th class="al-th">Примечание</th>
           </tr>
         </thead>
-        <tbody id="autoLogBody">
-          <tr><td colspan="8" class="hist-empty">Нет запусков</td></tr>
+        <tbody id="histBody">
+          <tr><td colspan="9" class="hist-empty">Нет загрузок</td></tr>
         </tbody>
       </table>
     </div>
@@ -341,40 +347,64 @@ const REPORT_LABELS={
 let sel={type:'MERCH',marketplace:'US',profileId:'2418854071638725'};
 let queue=[];
 let pollTimers={};
-let localHistory=JSON.parse(localStorage.getItem('ads_history')||'[]');
+let histSrc='';        // '' | 'auto' | 'manual'
+let histData=[];
+// отработавшие статусы — не показываются в очереди, только в истории
+const DONE_STATUSES=['LOADED','EMPTY','TIMEOUT'];
 
 const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
 document.getElementById('startDate').value=yesterday.toISOString().split('T')[0];
 document.getElementById('endDate').value=yesterday.toISOString().split('T')[0];
-renderMktSelector();renderHistory();loadLog();loadAutoLog();
+renderMktSelector();loadLog();loadHistory();
 
-async function loadAutoLog(){
-  const body=document.getElementById('autoLogBody');
+function setHistSrc(src,e){
+  histSrc=src;
+  document.querySelectorAll('#histSrcSel .ab-btn').forEach(b=>b.classList.remove('on'));
+  e.target.classList.add('on');
+  renderHistory();
+}
+
+async function loadHistory(){
   try{
-    const data=await(await fetch('/ads/auto_log?limit=50')).json();
-    if(!data.length){body.innerHTML='<tr><td colspan="8" class="hist-empty">Нет запусков</td></tr>';return}
-    body.innerHTML=data.map(e=>{
-      const st=(e.status||'').toUpperCase();
-      const sc=st==='LOADED'?'st-loaded':(st==='EMPTY'?'st-downloaded':(st==='PENDING'?'st-pending':'st-failed'));
-      const msg=e.error||e.note||'';
-      const msgCls=e.error?'al-err':'al-note';
-      const created=e.created_at?new Date(e.created_at).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-      const dur=e.duration_sec!=null?Math.round(e.duration_sec/60)+' мин':'';
-      const rows=e.inserted!=null?e.inserted.toLocaleString('ru'):(e.rows!=null?e.rows.toLocaleString('ru'):'');
-      return '<tr>'
-        +'<td class="al-td al-mono" style="color:var(--dim)">'+created+'</td>'
-        +'<td class="al-td"><span class="hist-acct">'+(e.profile_name||e.account_type+' '+e.marketplace)+'</span></td>'
-        +'<td class="al-td al-mono">'+(REPORT_LABELS[e.report_type]||e.report_type)+'</td>'
-        +'<td class="al-td al-mono" style="color:var(--muted)">'+(e.start_date||'')+' → '+(e.end_date||'')+'</td>'
-        +'<td class="al-td"><span class="rc-status '+sc+'">'+st+'</span></td>'
-        +'<td class="al-td al-mono" style="text-align:right">'+rows+'</td>'
-        +'<td class="al-td al-mono" style="text-align:right;color:var(--muted)">'+dur+'</td>'
-        +'<td class="al-td"><span class="'+msgCls+'" title="'+String(msg).replace(/"/g,'&quot;')+'">'+msg+'</span></td>'
-        +'</tr>';
-    }).join('');
+    histData=await(await fetch('/ads/history?limit=200')).json();
   }catch(err){
-    body.innerHTML='<tr><td colspan="8" class="hist-empty">Ошибка загрузки: '+err+'</td></tr>';
+    document.getElementById('histBody').innerHTML=
+      '<tr><td colspan="9" class="hist-empty">Ошибка загрузки: '+err+'</td></tr>';
+    return;
   }
+  renderHistory();
+}
+
+const HIST_STATUS={LOADED:'Загружено',EMPTY:'Пусто',FAILED:'Ошибка',
+                   ERROR:'Ошибка',TIMEOUT:'Таймаут',PENDING:'Ожидает'};
+
+function renderHistory(){
+  const body=document.getElementById('histBody');
+  const rows=histData.filter(e=>!histSrc||(e.source||'manual')===histSrc);
+  document.getElementById('histCount').textContent=rows.length?rows.length+' записей':'';
+  if(!rows.length){body.innerHTML='<tr><td colspan="9" class="hist-empty">Нет загрузок</td></tr>';return}
+  body.innerHTML=rows.map(e=>{
+    const st=(e.status||'').toUpperCase();
+    const sc=st==='LOADED'?'st-loaded':(st==='EMPTY'?'st-downloaded':(st==='PENDING'?'st-pending':'st-failed'));
+    const isAuto=(e.source||'manual')==='auto';
+    const msg=e.error||e.note||'';
+    const msgCls=e.error?'al-err':'al-note';
+    const ts=e.finished_at||e.created_at;
+    const when=ts?new Date(ts).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    const dur=e.duration_sec!=null?(e.duration_sec<60?e.duration_sec+' с':Math.round(e.duration_sec/60)+' мин'):'';
+    const n=e.inserted!=null?e.inserted:e.rows;
+    return '<tr>'
+      +'<td class="al-td al-mono" style="color:var(--dim)">'+when+'</td>'
+      +'<td class="al-td"><span class="src-b '+(isAuto?'src-auto':'src-man')+'">'+(isAuto?'АВТО':'РУЧНОЙ')+'</span></td>'
+      +'<td class="al-td"><span class="hist-acct">'+(e.profile_name||'')+'</span></td>'
+      +'<td class="al-td al-mono">'+(REPORT_LABELS[e.report_type]||e.report_type||'')+'</td>'
+      +'<td class="al-td al-mono" style="color:var(--muted)">'+(e.start_date||'')+' → '+(e.end_date||'')+'</td>'
+      +'<td class="al-td"><span class="rc-status '+sc+'">'+(HIST_STATUS[st]||st)+'</span></td>'
+      +'<td class="al-td al-mono" style="text-align:right">'+(n!=null?n.toLocaleString('ru'):'')+'</td>'
+      +'<td class="al-td al-mono" style="text-align:right;color:var(--muted)">'+dur+'</td>'
+      +'<td class="al-td"><span class="'+msgCls+'" title="'+String(msg).replace(/"/g,'&quot;')+'">'+msg+'</span></td>'
+      +'</tr>';
+  }).join('');
 }
 
 function setType(type,e){
@@ -403,7 +433,8 @@ async function loadLog(){
     const data=await(await fetch('/ads/reports_log')).json();
     const jobIds={};queue.forEach(q=>{if(q.job_id)jobIds[q.entry_id]=q.job_id;});
     const pcts={};queue.forEach(q=>{pcts[q.entry_id]={pct:q._pct,msg:q._msg};});
-    queue=data.map(e=>({
+    // в очереди только то, что ещё ждёт действия; отработавшее живёт в истории
+    queue=data.filter(e=>!DONE_STATUSES.includes((e.status||'').toUpperCase())).map(e=>({
       entry_id:e.id,report_id:e.report_id,report_type:e.report_type||'spTargeting',
       account_type:e.account_type,marketplace:e.marketplace,
       profile_id:e.profile_id,profile_name:e.profile_name,
@@ -496,13 +527,9 @@ function pollUpload(entryId,jobId){
           clearInterval(pollTimers[entryId]);
           item.status='LOADED';item.inserted=m.data.inserted;item.rows=m.data.rows;
           item._pct=100;item._msg='Готово!';
-          const rtLabel=REPORT_LABELS[item.report_type]||item.report_type;
-          localHistory.unshift({date:item.start_date,endDate:item.end_date,
-            acct:item.account_type+' '+item.marketplace+' · '+rtLabel,
-            rows:m.data.rows,inserted:m.data.inserted,
-            time:new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})});
-          localStorage.setItem('ads_history',JSON.stringify(localHistory.slice(0,50)));
-          renderHistory();
+          // отчёт отработал: уходит из очереди в историю (она пишется в файл на бэке)
+          queue=queue.filter(q=>q.entry_id!==entryId);
+          loadHistory();
         }else if(m.event==='error'){
           clearInterval(pollTimers[entryId]);item.status='ERROR';item.error=m.data.msg;
         }
@@ -563,19 +590,6 @@ function renderQueue(){
   }).join('');
 }
 
-function renderHistory(){
-  const list=document.getElementById('historyList');
-  if(!localHistory.length){list.innerHTML='<div class="hist-empty">Нет загрузок</div>';return}
-  list.innerHTML=localHistory.map(h=>
-    '<div class="hist-item">'
-    +'<span class="hist-acct">'+(h.acct||'MERCH US')+'</span>'
-    +'<span class="hist-date">'+h.date+(h.endDate&&h.endDate!==h.date?' → '+h.endDate:'')+'</span>'
-    +'<span class="hist-rows">'+((h.rows||0).toLocaleString('ru'))+' стр · '+((h.inserted||0).toLocaleString('ru'))+' зап</span>'
-    +'<span class="hist-time">'+h.time+'</span>'
-    +'</div>'
-  ).join('');
-}
-function clearHistory(){localHistory=[];localStorage.removeItem('ads_history');renderHistory();}
 </script>
 <script>
 document.addEventListener('click',function(e){
