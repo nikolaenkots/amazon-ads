@@ -157,12 +157,19 @@ def load_to_bq(rows, profile, report_type, start_date, end_date):
 
 
 # ── Основной цикл ─────────────────────────────────────────
-def main():
+def main(days=DAYS_BACK, only_types=None, only_profile=None):
     run_id     = datetime.now().strftime("%Y%m%d%H%M%S")
     end_date   = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     profiles   = _AMZ.get("profiles", [])
-    types      = list(REPORT_CONFIGS.keys())
+    types      = [t for t in REPORT_CONFIGS if not only_types or t in only_types]
+    if only_profile:  # ("MERCH", "US")
+        acct, mkt = only_profile
+        profiles = [p for p in profiles
+                    if p["type"] == acct and (not mkt or p["marketplace"] == mkt)]
+    if not profiles or not types:
+        print("Нет профилей/типов под заданный фильтр")
+        return
 
     print(f"=== Автосбор {start_date} → {end_date} | {len(profiles)} профилей × {len(types)} типов ===")
     token = _amz_token()
@@ -257,4 +264,19 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser(description="Автосбор отчётов Amazon Ads")
+    ap.add_argument("--test", action="store_true",
+                    help="быстрый тест: 1 профиль (MERCH US) × spTargeting × 2 дня")
+    ap.add_argument("--days", type=int, default=DAYS_BACK, help="дней назад (по умолчанию 14)")
+    ap.add_argument("--type", dest="types", action="append",
+                    choices=list(REPORT_CONFIGS.keys()), help="только этот тип (можно несколько раз)")
+    ap.add_argument("--profile", nargs=2, metavar=("ACCT", "MKT"),
+                    help="только этот профиль, напр.: --profile MERCH US")
+    args = ap.parse_args()
+
+    if args.test:
+        main(days=2, only_types=["spTargeting"], only_profile=("MERCH", "US"))
+    else:
+        main(days=args.days, only_types=args.types,
+             only_profile=tuple(args.profile) if args.profile else None)
