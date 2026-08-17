@@ -17,6 +17,7 @@ PROJECT_ID    = "amazon-ads-api-494412"
 DATASET       = "amazon_ads"
 CHUNK_SIZE    = 1000
 REPORTS_LOG   = os.path.join(BASE_DIR, 'reports_log.json')
+AUTO_LOG      = os.path.join(BASE_DIR, 'auto_collect_log.json')
 
 AMZ_SECRETS_PATH = os.path.join(BASE_DIR, 'config', 'amazon_secrets.json')
 with open(AMZ_SECRETS_PATH) as _f:
@@ -266,6 +267,19 @@ def ads_profiles():
 @ads_bp.route('/ads/reports_log', methods=['GET'])
 def ads_reports_log():
     return jsonify(_read_log())
+
+@ads_bp.route('/ads/auto_log', methods=['GET'])
+def ads_auto_log():
+    try:
+        limit = int(request.args.get('limit', 50))
+    except ValueError:
+        limit = 50
+    try:
+        with open(AUTO_LOG) as f:
+            entries = json.load(f)
+    except Exception:
+        entries = []
+    return jsonify(entries[:limit])
 
 @ads_bp.route('/ads/create_report', methods=['POST'])
 def ads_create_report():
