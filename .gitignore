@@ -4,3 +4,4 @@ uploads/
 __pycache__/
 streamlit_app.py
 .claude/
+auto_collect_log.json

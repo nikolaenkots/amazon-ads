@@ -104,6 +104,10 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .hist-rows{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto}
 .hist-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
 .hist-empty{padding:16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
+.al-th{text-align:left;padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+.al-td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+.al-mono{font-family:'DM Mono',monospace;font-size:11px}
+.al-err{color:var(--red);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Info */
 .info{padding:9px 13px;border-radius:7px;font-family:'DM Mono',monospace;font-size:12px;display:none;margin-top:10px}
@@ -276,6 +280,33 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
     <div id="historyList"><div class="hist-empty">Нет загрузок</div></div>
   </div>
 
+  <!-- Auto collect history -->
+  <div class="hist-wrap" style="margin-top:14px">
+    <div class="hist-hdr">
+      <span class="tt">Автосбор (утренняя задача)</span>
+      <button class="btn btn-s" style="height:28px;font-size:11px" onclick="loadAutoLog()">Обновить</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr>
+            <th class="al-th">Создано</th>
+            <th class="al-th">Профиль</th>
+            <th class="al-th">Тип</th>
+            <th class="al-th">Период</th>
+            <th class="al-th">Статус</th>
+            <th class="al-th" style="text-align:right">Строк</th>
+            <th class="al-th" style="text-align:right">Время</th>
+            <th class="al-th">Ошибка</th>
+          </tr>
+        </thead>
+        <tbody id="autoLogBody">
+          <tr><td colspan="8" class="hist-empty">Нет запусков</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -314,7 +345,34 @@ let localHistory=JSON.parse(localStorage.getItem('ads_history')||'[]');
 const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
 document.getElementById('startDate').value=yesterday.toISOString().split('T')[0];
 document.getElementById('endDate').value=yesterday.toISOString().split('T')[0];
-renderMktSelector();renderHistory();loadLog();
+renderMktSelector();renderHistory();loadLog();loadAutoLog();
+
+async function loadAutoLog(){
+  const body=document.getElementById('autoLogBody');
+  try{
+    const data=await(await fetch('/ads/auto_log?limit=50')).json();
+    if(!data.length){body.innerHTML='<tr><td colspan="8" class="hist-empty">Нет запусков</td></tr>';return}
+    body.innerHTML=data.map(e=>{
+      const st=(e.status||'').toUpperCase();
+      const sc=st==='LOADED'?'st-loaded':(st==='PENDING'?'st-pending':'st-failed');
+      const created=e.created_at?new Date(e.created_at).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      const dur=e.duration_sec!=null?Math.round(e.duration_sec/60)+' мин':'';
+      const rows=e.inserted!=null?e.inserted.toLocaleString('ru'):(e.rows!=null?e.rows.toLocaleString('ru'):'');
+      return '<tr>'
+        +'<td class="al-td al-mono" style="color:var(--dim)">'+created+'</td>'
+        +'<td class="al-td"><span class="hist-acct">'+(e.profile_name||e.account_type+' '+e.marketplace)+'</span></td>'
+        +'<td class="al-td al-mono">'+(REPORT_LABELS[e.report_type]||e.report_type)+'</td>'
+        +'<td class="al-td al-mono" style="color:var(--muted)">'+(e.start_date||'')+' → '+(e.end_date||'')+'</td>'
+        +'<td class="al-td"><span class="rc-status '+sc+'">'+st+'</span></td>'
+        +'<td class="al-td al-mono" style="text-align:right">'+rows+'</td>'
+        +'<td class="al-td al-mono" style="text-align:right;color:var(--muted)">'+dur+'</td>'
+        +'<td class="al-td"><span class="al-err" title="'+String(e.error||'').replace(/"/g,'&quot;')+'">'+(e.error||'')+'</span></td>'
+        +'</tr>';
+    }).join('');
+  }catch(err){
+    body.innerHTML='<tr><td colspan="8" class="hist-empty">Ошибка загрузки: '+err+'</td></tr>';
+  }
+}
 
 function setType(type,e){
   sel.type=type;
