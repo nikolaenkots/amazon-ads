@@ -114,7 +114,9 @@ def create_report(token, profile, report_type, start_date, end_date):
                 pass
         if r.status_code in (429, 500, 502, 503, 504) and attempt < 3:
             continue
-        r.raise_for_status()
+        if r.status_code >= 400:
+            # тело ответа Amazon содержит настоящую причину — без него 400 не диагностировать
+            raise Exception(f"HTTP {r.status_code}: {r.text[:400]}")
         return r.json()["reportId"]
     raise Exception(f"create_report: превышены ретраи ({r.status_code})")
 
@@ -135,15 +137,27 @@ def download_rows(url):
 
 # ── BigQuery ──────────────────────────────────────────────
 def load_to_bq(rows, profile, report_type, start_date, end_date):
+    """Заменить данные за период. Возвращает (inserted, note).
+
+    Пустой отчёт при наличии данных в базе НЕ применяется: Amazon иногда
+    отдаёт пустой отчёт из-за сбоя на своей стороне, и DELETE стёр бы
+    ранее собранную статистику за 14 дней.
+    """
     from google.cloud.bigquery import LoadJobConfig
     client     = get_client()
     table      = _get_table(profile["type"], report_type)
     profile_id = str(profile["id"])
+    period     = (f"WHERE date BETWEEN '{start_date}' AND '{end_date}' "
+                  f"AND profile_id = '{profile_id}'")
 
-    client.query(
-        f"DELETE FROM `{table}` "
-        f"WHERE date BETWEEN '{start_date}' AND '{end_date}' AND profile_id = '{profile_id}'"
-    ).result()
+    if not rows:
+        existing = list(client.query(f"SELECT COUNT(*) AS c FROM `{table}` {period}").result())[0]["c"]
+        if existing:
+            cnt = f"{existing:,}".replace(",", " ")
+            return 0, f"пустой отчёт — в базе {cnt} строк, не тронуты"
+        return 0, "нет рекламы за период"
+
+    client.query(f"DELETE FROM `{table}` {period}").result()
 
     mapped   = [_map_row(r, profile_id, profile["marketplace"], report_type) for r in rows]
     inserted = 0
@@ -154,7 +168,7 @@ def load_to_bq(rows, profile, report_type, start_date, end_date):
             job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
         ).result()
         inserted += len(chunk)
-    return inserted
+    return inserted, None
 
 
 # ── Основной цикл ─────────────────────────────────────────
@@ -194,6 +208,7 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
                 "rows":         None,
                 "inserted":     None,
                 "error":        None,
+                "note":         None,
                 "created_at":   _now_iso(),
                 "finished_at":  None,
                 "duration_sec": None,
@@ -230,9 +245,9 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
                     name = f"{task['profile'].get('name')} {task['report_type']}"
                     print(f"  ↓ {name}: скачиваем...")
                     try:
-                        rows     = download_rows(d["url"])
-                        inserted = load_to_bq(rows, task["profile"], task["report_type"],
-                                              start_date, end_date)
+                        rows           = download_rows(d["url"])
+                        inserted, note = load_to_bq(rows, task["profile"], task["report_type"],
+                                                    start_date, end_date)
                     except Exception as e:
                         # скачивание/загрузка сорвались — оставляем задачу на повтор,
                         # после LOAD_RETRIES попыток закрываем её как ERROR
@@ -251,12 +266,13 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
                         continue
                     tasks.remove(task)
                     log_update(task["entry_id"], {
-                        "status": "LOADED", "rows": len(rows), "inserted": inserted,
-                        "error": None,
+                        "status": "EMPTY" if not rows else "LOADED",
+                        "rows": len(rows), "inserted": inserted,
+                        "error": None, "note": note,
                         "finished_at": _now_iso(),
                         "duration_sec": int(time.time() - task["t0"]),
                     })
-                    print(f"  ✓ {name}: {inserted} строк")
+                    print(f"  ✓ {name}: {inserted} строк" + (f" ({note})" if note else ""))
                 elif status == "FAILED":
                     tasks.remove(task)
                     log_update(task["entry_id"], {
@@ -282,8 +298,12 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
 
     # Итог
     entries = [e for e in _read_log() if e.get("run_id") == run_id]
-    ok      = sum(1 for e in entries if e["status"] == "LOADED")
-    print(f"\n=== Итог: {ok}/{len(entries)} загружено ===")
+    ok    = sum(1 for e in entries if e["status"] == "LOADED")
+    empty = sum(1 for e in entries if e["status"] == "EMPTY")
+    bad   = [e for e in entries if e["status"] not in ("LOADED", "EMPTY")]
+    print(f"\n=== Итог: {ok} загружено, {empty} пустых, {len(bad)} с ошибкой (всего {len(entries)}) ===")
+    for e in bad:
+        print(f"  ✗ {e['profile_name']} {e['report_type']}: {e['status']} — {e.get('error')}")
 
 
 if __name__ == "__main__":
