@@ -212,9 +212,13 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
 
     # Фаза 2: поллинг + скачивание + загрузка
     waited = 0
+    total_tasks = len(tasks)
     while tasks and waited < MAX_WAIT:
         time.sleep(POLL_EVERY)
         waited += POLL_EVERY
+        print(f"  [{waited // 60}м {waited % 60:02d}с] ожидаем {len(tasks)}/{total_tasks} отчётов: "
+              + ", ".join(f"{t['profile'].get('name')} {t['report_type']}" for t in tasks[:4])
+              + ("..." if len(tasks) > 4 else ""), flush=True)
         if waited % 1800 == 0:
             token = _amz_token()  # токен живёт 60 мин — обновляем заранее
         for task in tasks[:]:
