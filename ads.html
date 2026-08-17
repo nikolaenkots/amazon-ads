@@ -107,7 +107,8 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .al-th{text-align:left;padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
 .al-td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
 .al-mono{font-family:'DM Mono',monospace;font-size:11px}
-.al-err{color:var(--red);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.al-err{color:var(--red);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.al-note{color:var(--muted);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
 
 /* Info */
 .info{padding:9px 13px;border-radius:7px;font-family:'DM Mono',monospace;font-size:12px;display:none;margin-top:10px}
@@ -297,7 +298,7 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
             <th class="al-th">Статус</th>
             <th class="al-th" style="text-align:right">Строк</th>
             <th class="al-th" style="text-align:right">Время</th>
-            <th class="al-th">Ошибка</th>
+            <th class="al-th">Примечание</th>
           </tr>
         </thead>
         <tbody id="autoLogBody">
@@ -354,7 +355,9 @@ async function loadAutoLog(){
     if(!data.length){body.innerHTML='<tr><td colspan="8" class="hist-empty">Нет запусков</td></tr>';return}
     body.innerHTML=data.map(e=>{
       const st=(e.status||'').toUpperCase();
-      const sc=st==='LOADED'?'st-loaded':(st==='PENDING'?'st-pending':'st-failed');
+      const sc=st==='LOADED'?'st-loaded':(st==='EMPTY'?'st-downloaded':(st==='PENDING'?'st-pending':'st-failed'));
+      const msg=e.error||e.note||'';
+      const msgCls=e.error?'al-err':'al-note';
       const created=e.created_at?new Date(e.created_at).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
       const dur=e.duration_sec!=null?Math.round(e.duration_sec/60)+' мин':'';
       const rows=e.inserted!=null?e.inserted.toLocaleString('ru'):(e.rows!=null?e.rows.toLocaleString('ru'):'');
@@ -366,7 +369,7 @@ async function loadAutoLog(){
         +'<td class="al-td"><span class="rc-status '+sc+'">'+st+'</span></td>'
         +'<td class="al-td al-mono" style="text-align:right">'+rows+'</td>'
         +'<td class="al-td al-mono" style="text-align:right;color:var(--muted)">'+dur+'</td>'
-        +'<td class="al-td"><span class="al-err" title="'+String(e.error||'').replace(/"/g,'&quot;')+'">'+(e.error||'')+'</span></td>'
+        +'<td class="al-td"><span class="'+msgCls+'" title="'+String(msg).replace(/"/g,'&quot;')+'">'+msg+'</span></td>'
         +'</tr>';
     }).join('');
   }catch(err){
