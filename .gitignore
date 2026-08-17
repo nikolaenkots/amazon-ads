@@ -5,3 +5,4 @@ __pycache__/
 streamlit_app.py
 .claude/
 auto_collect_log.json
+campaigns_sync_log.json

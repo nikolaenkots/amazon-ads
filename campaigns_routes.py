@@ -1,7 +1,7 @@
+import gc
 import json
 import os
 import time
-import decimal
 import threading
 from collections import Counter
 from datetime import datetime, timezone
@@ -27,21 +27,49 @@ CAMPAIGNS_TABLE = {
     "KDP":   f"{PROJECT_ID}.{DATASET}.campaigns_kdp",
 }
 
-COLS = {
-    "campaign":           ["campaign_id", "campaign_name", "targeting_type", "bidding_strategy", "daily_budget", "start_date", "campaign_state", "portfolio_id", "portfolio_name"],
-    "bidding_adjustment": ["campaign_id", "campaign_name", "placement", "placement_percentage", "bidding_strategy", "campaign_state"],
-    "ad_group":           ["ad_group_id", "ad_group_name", "campaign_id", "ad_group_default_bid", "ad_group_state"],
-    "keyword":            ["keyword_id", "keyword_text", "match_type", "keyword_bid", "keyword_state", "campaign_id", "ad_group_id"],
-    "negative_keyword":   ["keyword_id", "keyword_text", "match_type", "keyword_state", "campaign_id", "ad_group_id"],
-    "product_targeting":  ["target_id", "targeting_expression", "target_bid", "target_state", "campaign_id", "ad_group_id"],
-    "product_ad":         ["ad_id", "asin", "sku", "ad_state", "campaign_id", "ad_group_id"],
-}
+SYNC_LOG  = os.path.join(BASE_DIR, 'campaigns_sync_log.json')
+LOG_KEEP  = 500
+_log_lock = threading.Lock()
+
+def _read_sync_log():
+    try:
+        with open(SYNC_LOG) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def _write_sync_log(entries):
+    tmp = SYNC_LOG + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(entries[:LOG_KEEP], f, indent=2, ensure_ascii=False, default=str)
+    os.replace(tmp, SYNC_LOG)
+
+def _log_add(entry):
+    with _log_lock:
+        entries = _read_sync_log()
+        entries.insert(0, entry)
+        _write_sync_log(entries)
+
+def _log_update(entry_id, updates):
+    with _log_lock:
+        entries = _read_sync_log()
+        for e in entries:
+            if e.get('id') == entry_id:
+                e.update(updates)
+                break
+        _write_sync_log(entries)
 
 def _get_progress_store():
     import app
     return app.progress_store
 
 def emit(job_id, event, data):
+    """job_id=None — запуск из CLI: пишем в stdout вместо progress_store."""
+    if job_id is None:
+        msg = data.get("msg")
+        if msg:
+            print(f"    {msg}", flush=True)
+        return
     ps = _get_progress_store()
     if job_id not in ps:
         ps[job_id] = []
@@ -318,9 +346,38 @@ def _build_rows(campaigns, ad_groups, targets, ads, profile_id, marketplace, syn
     return rows
 
 
-def _run_campaigns_sync(account_type, marketplace, job_id):
+def _run_campaigns_sync(account_type, marketplace, job_id, source="manual"):
+    """Синхронизация структуры одного профиля. Пишет ход и результат в SYNC_LOG.
+
+    source: manual (кнопка на странице) | auto (ежедневная задача).
+    Возвращает запись лога с итогом.
+    """
+    _t0      = time.time()
+    entry_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
+    _profile = _get_profile(account_type, marketplace)
+    _log_add({
+        "id":           entry_id,
+        "source":       source,
+        "account_type": account_type,
+        "marketplace":  marketplace,
+        "profile_name": (_profile or {}).get("name") or f"{account_type} {marketplace}",
+        "status":       "RUNNING",
+        "total":        None,
+        "counts":       None,
+        "note":         None,
+        "error":        None,
+        "created_at":   datetime.now(tz=timezone.utc).isoformat(),
+        "finished_at":  None,
+        "duration_sec": None,
+    })
+
+    def _finish(**updates):
+        updates.setdefault("finished_at", datetime.now(tz=timezone.utc).isoformat())
+        updates.setdefault("duration_sec", int(time.time() - _t0))
+        _log_update(entry_id, updates)
+
     try:
-        profile    = _get_profile(account_type, marketplace)
+        profile    = _profile
         if not profile:
             raise Exception(f"Профиль не найден: {account_type} / {marketplace}")
         profile_id = profile["id"]
@@ -369,13 +426,30 @@ def _run_campaigns_sync(account_type, marketplace, job_id):
                                profile_id, marketplace, synced_at, portfolio_map)
 
         counts = dict(Counter(r["entity_type"] for r in all_rows))
+        client = bigquery.Client(project=PROJECT_ID)
+
+        # Пустой ответ API не должен стирать структуру: сбой на стороне Amazon
+        # иначе обнулил бы весь маркетплейс.
+        if not all_rows:
+            existing = list(client.query(
+                f"SELECT COUNT(*) AS c FROM `{table_ref}` WHERE marketplace = '{marketplace}'"
+            ).result())[0]["c"]
+            if existing:
+                cnt  = f"{existing:,}".replace(",", " ")
+                note = f"API вернул 0 объектов — в базе {cnt} строк, не тронуты"
+                emit(job_id, "progress", {"msg": note, "pct": 99})
+                _finish(status="EMPTY", total=0, counts={}, note=note)
+                emit(job_id, "done", {"total": 0, "counts": {}, "synced_at": synced_at, "note": note})
+                return _get_log_entry(entry_id)
+            note = "нет кампаний у профиля"
+            _finish(status="EMPTY", total=0, counts={}, note=note)
+            emit(job_id, "done", {"total": 0, "counts": {}, "synced_at": synced_at, "note": note})
+            return _get_log_entry(entry_id)
 
         # ── ИСПРАВЛЕНО: DELETE по маркетплейсу вместо TRUNCATE ──
         emit(job_id, "step", {"key": "bq", "step": 6, "pct": 80, "msg": f"Очищаем {marketplace} в таблице..."})
-        client = bigquery.Client(project=PROJECT_ID)
         client.query(f"DELETE FROM `{table_ref}` WHERE marketplace = '{marketplace}'").result()
 
-        import time
         total      = len(all_rows)
         uploaded   = 0
         CHUNK      = 50_000
@@ -404,10 +478,27 @@ def _run_campaigns_sync(account_type, marketplace, job_id):
                 time.sleep(2)
 
         emit(job_id, "count", {"key": "bq", "pct": 99, "msg": f"Загружено {total} строк", "count": total})
+        _finish(status="OK", total=total, counts=counts)
         emit(job_id, "done",  {"total": total, "counts": counts, "synced_at": synced_at})
 
+        # структура крупного аккаунта занимает гигабайты — освобождаем сразу,
+        # иначе последовательный обход профилей упрётся в лимит памяти
+        del campaigns, ad_groups, targets, ads, all_rows, chunks
+        gc.collect()
+        return _get_log_entry(entry_id)
+
     except Exception as e:
+        _finish(status="ERROR", error=str(e))
         emit(job_id, "error", {"msg": str(e)})
+        gc.collect()
+        return _get_log_entry(entry_id)
+
+
+def _get_log_entry(entry_id):
+    for e in _read_sync_log():
+        if e.get("id") == entry_id:
+            return e
+    return None
 
 
 @campaigns_bp.route('/campaigns')
@@ -436,28 +527,13 @@ def campaigns_progress(job_id):
     ps[job_id] = []
     return jsonify(msgs)
 
-@campaigns_bp.route('/campaigns/preview')
-def campaigns_preview():
-    account_type = request.args.get('account_type', 'MERCH').upper()
-    marketplace  = request.args.get('marketplace', 'US').upper()
-    entity       = request.args.get('entity', 'campaign')
-    table_ref    = CAMPAIGNS_TABLE.get(account_type)
-    if not table_ref:
-        return jsonify({"error": "Неверный account_type"})
-    cols = COLS.get(entity, ["campaign_id", "campaign_name"])
+@campaigns_bp.route('/campaigns/history')
+def campaigns_history():
+    """История синхронизаций из файла: ручные (кнопка) и авто (ежедневная задача)."""
     try:
-        client   = bigquery.Client(project=PROJECT_ID)
-        cols_sql = ", ".join(cols)
-        total    = list(client.query(
-            f"SELECT COUNT(*) as cnt FROM `{table_ref}` WHERE entity_type = '{entity}' AND marketplace = '{marketplace}'"
-        ).result())[0].cnt
-        rows = [dict(row) for row in client.query(
-            f"SELECT {cols_sql} FROM `{table_ref}` WHERE entity_type = '{entity}' AND marketplace = '{marketplace}' LIMIT 50"
-        ).result()]
-        for row in rows:
-            for k, v in row.items():
-                if isinstance(v, decimal.Decimal): row[k] = float(v)
-                elif hasattr(v, 'isoformat'): row[k] = v.isoformat()
-        return jsonify({"rows": rows, "columns": cols, "total": total})
-    except Exception as e:
-        return jsonify({"error": str(e)})
+        limit = int(request.args.get('limit', 100))
+    except ValueError:
+        limit = 100
+    entries = _read_sync_log()
+    entries.sort(key=lambda e: (e.get("finished_at") or e.get("created_at") or ""), reverse=True)
+    return jsonify(entries[:limit])
