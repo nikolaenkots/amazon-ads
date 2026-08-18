@@ -97,6 +97,15 @@ print(f"  ✓ найдено {d['total']} ASIN, {d['summary']['groups']} акт�
 assert 'active_groups' in sql and 'IFNULL(gc.active_groups, 0) > 0' in sql
 print("  ✓ ASIN без активных групп отфильтрованы на стороне SQL")
 
+# активность считается по всей цепочке: объявление + группа + кампания
+assert "ct.campaign_state = 'ENABLED'" in sql, "группы остановленных кампаний считаются активными"
+assert 'LEFT JOIN camp_type' not in sql, "LEFT JOIN пропустил бы группы без активной кампании"
+c.post('/automation/pause-asins/groups', headers=H,
+       json={"account_type": "MERCH", "asins": ["B0TEST0001"]})
+assert "rn = 1 AND campaign_state = 'ENABLED'" in fake.queries[-1]
+assert 'LEFT JOIN camps' not in fake.queries[-1]
+print("  ✓ группы остановленных кампаний не считаются активными и в очередь не идут")
+
 
 # ── 3. Предпросмотр групп + чужие ASIN в группе ───────────
 fake.group_rows = [
