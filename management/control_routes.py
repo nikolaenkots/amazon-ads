@@ -15,6 +15,7 @@ Endpoints:
 """
 
 import os
+import sys
 import json
 import uuid
 import subprocess
@@ -472,7 +473,10 @@ def send_approved():
     def run():
         try:
             main_app.progress_store[job_id] = {"status": "running", "log": []}
-            cmd = ["python3", os.path.join(BASE_DIR, "send.py"),
+            # sys.executable, а не "python3": системный интерпретатор без пакетов
+            # приложения роняет send.py с ModuleNotFound (см. project_context.md).
+            # Сам скрипт лежит в scripts/.
+            cmd = [sys.executable, os.path.join(BASE_DIR, "scripts", "send.py"),
                    "--account", account_type]
             if marketplace:
                 cmd += ["--marketplace", marketplace]

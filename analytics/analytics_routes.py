@@ -54,7 +54,8 @@ def budget_analysis_page():
 
 @analytics_bp.route('/campaigns-deleting')
 def campaigns_deleting_page():
-    return send_from_directory(PAGE_DIR, 'campaigns_deleting.html')
+    # страница относится к разделу «Управление», её файл лежит в management/
+    return send_from_directory(os.path.join(BASE_DIR, 'management'), 'campaigns_deleting.html')
 
 
 # ── API ───────────────────────────────────────────────────
