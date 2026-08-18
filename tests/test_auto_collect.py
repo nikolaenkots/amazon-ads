@@ -70,6 +70,7 @@ def fake_get(url, **kw):
 
 
 class FakeJob:
+    errors = None
     def result(self): return None
 
 class FakeCount:
@@ -85,6 +86,10 @@ class FakeBQ:
         self.deletes.append(sql); return FakeJob()
     def load_table_from_json(self, rows, table, job_config=None):
         self.loaded.append((table, len(rows))); return FakeJob()
+    def load_table_from_file(self, fh, table, job_config=None):
+        # данные грузятся одним заданием из NDJSON-файла
+        n = sum(1 for line in fh if line.strip())
+        self.loaded.append((table, n)); return FakeJob()
 
 
 def run(label, **flags):

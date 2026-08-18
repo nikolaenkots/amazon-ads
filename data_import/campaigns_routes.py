@@ -7,8 +7,8 @@ from collections import Counter
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, send_from_directory
 from google.cloud import bigquery
-from google.cloud.bigquery import LoadJobConfig
 import requests as req_lib
+from bq_client import get_client, load_rows, run_query
 
 campaigns_bp = Blueprint('campaigns', __name__)
 
@@ -427,7 +427,7 @@ def _run_campaigns_sync(account_type, marketplace, job_id, source="manual"):
                                profile_id, marketplace, synced_at, portfolio_map)
 
         counts = dict(Counter(r["entity_type"] for r in all_rows))
-        client = bigquery.Client(project=PROJECT_ID)
+        client = get_client()
 
         # Пустой ответ API не должен стирать структуру: сбой на стороне Amazon
         # иначе обнулил бы весь маркетплейс.
@@ -449,34 +449,18 @@ def _run_campaigns_sync(account_type, marketplace, job_id, source="manual"):
 
         # ── ИСПРАВЛЕНО: DELETE по маркетплейсу вместо TRUNCATE ──
         emit(job_id, "step", {"key": "bq", "step": 6, "pct": 80, "msg": f"Очищаем {marketplace} в таблице..."})
-        client.query(f"DELETE FROM `{table_ref}` WHERE marketplace = '{marketplace}'").result()
+        run_query(f"DELETE FROM `{table_ref}` WHERE marketplace = '{marketplace}'",
+                  progress=lambda d, t, m: emit(job_id, "progress", {"msg": m, "pct": 80}))
 
-        total      = len(all_rows)
-        uploaded   = 0
-        CHUNK      = 50_000
-        BATCH_SIZE = 5   # jobs параллельно, потом пауза
-        chunks     = [all_rows[i:i+CHUNK] for i in range(0, total, CHUNK)]
-        emit(job_id, "progress", {"uploaded": 0, "total": total, "pct": 81,
-                                   "msg": f"Загружаем {total} строк ({len(chunks)} частей)..."})
-        for b_start in range(0, len(chunks), BATCH_SIZE):
-            batch = chunks[b_start:b_start+BATCH_SIZE]
-            jobs  = []
-            for ch in batch:
-                j = client.load_table_from_json(
-                    ch, table_ref,
-                    job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
-                )
-                jobs.append((j, len(ch)))
-            for j, n in jobs:
-                j.result()
-                if j.errors:
-                    raise RuntimeError(f"BQ ошибки: {j.errors}")
-                uploaded += n
-                pct = 80 + int(uploaded / total * 18)
-                emit(job_id, "progress", {"uploaded": uploaded, "total": total, "pct": pct})
-            # пауза между батчами чтобы не превысить rate limit
-            if b_start + BATCH_SIZE < len(chunks):
-                time.sleep(2)
+        total = len(all_rows)
+
+        def _progress(done, tot, msg):
+            emit(job_id, "progress", {"uploaded": done, "total": tot, "msg": msg,
+                                      "pct": 80 + int(done / max(tot, 1) * 18)})
+
+        # одним заданием: пачка мелких job упиралась в лимит частоты операций
+        # над таблицей (429 rateLimitExceeded) на аккаунтах с сотнями тысяч строк
+        uploaded = load_rows(all_rows, table_ref, progress=_progress)
 
         emit(job_id, "count", {"key": "bq", "pct": 99, "msg": f"Загружено {total} строк", "count": total})
         _finish(status="OK", total=total, counts=counts)
@@ -484,7 +468,7 @@ def _run_campaigns_sync(account_type, marketplace, job_id, source="manual"):
 
         # структура крупного аккаунта занимает гигабайты — освобождаем сразу,
         # иначе последовательный обход профилей упрётся в лимит памяти
-        del campaigns, ad_groups, targets, ads, all_rows, chunks
+        del campaigns, ad_groups, targets, ads, all_rows
         gc.collect()
         return _get_log_entry(entry_id)
 
