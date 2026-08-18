@@ -71,6 +71,7 @@ from management.campaign_copy_routes import campaign_copy_bp
 from automation.search_terms_optimizer_routes import st_optimizer_bp
 from automation.bid_automation_routes import bid_automation_bp
 from automation.placements_routes import placements_bp
+from automation.pause_asins_routes import pause_asins_bp
 
 
 app.register_blueprint(catalog_bp)
@@ -93,6 +94,7 @@ app.register_blueprint(campaign_copy_bp)
 app.register_blueprint(st_optimizer_bp)
 app.register_blueprint(bid_automation_bp)
 app.register_blueprint(placements_bp)
+app.register_blueprint(pause_asins_bp)
 
 # ── Общее оформление ──────────────────────────────────────
 # Отдаём своим роутом, а не через /static/: на PythonAnywhere путь /static/

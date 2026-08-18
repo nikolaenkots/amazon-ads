@@ -277,9 +277,6 @@ def add_change_batch():
         if et not in ALLOWED_OPS:
             errors.append({"index": i, "error": f"Неизвестный entity_type: {et}"})
             continue
-        if et not in NO_DUP_CHECK:
-            errors.append({"index": i, "error": f"{et} не поддерживается в batch"})
-            continue
         if not eid or not nv:
             errors.append({"index": i, "error": "entity_id и new_value обязательны"})
             continue
@@ -300,8 +297,32 @@ def add_change_batch():
             "retry_count": 0,
         })
 
+    # Типы вне NO_DUP_CHECK нельзя ставить дважды: одна проверка на весь пакет
+    # (по одному запросу на элемент было бы слишком долго для сотен групп).
+    dup_rows = [r for r in rows if r["entity_type"] not in NO_DUP_CHECK]
+    skipped  = 0
+    if dup_rows and account_type:
+        ids  = ",".join("'" + r["entity_id"].replace("'", "''") + "'" for r in {r["entity_id"]: r for r in dup_rows}.values())
+        bq_c = bigquery.Client(project=PROJECT_ID)
+        existing = {
+            (row["entity_type"], row["entity_id"], row["field_name"])
+            for row in bq_c.query(
+                f"SELECT entity_type, entity_id, field_name FROM `{PENDING_TABLES[account_type]}` "
+                f"WHERE status = 'PENDING' AND entity_id IN ({ids})"
+            ).result()
+        }
+        keep = []
+        for r in rows:
+            key = (r["entity_type"], r["entity_id"], r["field_name"])
+            if r["entity_type"] not in NO_DUP_CHECK and key in existing:
+                skipped += 1
+                continue
+            keep.append(r)
+        rows = keep
+
     if not rows:
-        return jsonify({"error": "Нет валидных элементов", "errors": errors}), 400
+        return jsonify({"success": True, "inserted": 0, "skipped": skipped,
+                        "errors": errors, "ids": []})
 
     table = PENDING_TABLES[account_type]
     bq    = bigquery.Client(project=PROJECT_ID)
@@ -314,6 +335,7 @@ def add_change_batch():
     return jsonify({
         "success":   True,
         "inserted":  len(rows),
+        "skipped":   skipped,          # уже стояли в очереди
         "errors":    errors,
         "ids":       [r["id"] for r in rows],
     })
