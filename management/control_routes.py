@@ -91,6 +91,25 @@ LABELS = {
 }
 
 
+def _python_bin():
+    """Путь к интерпретатору с пакетами приложения — для запуска send.py.
+
+    Под uwsgi (PythonAnywhere) sys.executable указывает на сам uwsgi, и запуск
+    скрипта им приводит к 'unrecognized option --account'. Системный "python3"
+    тоже не годится — в нём нет пакетов приложения (ModuleNotFound: google).
+    Поэтому берём python из окружения, в котором работает приложение.
+    """
+    exe = sys.executable or ''
+    if 'python' in os.path.basename(exe):
+        return exe
+    for cand in (os.path.join(sys.prefix, 'bin', 'python3'),
+                 os.path.join(sys.prefix, 'bin', 'python'),
+                 os.path.join(sys.base_prefix, 'bin', 'python3')):
+        if os.path.exists(cand):
+            return cand
+    return 'python3'
+
+
 def get_label(entity_type, field_name, new_value):
     fn = LABELS.get((entity_type, field_name))
     if fn:
@@ -473,10 +492,7 @@ def send_approved():
     def run():
         try:
             main_app.progress_store[job_id] = {"status": "running", "log": []}
-            # sys.executable, а не "python3": системный интерпретатор без пакетов
-            # приложения роняет send.py с ModuleNotFound (см. project_context.md).
-            # Сам скрипт лежит в scripts/.
-            cmd = [sys.executable, os.path.join(BASE_DIR, "scripts", "send.py"),
+            cmd = [_python_bin(), os.path.join(BASE_DIR, "scripts", "send.py"),
                    "--account", account_type]
             if marketplace:
                 cmd += ["--marketplace", marketplace]
@@ -485,6 +501,9 @@ def send_approved():
                 cmd, capture_output=True, text=True, cwd=BASE_DIR
             )
             output = result.stdout + result.stderr
+            if result.returncode != 0:
+                # при сбое видно, чем и что запускалось — иначе причину не найти
+                output = f"$ {' '.join(cmd)}\n" + output
             main_app.progress_store[job_id] = {
                 "status": "done" if result.returncode == 0 else "error",
                 "log":    output.strip().split("\n"),
