@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import threading
 from datetime import datetime, timezone
@@ -104,6 +105,44 @@ def assets(filename):
     if filename.endswith('.css'):
         resp.headers['Content-Type'] = 'text/css; charset=utf-8'
     resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
+# ── Подстановка общего CSS прямо в страницу ───────────────
+# Домен начинается с "ads.", и блокировщики рекламы режут отдельный запрос
+# за common.css (в DevTools это видно как blocked:other), из-за чего страница
+# остаётся без оформления. Поэтому <link> заменяется на <style> с содержимым
+# файла: отдельного запроса нет — блокировать нечего. Источник оформления
+# по-прежнему один: static/common.css.
+COMMON_CSS_PATH = os.path.join(BASE_DIR, 'static', 'common.css')
+_css_cache = {"mtime": None, "text": ""}
+
+def _common_css():
+    try:
+        mtime = os.path.getmtime(COMMON_CSS_PATH)
+    except OSError:
+        return ""
+    if _css_cache["mtime"] != mtime:
+        with open(COMMON_CSS_PATH, encoding='utf-8') as f:
+            _css_cache["text"] = f.read()
+        _css_cache["mtime"] = mtime
+    return _css_cache["text"]
+
+CSS_LINK_RE = re.compile(r'<link[^>]+href="/assets/common\.css[^"]*"[^>]*>')
+
+@app.after_request
+def inline_common_css(resp):
+    if not (resp.content_type or '').startswith('text/html'):
+        return resp
+    css = _common_css()
+    if not css:
+        return resp
+    if resp.direct_passthrough:          # ответы send_from_directory отдают файл потоком
+        resp.direct_passthrough = False
+    html = resp.get_data(as_text=True)
+    if '/assets/common.css' not in html:
+        return resp
+    resp.set_data(CSS_LINK_RE.sub(f'<style>\n{css}\n</style>', html, count=1))
     return resp
 
 @app.route('/assets-check')
