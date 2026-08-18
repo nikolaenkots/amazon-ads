@@ -6,37 +6,23 @@
 <title>Кампании · Amazon Ads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/common.css?v=1">
 <style>
-:root{
-  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
-  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
-  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
-  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
-  --red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);
-  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
-  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
-
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22)}
+body{min-height:100vh}
 /* Header */
-header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
-.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
-nav{display:flex;gap:2px}
+header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
 nav a:hover{color:var(--text);background:var(--surface2)}
 nav a.active{color:var(--accent);background:var(--accent-bg)}
-
 /* Layout */
-main{padding:18px 32px;max-width:1200px;margin:0 auto}
-
+main{max-width:1200px}
 /* Buttons */
-.btn{height:34px;padding:0 14px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn{padding:0 14px;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn-p{background:var(--accent);color:#fff}.btn-p:hover:not(:disabled){background:#a83d10}
-.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover:not(:disabled){background:var(--surface2)}
-
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover:not(:disabled){background:#a83d10}
+.btn-s:hover:not(:disabled){background:var(--surface2)}
 /* Account bar */
 .ab{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .ab-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
@@ -47,25 +33,22 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .ab-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
 .ab-profile{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:5px 11px;border-radius:6px}
 .ab-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
-
 /* Sync panel */
 .sp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .sp-title{font-size:13px;font-weight:600;margin-bottom:3px}
 .sp-desc{font-size:12px;color:var(--muted);margin-bottom:13px;line-height:1.5}
 .sp-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .last-sync{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim)}
-
 /* Progress */
 .pw{display:none;margin-top:14px}
 .pw.on{display:block}
-
 /* Progress bar */
 .pbw{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border);margin-bottom:3px}
 .pbf{height:100%;background:var(--accent);border-radius:3px;transition:width .4s;width:0}
 .pbf.ok{background:var(--green)}
 .pb-meta{display:flex;justify-content:space-between;margin-bottom:10px}
-.pb-label{font-size:12px;color:var(--muted)}.pb-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
-
+.pb-label{font-size:12px;color:var(--muted)}
+.pb-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
 /* Steps */
 .steps{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .step{display:flex;align-items:center;gap:10px;font-size:12px;padding:7px 12px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
@@ -75,30 +58,23 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .step-ico{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px}
 .step-txt{flex:1}
 .step-cnt{font-family:'DM Mono',monospace;font-size:10px;opacity:.8}
-
 /* Stats pills */
 .spills{display:none;flex-wrap:wrap;gap:5px;margin-bottom:10px}
 .spills.on{display:flex}
 .spill{font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
 .spill.g{background:var(--green-bg);border-color:var(--green-bd);color:var(--green)}
 .spill.b{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue)}
-
 /* Log */
 .logb{display:none;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);max-height:130px;overflow-y:auto;line-height:1.6}
 .logb.on{display:block}
-.ll-ok{color:var(--green)}.ll-err{color:var(--red)}.ll-inf{color:var(--blue)}
-
+.ll-ok{color:var(--green)}
+.ll-err{color:var(--red)}
+.ll-inf{color:var(--blue)}
 /* Info */
-.info{padding:9px 13px;border-radius:7px;font-family:'DM Mono',monospace;font-size:12px;display:none;margin-top:8px}
+.info{margin-top:8px}
 .info.on{display:block}
 .info.ok{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
 .info.err{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
-
-/* Spinner */
-@keyframes spin{to{transform:rotate(360deg)}}
-.sp2{animation:spin .7s linear infinite;display:inline-block}
-
-
 /* Sync history */
 .hist-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px}
 .hist-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
@@ -106,7 +82,7 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .hist-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px}
 .hist-item:last-child{border-bottom:none}
 .hist-acct{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);white-space:nowrap;font-family:'DM Mono',monospace}
-.hist-date{font-family:'DM Mono',monospace;color:var(--text);font-size:11px}
+.hist-date{font-size:11px}
 .hist-rows{color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;margin-left:auto}
 .hist-time{color:var(--dim);font-family:'DM Mono',monospace;font-size:11px}
 .hist-empty{padding:14px 16px;font-size:12px;color:var(--dim);font-family:'DM Mono',monospace}
@@ -123,16 +99,11 @@ main{padding:18px 32px;max-width:1200px;margin:0 auto}
 .st-empty{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
 .st-run{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
 .st-err{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
-
 /* Table section */
-.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
-.tt{font-size:14px;font-weight:600}
 .etabs{display:flex;gap:3px;flex-wrap:wrap}
 .etab{font-size:11px;font-family:'DM Mono',monospace;padding:3px 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s}
 .etab:hover{background:var(--surface);color:var(--text)}
 .etab.on{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
-.tsx{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 thead th{text-align:left;padding:7px 13px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
@@ -140,31 +111,24 @@ tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:#fafafa}
 td{padding:7px 13px;font-family:'DM Mono',monospace;vertical-align:middle;white-space:nowrap}
 .tf{padding:9px 16px;border-top:1px solid var(--border);font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);background:var(--surface2)}
-.te{padding:48px;text-align:center;color:var(--muted);font-size:13px}
-
+.te{padding:48px}
 /* Badges */
 .b{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace;border:1px solid}
-.be{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.be{border-color:var(--green-bd)}
 .bp{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
-.ba{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.ba{border-color:var(--blue-bd)}
 .bm{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-bd)}
-
 /* Nav */
-.nav-bar{display:flex;align-items:center;gap:2px}
-.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
-.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-home{border-radius:6px;transition:color .15s,background .15s}
+.nav-home:hover{background:var(--surface2)}
 .nav-home.active{color:var(--accent);background:var(--accent-bg)}
-.nav-drop{position:relative;display:inline-flex;align-items:center}
-.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
-.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop{display:inline-flex;align-items:center}
+.nav-drop-btn{transition:color .15s,background .15s}
 .nav-drop.open .nav-drop-btn{color:var(--text)}
 .nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
 .nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
-.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
-.nav-drop.open .nav-drop-menu{display:block}
-.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
-.nav-link:hover{background:var(--surface2)}
-.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-drop-menu{right:0}
+.nav-link{font-weight:500;transition:background .15s}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 </style>
 </head>
