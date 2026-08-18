@@ -10,7 +10,8 @@ from google.cloud.bigquery import LoadJobConfig
 
 earnings_bp = Blueprint('earnings', __name__)
 
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR      = os.path.dirname(PAGE_DIR)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 PROJECT_ID    = "amazon-ads-api-494412"
 DATASET       = "amazon_ads"
@@ -186,7 +187,7 @@ def run_earnings_import(filepath, job_id):
 
 @earnings_bp.route('/earnings')
 def earnings_page():
-    return send_from_directory(BASE_DIR, 'earnings.html')
+    return send_from_directory(PAGE_DIR, 'earnings.html')
 
 @earnings_bp.route('/upload_earnings', methods=['POST'])
 def upload_earnings():

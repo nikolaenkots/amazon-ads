@@ -10,7 +10,8 @@ from google.cloud.bigquery import LoadJobConfig
 
 catalog_bp = Blueprint('catalog', __name__)
 
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR      = os.path.dirname(PAGE_DIR)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 PROJECT_ID    = "amazon-ads-api-494412"
 DATASET       = "amazon_ads"
@@ -365,7 +366,7 @@ def run_catalog_import(filepath, job_id):
 
 @catalog_bp.route('/catalog')
 def catalog_page():
-    return send_from_directory(BASE_DIR, 'catalog.html')
+    return send_from_directory(PAGE_DIR, 'catalog.html')
 
 @catalog_bp.route('/upload', methods=['POST'])
 def upload():

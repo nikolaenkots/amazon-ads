@@ -4,14 +4,15 @@ from flask import Blueprint, jsonify, send_from_directory, request, Response
 
 bq_stats_bp = Blueprint('bq_stats', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 
 @bq_stats_bp.route('/bq-stats')
 def bq_stats_page():
-    return send_from_directory(BASE_DIR, 'bq_stats.html')
+    return send_from_directory(PAGE_DIR, 'bq_stats.html')
 
 
 @bq_stats_bp.route('/bq-stats/sql')

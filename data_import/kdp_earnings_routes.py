@@ -20,7 +20,8 @@ from google.cloud.bigquery import LoadJobConfig, SchemaField, SchemaUpdateOption
 
 kdp_earnings_bp = Blueprint('kdp_earnings', __name__)
 
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR      = os.path.dirname(PAGE_DIR)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 PROJECT_ID    = "amazon-ads-api-494412"
 DATASET       = "amazon_ads"

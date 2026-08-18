@@ -4,7 +4,7 @@
 Автосбор рекламной статистики Amazon Ads.
 
 Запускается ежедневной задачей (PythonAnywhere Scheduled Task):
-    python3 /home/nikolaenkots/amazon-ads/auto_collect.py
+    python3 /home/nikolaenkots/amazon-ads/scripts/auto_collect.py
 
 Для всех профилей из config/amazon_secrets.json и всех типов отчётов
 (spTargeting, spAdvertisedProduct, spSearchTerm, spCampaigns):
@@ -25,12 +25,12 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
                       os.path.join(BASE_DIR, "config", "bigquery_key.json"))
 
-from ads_routes import REPORT_CONFIGS, _AMZ, _amz_headers, _amz_token, _get_table, _map_row
+from data_import.ads_routes import REPORT_CONFIGS, _AMZ, _amz_headers, _amz_token, _get_table, _map_row
 from bq_client import get_client
 
 AUTO_LOG    = os.path.join(BASE_DIR, "auto_collect_log.json")

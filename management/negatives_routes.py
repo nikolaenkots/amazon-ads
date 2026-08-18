@@ -5,7 +5,8 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 negatives_bp = Blueprint('negatives', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -17,7 +18,7 @@ def _suffix(account_type):
 # ── HTML page ─────────────────────────────────────────────
 @negatives_bp.route('/negatives')
 def negatives_page():
-    return send_from_directory(BASE_DIR, 'negatives.html')
+    return send_from_directory(PAGE_DIR, 'negatives.html')
 
 
 # ── Campaigns list with neg counts ────────────────────────

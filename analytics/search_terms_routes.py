@@ -5,7 +5,8 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 search_terms_bp = Blueprint('search_terms', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -49,7 +50,7 @@ def _build_num_where(args):
 
 @search_terms_bp.route('/search-terms')
 def search_terms_page():
-    return send_from_directory(BASE_DIR, 'search_terms.html')
+    return send_from_directory(PAGE_DIR, 'search_terms.html')
 
 
 @search_terms_bp.route('/search-terms/data')

@@ -5,7 +5,8 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 targets_bp = Blueprint('targets', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -57,7 +58,7 @@ def _build_having(args):
 
 @targets_bp.route('/targets')
 def targets_page():
-    return send_from_directory(BASE_DIR, 'targets.html')
+    return send_from_directory(PAGE_DIR, 'targets.html')
 
 
 @targets_bp.route('/targets/data')

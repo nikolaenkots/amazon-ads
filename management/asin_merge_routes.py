@@ -4,14 +4,15 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 asin_merge_bp = Blueprint('asin_merge', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 
 @asin_merge_bp.route('/asin-merge')
 def asin_merge_page():
-    return send_from_directory(BASE_DIR, 'asin_merge.html')
+    return send_from_directory(PAGE_DIR, 'asin_merge.html')
 
 
 @asin_merge_bp.route('/asin-merge/lookup')

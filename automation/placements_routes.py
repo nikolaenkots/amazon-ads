@@ -19,7 +19,8 @@ from bq_client import get_client
 
 placements_bp = Blueprint('placements', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -50,7 +51,7 @@ def _pct(part, whole):
 
 @placements_bp.route('/automation/placements')
 def placements_page():
-    return send_from_directory(BASE_DIR, 'placements.html')
+    return send_from_directory(PAGE_DIR, 'placements.html')
 
 
 @placements_bp.route('/automation/placements/data')

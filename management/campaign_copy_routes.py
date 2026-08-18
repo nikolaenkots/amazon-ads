@@ -3,14 +3,15 @@ import os
 from flask import Blueprint, jsonify, request, send_from_directory
 
 campaign_copy_bp = Blueprint('campaign_copy', __name__)
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 
 @campaign_copy_bp.route('/campaign-copy')
 def campaign_copy_page():
-    return send_from_directory(BASE_DIR, 'campaign_copy.html')
+    return send_from_directory(PAGE_DIR, 'campaign_copy.html')
 
 
 @campaign_copy_bp.route('/campaign-copy/debug')

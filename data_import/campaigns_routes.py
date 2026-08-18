@@ -12,7 +12,8 @@ import requests as req_lib
 
 campaigns_bp = Blueprint('campaigns', __name__)
 
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR      = os.path.dirname(PAGE_DIR)
 PROJECT_ID    = "amazon-ads-api-494412"
 DATASET       = "amazon_ads"
 CHUNK_SIZE    = 1000
@@ -503,7 +504,7 @@ def _get_log_entry(entry_id):
 
 @campaigns_bp.route('/campaigns')
 def campaigns_page():
-    return send_from_directory(BASE_DIR, 'campaigns.html')
+    return send_from_directory(PAGE_DIR, 'campaigns.html')
 
 @campaigns_bp.route('/campaigns/sync', methods=['POST'])
 def campaigns_sync():

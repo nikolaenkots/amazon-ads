@@ -5,7 +5,8 @@ from flask import Blueprint, request, jsonify, send_from_directory
 
 sales_comparison_bp = Blueprint('sales_comparison', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -69,7 +70,7 @@ def _cvt(v):
 
 @sales_comparison_bp.route('/sales-comparison')
 def sales_comparison_page():
-    return send_from_directory(BASE_DIR, 'sales_comparison.html')
+    return send_from_directory(PAGE_DIR, 'sales_comparison.html')
 
 
 @sales_comparison_bp.route('/sales-comparison/data')

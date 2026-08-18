@@ -7,14 +7,15 @@ import json, requests
 
 portfolios_bp = Blueprint('portfolios', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
 
 @portfolios_bp.route('/portfolios')
 def portfolios_page():
-    return send_from_directory(BASE_DIR, 'portfolios.html')
+    return send_from_directory(PAGE_DIR, 'portfolios.html')
 
 
 

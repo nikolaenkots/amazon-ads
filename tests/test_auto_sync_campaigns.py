@@ -9,13 +9,13 @@
 """
 import json, os, sys, time
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 os.chdir(BASE)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/dev/null"
 
-import campaigns_routes as cr
-import auto_sync_campaigns
+import data_import.campaigns_routes as cr
+import scripts.auto_sync_campaigns as auto_sync_campaigns
 
 
 class FakeResp:

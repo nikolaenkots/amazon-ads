@@ -4,7 +4,7 @@
 Автосинхронизация структуры кампаний из Amazon SP API.
 
 Запускается ежедневной задачей (PythonAnywhere Scheduled Task):
-    python3 /home/nikolaenkots/amazon-ads/auto_sync_campaigns.py
+    python3 /home/nikolaenkots/amazon-ads/scripts/auto_sync_campaigns.py
 
 Для каждого профиля из config/amazon_secrets.json тянет кампании, группы,
 таргеты, минус-слова, product ads и портфолио, затем перезаписывает свой
@@ -22,12 +22,12 @@ import sys
 import time
 from datetime import datetime, timezone
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
                       os.path.join(BASE_DIR, "config", "bigquery_key.json"))
 
-from campaigns_routes import _AMZ, _read_sync_log, _run_campaigns_sync
+from data_import.campaigns_routes import _AMZ, _read_sync_log, _run_campaigns_sync
 
 
 def main(only_profile=None):

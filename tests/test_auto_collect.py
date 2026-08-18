@@ -9,12 +9,14 @@
 """
 import gzip, json, os, sys, time
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 os.chdir(BASE)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/dev/null"
 
-import auto_collect, ads_routes, bq_client
+import scripts.auto_collect as auto_collect
+import data_import.ads_routes as ads_routes
+import bq_client
 
 
 class FakeResp:

@@ -51,26 +51,26 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = KEY_FILE
 progress_store = {}
 
 # ── Blueprints ────────────────────────────────────────────
-from catalog_routes   import catalog_bp
-from earnings_routes  import earnings_bp
-from ads_routes       import ads_bp
-from campaigns_routes import campaigns_bp
-from portfolios       import portfolios_bp
-from analytics_routes import analytics_bp
-from control_routes import control_bp
-from products_routes  import products_bp
-from kdp_earnings_routes import kdp_earnings_bp
-from campaign_builder_routes import campaign_builder_bp
-from targets_routes import targets_bp
-from search_terms_routes import search_terms_bp
-from sales_comparison_routes import sales_comparison_bp
-from asin_merge_routes import asin_merge_bp
-from negatives_routes import negatives_bp
-from bq_stats_routes import bq_stats_bp
-from campaign_copy_routes import campaign_copy_bp
-from search_terms_optimizer_routes import st_optimizer_bp
-from bid_automation_routes import bid_automation_bp
-from placements_routes import placements_bp
+from data_import.catalog_routes   import catalog_bp
+from data_import.earnings_routes  import earnings_bp
+from data_import.ads_routes       import ads_bp
+from data_import.campaigns_routes import campaigns_bp
+from management.portfolios       import portfolios_bp
+from analytics.analytics_routes import analytics_bp
+from management.control_routes import control_bp
+from analytics.products_routes  import products_bp
+from data_import.kdp_earnings_routes import kdp_earnings_bp
+from management.campaign_builder_routes import campaign_builder_bp
+from analytics.targets_routes import targets_bp
+from analytics.search_terms_routes import search_terms_bp
+from analytics.sales_comparison_routes import sales_comparison_bp
+from management.asin_merge_routes import asin_merge_bp
+from management.negatives_routes import negatives_bp
+from resources.bq_stats_routes import bq_stats_bp
+from management.campaign_copy_routes import campaign_copy_bp
+from automation.search_terms_optimizer_routes import st_optimizer_bp
+from automation.bid_automation_routes import bid_automation_bp
+from automation.placements_routes import placements_bp
 
 
 app.register_blueprint(catalog_bp)
@@ -210,7 +210,7 @@ def index():
 
 @app.route('/earnings-kdp')
 def earnings_kdp():
-    return send_from_directory(BASE_DIR, 'earnings_kdp.html')
+    return send_from_directory(os.path.join(BASE_DIR, 'data_import'), 'earnings_kdp.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)

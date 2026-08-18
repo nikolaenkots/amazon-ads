@@ -6,7 +6,8 @@ from google.cloud import bigquery
 
 products_bp = Blueprint('products', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -14,7 +15,7 @@ DATASET    = "amazon_ads"
 # ── HTML страница ─────────────────────────────────────────
 @products_bp.route('/analytics/products')
 def analytics_products_page():
-    return send_from_directory(BASE_DIR, 'products_analytics.html')
+    return send_from_directory(PAGE_DIR, 'products_analytics.html')
 
 
 # ── Список ASIN со статистикой ────────────────────────────

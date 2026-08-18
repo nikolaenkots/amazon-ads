@@ -400,6 +400,51 @@ function toast(msg, ok=true){
 
 ## Файловая структура (~/amazon-ads/)
 
+### Раскладка по папкам (август 2026)
+
+Файлы разложены по разделам меню: модуль и его страница лежат рядом.
+
+```
+amazon-ads/
+├── app.py                  Flask init, blueprints, auth, подстановка CSS и шапки
+├── bq_client.py            общий клиент BigQuery
+├── index.html              главная
+├── partials/nav.html       шапка с меню — единственное место, где её править
+├── static/common.css       общее оформление всех страниц
+├── config/                 секреты (не в git)
+├── analytics/              Аналитика: кампании, продукты, таргеты, поисковые
+│                           запросы, сравнение продаж, бюджет
+├── management/             Управление: очередь изменений, портфолио, слияние
+│                           ASIN, campaign builder, копирование, минус-слова
+├── data_import/            Импорт: каталог, реклама, продажи KDP/Merch,
+│                           кампании SP API
+├── resources/              Ресурсы: BQ Stats
+├── automation/             Автоматизация: оптимизация запросов, ставки,
+│                           плейсменты
+├── scripts/                CLI: collect, send, auto_collect,
+│                           auto_sync_campaigns и разовые скрипты
+└── tests/                  мок-тесты автосбора и автосинхронизации
+```
+
+**Пути внутри модулей:** `PAGE_DIR` — папка модуля, оттуда отдаётся его HTML;
+`BASE_DIR` — корень проекта, там `config/`, `uploads/`, файлы логов. При
+создании нового модуля повторяйте эту пару:
+
+```python
+PAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(PAGE_DIR)
+```
+
+**Импорт blueprint в app.py** — с именем папки: `from analytics.targets_routes
+import targets_bp`. Внутри модулей `from bq_client import get_client` работает
+как раньше: корень проекта в `sys.path`.
+
+**Запуск скриптов** (пути в задачах PythonAnywhere изменились):
+```
+python3.10 /home/nikolaenkots/amazon-ads/scripts/auto_sync_campaigns.py
+python3.10 /home/nikolaenkots/amazon-ads/scripts/auto_collect.py
+```
+
 ### Flask приложение
 
 | Файл | Blueprint | Описание |

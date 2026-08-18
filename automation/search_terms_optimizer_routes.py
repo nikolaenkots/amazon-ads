@@ -12,7 +12,8 @@ except Exception:
 
 st_optimizer_bp = Blueprint('st_optimizer', __name__)
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(PAGE_DIR)
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -27,7 +28,7 @@ def _suffix(account_type):
 
 @st_optimizer_bp.route('/automation/search-terms')
 def search_terms_optimizer_page():
-    return send_from_directory(BASE_DIR, 'search_terms_optimizer.html')
+    return send_from_directory(PAGE_DIR, 'search_terms_optimizer.html')
 
 
 def _date_where(args, alias='s'):
