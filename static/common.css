@@ -5,7 +5,14 @@
    этот файл, так как подключается он раньше.
    ------------------------------------------------------------ */
 
-:root{--bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;--accent:#c84b14;--green:#1a8f5c}
+:root{--bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;--accent:#c84b14;--green:#1a8f5c;
+  /* цвета-акценты: раньше каждая страница объявляла их у себя заново */
+  --border2:#ccccd4;--red:#d94040;--blue:#1a6fd4;--amber:#b07800;--purple:#6c3fc9;
+  --accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--green-border:rgba(26,143,92,.2);
+  --red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);--red-border:rgba(217,64,64,.22);
+  --blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
 header{display:flex;align-items:center;padding:0 32px;background:var(--surface);border-bottom:1px solid var(--border)}
