@@ -93,6 +93,14 @@ app.register_blueprint(st_optimizer_bp)
 app.register_blueprint(bid_automation_bp)
 app.register_blueprint(placements_bp)
 
+# ── Общее оформление ──────────────────────────────────────
+# Отдаём своим роутом, а не через /static/: на PythonAnywhere путь /static/
+# перехватывается настройками Static files на вкладке Web, и запрос до Flask
+# не доходит.
+@app.route('/assets/<path:filename>')
+def assets(filename):
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
+
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
 def index():
