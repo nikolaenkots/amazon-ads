@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Остановка ASIN · Amazon Ads Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css?v=1">
+<style>
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
+  --green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
+  --red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);
+  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
+  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22)}
+body{min-height:100vh}
+header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+main{max-width:1400px;padding:24px 32px}
+.hero{margin-bottom:18px}
+.hero-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:8px}
+.hero-title{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.hero-sub{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+/* Панель критериев */
+.fp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.fr{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fg input,.fg select{height:34px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;
+  font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent-bd)}
+.fg input.num{width:92px}
+.at{display:flex;gap:3px}
+.atb{height:34px;padding:0 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);
+  color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.atb.on{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+/* Сводка */
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;min-width:130px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sc-l{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:3px}
+.sc-v{font-size:19px;font-weight:600;letter-spacing:-.01em}
+
+/* Панель действия */
+.bar{display:none;align-items:center;gap:12px;background:var(--accent-bg);border:1px solid var(--accent-bd);
+  border-radius:9px;padding:11px 16px;margin-bottom:12px}
+.bar.on{display:flex}
+.bar-txt{font-size:13px;font-weight:500}
+.bar .btn{margin-left:auto}
+
+/* Таблица */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.thr{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+.tt{font-size:14px;font-weight:600}
+.tc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.tsx{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:7px 12px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#fafafa}
+tbody tr.sel{background:var(--accent-bg)}
+td{padding:8px 12px;vertical-align:middle}
+td.num{text-align:right;font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap}
+.cb{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.asin{font-family:'DM Mono',monospace;font-size:12px}
+.thumb{width:34px;height:34px;border-radius:5px;object-fit:cover;background:var(--surface2);border:1px solid var(--border)}
+.pname{font-size:12px;color:var(--text);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk{font-family:'DM Mono',monospace;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surface2);
+  border:1px solid var(--border);color:var(--muted)}
+.gcnt{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:10px;
+  background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.empty{padding:34px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Модалка предпросмотра */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:8000;align-items:center;justify-content:center}
+.modal-bg.op{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:760px;
+  max-width:95vw;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.warn{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);border-radius:8px;
+  padding:10px 13px;font-size:12px;line-height:1.5;margin-bottom:12px}
+.glist{overflow-y:auto;border:1px solid var(--border);border-radius:8px;flex:1;min-height:120px}
+.gi{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px}
+.gi:last-child{border-bottom:none}
+.gi-c{color:var(--muted);max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi-g{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi-w{font-family:'DM Mono',monospace;font-size:10px;padding:1px 7px;border-radius:4px;
+  background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);white-space:nowrap}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.sp2{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+  border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px}
+.toast-item.ok{border-color:var(--green-bd)}
+.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+</style>
+</head>
+<body>
+
+<!--HEADER:Автоматизация-->
+
+<main>
+
+  <div class="hero">
+    <div class="hero-label">Автоматизация</div>
+    <div class="hero-title">Остановка ASIN без продаж</div>
+    <div class="hero-sub">Находит ASIN, которые тратят бюджет без заказов, и ставит в очередь паузу всех их групп объявлений — вместо того чтобы открывать каждый ASIN вручную.</div>
+  </div>
+
+  <!-- Критерии -->
+  <div class="fp">
+    <div class="fr">
+      <div class="fg">
+        <span class="fl">Аккаунт</span>
+        <div class="at" id="acctSel">
+          <button class="atb on" onclick="setAcct('MERCH',event)">Merch</button>
+          <button class="atb" onclick="setAcct('KDP',event)">KDP</button>
+        </div>
+      </div>
+      <div class="fg">
+        <span class="fl">Маркетплейс</span>
+        <select id="mkt" onchange="load()"><option value="">Все</option></select>
+      </div>
+      <div class="fg"><span class="fl">От</span><input type="date" id="df" onchange="load()"></div>
+      <div class="fg"><span class="fl">До</span><input type="date" id="dt" onchange="load()"></div>
+      <div class="fg"><span class="fl">Кликов от</span><input type="number" class="num" id="minClicks" value="10" min="0" step="1" onchange="load()"></div>
+      <div class="fg"><span class="fl">Расход от $</span><input type="number" class="num" id="minCost" value="0" min="0" step="0.5" onchange="load()"></div>
+      <div class="fg"><span class="fl">Заказов не больше</span><input type="number" class="num" id="maxOrders" value="0" min="0" step="1" onchange="load()"></div>
+      <button class="btn btn-p" onclick="load()" id="btnLoad">Найти</button>
+    </div>
+    <div class="hint">Показываются только ASIN, у которых есть активные группы объявлений — те, что уже остановлены, в список не попадают.</div>
+  </div>
+
+  <div class="sum" id="sum"></div>
+
+  <!-- Действие над выбранными -->
+  <div class="bar" id="bar">
+    <span class="bar-txt" id="barTxt">Выбрано: 0</span>
+    <button class="btn btn-s" onclick="clearSel()">Снять выделение</button>
+    <button class="btn btn-d" onclick="preview()" id="btnPause">⏸ Остановить группы</button>
+  </div>
+
+  <div class="tw">
+    <div class="thr">
+      <span class="tt">ASIN без продаж</span>
+      <span class="tc" id="cnt"></span>
+    </div>
+    <div class="tsx">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px"><input type="checkbox" class="cb" id="cbAll" onchange="toggleAll(this)"></th>
+            <th style="width:44px"></th>
+            <th>ASIN</th>
+            <th>Название</th>
+            <th>Мкт</th>
+            <th style="text-align:right">Показы</th>
+            <th style="text-align:right">Клики</th>
+            <th style="text-align:right">Расход</th>
+            <th style="text-align:right">Продажи</th>
+            <th style="text-align:right">Заказы</th>
+            <th style="text-align:right">Групп</th>
+          </tr>
+        </thead>
+        <tbody id="tb"><tr><td colspan="11" class="empty">Задайте критерии и нажмите «Найти»</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Предпросмотр остановки -->
+<div class="modal-bg" id="modalPause">
+  <div class="modal">
+    <div class="modal-title">Остановка групп объявлений</div>
+    <div class="modal-sub" id="pvSub"></div>
+    <div id="pvWarn"></div>
+    <div class="glist" id="pvList"></div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-d" id="btnConfirm" onclick="confirmPause()">Поставить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastWrap"></div>
+
+<script>
+const MKTS={MERCH:['US','UK','DE','FR','IT','ES'],KDP:['US','CA','UK','DE','FR','IT','ES','AU']};
+const S={acct:'MERCH',rows:[],sel:new Set(),groups:[]};
+
+fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+function getProfileId(mkt){ return (window._pm||{})[S.acct+'_'+mkt]||''; }
+
+// период по умолчанию — последние 30 дней
+(function initDates(){
+  const to=new Date(); to.setDate(to.getDate()-1);
+  const from=new Date(); from.setDate(from.getDate()-30);
+  document.getElementById('dt').value=to.toISOString().slice(0,10);
+  document.getElementById('df').value=from.toISOString().slice(0,10);
+})();
+renderMkts();
+
+function setAcct(a,e){
+  S.acct=a;
+  document.querySelectorAll('#acctSel .atb').forEach(b=>b.classList.remove('on'));
+  e.target.classList.add('on');
+  renderMkts(); load();
+}
+function renderMkts(){
+  const s=document.getElementById('mkt'), cur=s.value;
+  s.innerHTML='<option value="">Все</option>'+MKTS[S.acct].map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(MKTS[S.acct].includes(cur)) s.value=cur;
+}
+
+async function load(){
+  const btn=document.getElementById('btnLoad');
+  btn.disabled=true; btn.textContent='Ищем...';
+  document.getElementById('tb').innerHTML='<tr><td colspan="11" class="empty">Загрузка…</td></tr>';
+  S.sel.clear(); renderBar();
+  const p=new URLSearchParams({
+    account_type:S.acct,
+    marketplace:document.getElementById('mkt').value,
+    date_from:document.getElementById('df').value,
+    date_to:document.getElementById('dt').value,
+    min_clicks:document.getElementById('minClicks').value||0,
+    min_cost:document.getElementById('minCost').value||0,
+    max_orders:document.getElementById('maxOrders').value||0,
+  });
+  try{
+    const d=await(await fetch('/automation/pause-asins/data?'+p)).json();
+    if(d.error) throw new Error(d.error);
+    S.rows=d.rows||[];
+    renderSum(d.summary||{});
+    renderRows();
+  }catch(e){
+    document.getElementById('tb').innerHTML=`<tr><td colspan="11" class="empty">Ошибка: ${xe(e.message)}</td></tr>`;
+    toast('Ошибка загрузки: '+e.message,false);
+  }finally{
+    btn.disabled=false; btn.textContent='Найти';
+  }
+}
+
+function renderSum(s){
+  document.getElementById('sum').innerHTML=[
+    ['ASIN найдено', f(s.asins)],
+    ['Активных групп', f(s.groups)],
+    ['Клики', f(s.clicks)],
+    ['Расход впустую', '$'+f(s.cost,2)],
+  ].map(([l,v])=>`<div class="sc"><div class="sc-l">${l}</div><div class="sc-v">${v}</div></div>`).join('');
+}
+
+function renderRows(){
+  const tb=document.getElementById('tb');
+  document.getElementById('cnt').textContent=S.rows.length?S.rows.length+' записей':'';
+  if(!S.rows.length){
+    tb.innerHTML='<tr><td colspan="11" class="empty">Под критерии никто не подошёл — значит убыточных ASIN нет</td></tr>';
+    return;
+  }
+  tb.innerHTML=S.rows.map((r,i)=>{
+    const key=r.asin+'|'+r.marketplace;
+    const img=r.image_url?`<img class="thumb" src="${xe(r.image_url)}" loading="lazy" onerror="this.style.visibility='hidden'">`:'<div class="thumb"></div>';
+    return `<tr class="${S.sel.has(key)?'sel':''}" data-k="${xe(key)}">
+      <td><input type="checkbox" class="cb" ${S.sel.has(key)?'checked':''} onchange="toggleRow('${xe(key)}',this)"></td>
+      <td>${img}</td>
+      <td class="asin">${xe(r.asin)}</td>
+      <td><div class="pname" title="${xe(r.title||'')}">${xe(r.title||'—')}</div></td>
+      <td><span class="mk">${xe(r.marketplace)}</span></td>
+      <td class="num">${f(r.impressions)}</td>
+      <td class="num">${f(r.clicks)}</td>
+      <td class="num">$${f(r.cost,2)}</td>
+      <td class="num">$${f(r.sales_14d,2)}</td>
+      <td class="num">${f(r.purchases_14d)}</td>
+      <td class="num"><span class="gcnt">${f(r.active_groups)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleRow(key,el){
+  if(el.checked)S.sel.add(key); else S.sel.delete(key);
+  const tr=el.closest('tr'); if(tr)tr.classList.toggle('sel',el.checked);
+  renderBar();
+}
+function toggleAll(el){
+  S.sel.clear();
+  if(el.checked) S.rows.forEach(r=>S.sel.add(r.asin+'|'+r.marketplace));
+  renderRows(); renderBar();
+}
+function clearSel(){ S.sel.clear(); document.getElementById('cbAll').checked=false; renderRows(); renderBar(); }
+function renderBar(){
+  const n=S.sel.size;
+  const groups=S.rows.filter(r=>S.sel.has(r.asin+'|'+r.marketplace))
+                     .reduce((s,r)=>s+(r.active_groups||0),0);
+  document.getElementById('bar').classList.toggle('on',n>0);
+  document.getElementById('barTxt').textContent=`Выбрано ASIN: ${n} · активных групп: ${groups}`;
+}
+
+// ── Предпросмотр: какие именно группы встанут ─────────────
+async function preview(){
+  const chosen=S.rows.filter(r=>S.sel.has(r.asin+'|'+r.marketplace));
+  if(!chosen.length){toast('Не выбрано ни одного ASIN',false);return;}
+  const mkts=[...new Set(chosen.map(r=>r.marketplace))];
+  if(mkts.length>1){
+    toast('Выберите ASIN одного маркетплейса: у каждого свой профиль Amazon',false);
+    return;
+  }
+  const btn=document.getElementById('btnPause');
+  btn.disabled=true; btn.innerHTML='<span class="sp2"></span> Считаем...';
+  try{
+    const r=await fetch('/automation/pause-asins/groups',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({account_type:S.acct,marketplace:mkts[0],asins:chosen.map(x=>x.asin)})});
+    const d=await r.json();
+    if(!r.ok||d.error) throw new Error(d.error||'Ошибка запроса');
+    S.groups=d.groups||[];
+    showPreview(chosen.length, d.with_other||0);
+  }catch(e){
+    toast('Ошибка: '+e.message,false);
+  }finally{
+    btn.disabled=false; btn.innerHTML='⏸ Остановить группы';
+  }
+}
+
+function showPreview(asinCount, withOther){
+  const n=S.groups.length;
+  document.getElementById('pvSub').textContent=
+    `${n} групп по ${asinCount} ASIN будут поставлены в очередь на паузу. Изменения применятся после одобрения в «Очереди изменений».`;
+  document.getElementById('pvWarn').innerHTML = withOther
+    ? `<div class="warn">В ${withOther} из ${n} групп рекламируются и другие ASIN, которые вы не выбирали — остановка группы затронет и их. Такие группы отмечены в списке.</div>`
+    : '';
+  document.getElementById('pvList').innerHTML = n
+    ? S.groups.map(g=>`<div class="gi">
+        <span class="gi-c" title="${xe(g.campaign_name||'')}">${xe(g.campaign_name||'—')}</span>
+        <span class="gi-g" title="${xe(g.ad_group_name||'')}">${xe(g.ad_group_name||g.ad_group_id)}</span>
+        ${g.has_other_asins?`<span class="gi-w">+${(g.asins_total-g.asins_selected)} чужих ASIN</span>`:''}
+      </div>`).join('')
+    : '<div class="empty">Активных групп не найдено</div>';
+  document.getElementById('btnConfirm').disabled = !n;
+  document.getElementById('btnConfirm').textContent = n?`Поставить в очередь (${n})`:'Нечего останавливать';
+  document.getElementById('modalPause').classList.add('op');
+}
+function closeModal(){ document.getElementById('modalPause').classList.remove('op'); }
+
+async function confirmPause(){
+  if(!S.groups.length)return;
+  const btn=document.getElementById('btnConfirm');
+  btn.disabled=true; btn.innerHTML='<span class="sp2"></span> Ставим в очередь...';
+  const items=S.groups.map(g=>({
+    account_type:S.acct, marketplace:g.marketplace,
+    profile_id:g.profile_id||getProfileId(g.marketplace),
+    entity_type:'ad_group', entity_id:String(g.ad_group_id),
+    field_name:'state', old_value:'ENABLED', new_value:'PAUSED',
+  }));
+  try{
+    // очередь принимает максимум 500 записей за запрос
+    let inserted=0, skipped=0, failed=0;
+    for(let i=0;i<items.length;i+=500){
+      const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({items:items.slice(i,i+500)})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'Ошибка очереди');
+      inserted+=d.inserted||0; skipped+=d.skipped||0; failed+=(d.errors||[]).length;
+    }
+    closeModal();
+    toast(`В очередь: ${inserted} групп`+(skipped?`, уже стояло: ${skipped}`:'')+(failed?`, ошибок: ${failed}`:''), failed===0);
+    clearSel();
+  }catch(e){
+    toast('Ошибка: '+e.message,false);
+  }finally{
+    btn.disabled=false; btn.textContent='Поставить в очередь';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function f(v,d=0){if(v==null||v==='')return'0';return Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function xe(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,ok=true){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast-item '+(ok?'ok':'err');
+  d.innerHTML=`<span>${ok?'✓':'✕'}</span> <span></span>`;
+  d.lastChild.textContent=msg;
+  w.appendChild(d); setTimeout(()=>d.remove(),4000);
+}
+document.getElementById('modalPause').addEventListener('click',e=>{
+  if(e.target.id==='modalPause')closeModal();
+});
+</script>
+
+<script>
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.nav-drop').forEach(function(d){
+    if(!d.contains(e.target))d.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
