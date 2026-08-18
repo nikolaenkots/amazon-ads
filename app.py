@@ -130,19 +130,64 @@ def _common_css():
 
 CSS_LINK_RE = re.compile(r'<link[^>]+href="/assets/common\.css[^"]*"[^>]*>')
 
+# ── Общая шапка с меню ────────────────────────────────────
+# Разметка меню лежит в partials/nav.html — единственном месте, где её нужно
+# править. Страница ставит маркер <!--HEADER--> (или <!--HEADER:текст справа-->),
+# сервер подставляет шапку и помечает активный пункт по текущему адресу.
+NAV_PATH  = os.path.join(BASE_DIR, 'partials', 'nav.html')
+_nav_cache = {"mtime": None, "text": ""}
+
+def _nav_html():
+    try:
+        mtime = os.path.getmtime(NAV_PATH)
+    except OSError:
+        return ""
+    if _nav_cache["mtime"] != mtime:
+        with open(NAV_PATH, encoding='utf-8') as f:
+            _nav_cache["text"] = f.read()
+        _nav_cache["mtime"] = mtime
+    return _nav_cache["text"]
+
+HEADER_MARK_RE = re.compile(r'<!--\s*HEADER(?::(.*?))?\s*-->', re.S)
+
+def _mark_active(nav, path):
+    """Пометить пункт меню, соответствующий текущему адресу."""
+    def link(m):
+        href = m.group(1)
+        cls  = m.group(2)
+        if href == path or (href != '/' and path.startswith(href + '/')):
+            return f'<a href="{href}" class="{cls} active"'
+        return m.group(0)
+    nav = re.sub(r'<a href="([^"]+)" class="(nav-link|nav-home)"', link, nav)
+    return nav
+
 @app.after_request
-def inline_common_css(resp):
+def inline_common_parts(resp):
+    """Подставить общий CSS и общую шапку прямо в HTML-ответ."""
     if not (resp.content_type or '').startswith('text/html'):
-        return resp
-    css = _common_css()
-    if not css:
         return resp
     if resp.direct_passthrough:          # ответы send_from_directory отдают файл потоком
         resp.direct_passthrough = False
     html = resp.get_data(as_text=True)
-    if '/assets/common.css' not in html:
-        return resp
-    resp.set_data(CSS_LINK_RE.sub(f'<style>\n{css}\n</style>', html, count=1))
+    changed = False
+
+    css = _common_css()
+    if css and '/assets/common.css' in html:
+        html = CSS_LINK_RE.sub(lambda _: f'<style>\n{css}\n</style>', html, count=1)
+        changed = True
+
+    nav = _nav_html()
+    if nav and HEADER_MARK_RE.search(html):
+        def put(m):
+            right = (m.group(1) or '').strip()
+            block = nav.replace('{{RIGHT}}',
+                                f'<span class="header-right">{right}</span>' if right else '')
+            return _mark_active(block, request.path)
+        html = HEADER_MARK_RE.sub(put, html, count=1)
+        changed = True
+
+    if changed:
+        resp.set_data(html)
     return resp
 
 @app.route('/assets-check')
