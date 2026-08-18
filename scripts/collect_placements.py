@@ -16,7 +16,7 @@ import json, gzip, time, os, sys, requests
 from datetime import date, timedelta, datetime, timezone
 from google.cloud import bigquery
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
