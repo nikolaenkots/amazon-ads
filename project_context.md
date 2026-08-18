@@ -450,42 +450,42 @@ python3.10 /home/nikolaenkots/amazon-ads/scripts/auto_collect.py
 | Файл | Blueprint | Описание |
 |---|---|---|
 | `app.py` | — | Flask init, регистрация blueprints, `progress_store = {}`, HTTP Basic Auth |
-| `catalog_routes.py` | `catalog_bp` | `/catalog` — импорт каталога из Productor CSV |
-| `earnings_routes.py` | `earnings_bp` | `/earnings` — импорт отчётов продаж MBA (CSV) |
-| `kdp_earnings_routes.py` | `kdp_earnings_bp` | `/earnings-kdp` — импорт продаж KDP (Excel) |
-| `ads_routes.py` | `ads_bp` | `/ads` — сбор рекламной статистики |
-| `campaigns_routes.py` | `campaigns_bp` | `/campaigns` — синхронизация структуры кампаний из SP API |
-| `portfolios.py` | `portfolios_bp` | `/portfolios` — управление именами портфолио |
-| `analytics_routes.py` | `analytics_bp` | `/analytics/campaigns` — аналитика кампаний |
-| `products_routes.py` | `products_bp` | `/analytics/products` — аналитика по рекламируемым ASIN |
-| `targets_routes.py` | `targets_bp` | `/targets` — анализ таргетов (ключевые слова, авто/мануал) |
-| `control_routes.py` | `control_bp` | `/control` — управление рекламой через pending_changes |
-| `sales_comparison_routes.py` | `sales_comparison_bp` | `/sales-comparison` — сравнение продаж MBA/KDP с рекламой |
-| `asin_merge_routes.py` | `asin_merge_bp` | `/asin-merge` — слияние ASIN дубликатов в каталоге |
+| `data_import/catalog_routes.py` | `catalog_bp` | `/catalog` — импорт каталога из Productor CSV |
+| `data_import/earnings_routes.py` | `earnings_bp` | `/earnings` — импорт отчётов продаж MBA (CSV) |
+| `data_import/kdp_earnings_routes.py` | `kdp_earnings_bp` | `/earnings-kdp` — импорт продаж KDP (Excel) |
+| `data_import/ads_routes.py` | `ads_bp` | `/ads` — сбор рекламной статистики |
+| `data_import/campaigns_routes.py` | `campaigns_bp` | `/campaigns` — синхронизация структуры кампаний из SP API |
+| `management/portfolios.py` | `portfolios_bp` | `/portfolios` — управление именами портфолио |
+| `analytics/analytics_routes.py` | `analytics_bp` | `/analytics/campaigns` — аналитика кампаний |
+| `analytics/products_routes.py` | `products_bp` | `/analytics/products` — аналитика по рекламируемым ASIN |
+| `analytics/targets_routes.py` | `targets_bp` | `/targets` — анализ таргетов (ключевые слова, авто/мануал) |
+| `management/control_routes.py` | `control_bp` | `/control` — управление рекламой через pending_changes |
+| `analytics/sales_comparison_routes.py` | `sales_comparison_bp` | `/sales-comparison` — сравнение продаж MBA/KDP с рекламой |
+| `management/asin_merge_routes.py` | `asin_merge_bp` | `/asin-merge` — слияние ASIN дубликатов в каталоге |
 
 ### HTML страницы
 
 | Файл | URL | Описание |
 |---|---|---|
 | `index.html` | `/` | Главная — горизонтальные карточки навигации по секциям |
-| `campaigns_analytics.html` | `/analytics/campaigns` | Аналитика кампаний с фильтрами, структурой, управлением |
-| `products_analytics.html` | `/analytics/products` | Аналитика по рекламируемым ASIN + управление кампаниями |
-| `control.html` | `/control` | Очередь изменений: Ожидают / Одобрено / История |
-| `campaigns.html` | `/campaigns` | Синхронизация кампаний из SP API |
-| `portfolios.html` | `/portfolios` | Управление портфолио |
-| `catalog.html` | `/catalog` | Импорт каталога |
-| `earnings.html` | `/earnings` | Импорт продаж Merch (CSV) |
-| `earnings_kdp.html` | `/earnings-kdp` | Импорт продаж KDP (Excel, вкладки Paperback/Hardcover/eBook Royalty) |
-| `sales_comparison.html` | `/sales-comparison` | Сравнение продаж MBA/KDP с рекламой по дизайнам |
-| `asin_merge.html` | `/asin-merge` | Слияние ASIN-дубликатов в каталоге по design_id |
-| `ads.html` | `/ads` | Сбор статистики |
+| `analytics/campaigns_analytics.html` | `/analytics/campaigns` | Аналитика кампаний с фильтрами, структурой, управлением |
+| `analytics/products_analytics.html` | `/analytics/products` | Аналитика по рекламируемым ASIN + управление кампаниями |
+| `management/control.html` | `/control` | Очередь изменений: Ожидают / Одобрено / История |
+| `data_import/campaigns.html` | `/campaigns` | Синхронизация кампаний из SP API |
+| `management/portfolios.html` | `/portfolios` | Управление портфолио |
+| `data_import/catalog.html` | `/catalog` | Импорт каталога |
+| `data_import/earnings.html` | `/earnings` | Импорт продаж Merch (CSV) |
+| `data_import/earnings_kdp.html` | `/earnings-kdp` | Импорт продаж KDP (Excel, вкладки Paperback/Hardcover/eBook Royalty) |
+| `analytics/sales_comparison.html` | `/sales-comparison` | Сравнение продаж MBA/KDP с рекламой по дизайнам |
+| `management/asin_merge.html` | `/asin-merge` | Слияние ASIN-дубликатов в каталоге по design_id |
+| `data_import/ads.html` | `/ads` | Сбор статистики |
 
 ### CLI скрипты
 
 | Файл | Описание |
 |---|---|
-| `collect.py` | Сбор статистики из Amazon Ads API |
-| `send.py` | Отправка APPROVED изменений в Amazon API |
+| `scripts/collect.py` | Сбор статистики из Amazon Ads API |
+| `scripts/send.py` | Отправка APPROVED изменений в Amazon API |
 
 ### Конфиги (не в git)
 
@@ -1625,25 +1625,25 @@ req.onsuccess = function(e) {
 3. `POST /ads/download_report` → скачивает gzip с S3
 4. `POST /ads/upload_to_bq` → DELETE старых данных + INSERT новых
 
-### Через CLI (collect.py)
+### Через CLI (scripts/collect.py)
 ```bash
-python3 collect.py 2026-05-31                         # Merch US за день
-python3 collect.py 2026-05-01 2026-05-31 MERCH US     # период
-python3 collect.py 2026-05-31 2026-05-31 KDP UK       # KDP UK
-python3 collect.py 2026-05-31 all                     # все профили
+python3 scripts/collect.py 2026-05-31                         # Merch US за день
+python3 scripts/collect.py 2026-05-01 2026-05-31 MERCH US     # период
+python3 scripts/collect.py 2026-05-31 2026-05-31 KDP UK       # KDP UK
+python3 scripts/collect.py 2026-05-31 all                     # все профили
 ```
 
-### Через автосбор (auto_collect.py) — ежедневная задача
+### Через автосбор (scripts/auto_collect.py) — ежедневная задача
 
 Один запуск = все профили × все 4 типа отчётов за **последние 14 дней**
 (по вчера включительно). Именно 14 дней потому, что Amazon пересчитывает
 атрибуцию задним числом — окно перезаписывается каждый день.
 
 ```bash
-python3 auto_collect.py                          # полный прогон (как в задаче)
-python3 auto_collect.py --test                   # быстрая проверка: MERCH US × Targeting × 2 дня
-python3 auto_collect.py --profile KDP DE --type spTargeting --days 3
-python3 auto_collect.py --days 30                # другое окно
+python3 scripts/auto_collect.py                          # полный прогон (как в задаче)
+python3 scripts/auto_collect.py --test                   # быстрая проверка: MERCH US × Targeting × 2 дня
+python3 scripts/auto_collect.py --profile KDP DE --type spTargeting --days 3
+python3 scripts/auto_collect.py --days 30                # другое окно
 ```
 
 **Фазы:** создаёт все отчёты сразу → общий поллинг каждые 30 сек →
@@ -1656,9 +1656,9 @@ python3 auto_collect.py --days 30                # другое окно
 - команда — тем же интерпретатором, что и веб-приложение (см. Web tab →
   Virtualenv); та же грабля, что была с `send.py`:
   ```
-  /home/nikolaenkots/.virtualenvs/<venv>/bin/python /home/nikolaenkots/amazon-ads/auto_collect.py
+  /home/nikolaenkots/.virtualenvs/<venv>/bin/python /home/nikolaenkots/amazon-ads/scripts/auto_collect.py
   ```
-  без virtualenv — `python3 /home/nikolaenkots/amazon-ads/auto_collect.py`
+  без virtualenv — `python3 /home/nikolaenkots/amazon-ads/scripts/auto_collect.py`
 - cwd не важен: пути внутри скрипта считаются от `__file__`
 
 **История:** `auto_collect_log.json` (последние 500 записей, `source: "auto"`).
@@ -1673,19 +1673,19 @@ python3 auto_collect.py --days 30                # другое окно
 за период в таблице уже есть строки (Amazon иногда отдаёт пустой отчёт из-за
 сбоя — иначе он бы обнулил 14 дней статистики).
 
-**Тест без обращения к API:** `python3 test_auto_collect.py` — мок Amazon и
+**Тест без обращения к API:** `python3 tests/test_auto_collect.py` — мок Amazon и
 BigQuery, 4 сценария (пустое гео, пустое гео при непустой базе, 400 при
 создании, обрыв при скачивании).
 
-### Автосинхронизация кампаний (auto_sync_campaigns.py)
+### Автосинхронизация кампаний (scripts/auto_sync_campaigns.py)
 
 Структура кампаний (кампании, группы, таргеты, минусы, product ads, портфолио)
 по всем профилям. Отдельная задача от `auto_collect.py`.
 
 ```bash
-python3 auto_sync_campaigns.py                  # все профили (как в задаче)
-python3 auto_sync_campaigns.py --test           # только MERCH US
-python3 auto_sync_campaigns.py --profile KDP UK
+python3 scripts/auto_sync_campaigns.py                  # все профили (как в задаче)
+python3 scripts/auto_sync_campaigns.py --test           # только MERCH US
+python3 scripts/auto_sync_campaigns.py --profile KDP UK
 ```
 
 Профили идут **последовательно** и память освобождается после каждого
@@ -1707,7 +1707,7 @@ python3 auto_sync_campaigns.py --profile KDP UK
 выполняется, если API вернул 0 объектов, а в таблице по этому маркетплейсу
 есть строки. Иначе сбой Amazon обнулил бы весь маркетплейс.
 
-**Тест:** `python3 test_auto_sync_campaigns.py` — мок API и BigQuery,
+**Тест:** `python3 tests/test_auto_sync_campaigns.py` — мок API и BigQuery,
 3 сценария + проверка endpoint истории.
 
 **Убрано (август 2026):** блок «Последние данные» на `/campaigns` и endpoint
@@ -1796,7 +1796,7 @@ def require_auth():
 
 | Файл | Описание |
 |---|---|
-| `collect.py` | CLI сбор статистики — используется регулярно |
+| `scripts/collect.py` | CLI сбор статистики — используется регулярно |
 | `fix_uk_fr.py` | Исправление профилей UK/FR |
 | `get_merch_eu_profiles.py` | Получение EU профилей |
 | `reports_log.json` | Лог отчётов — активный файл |
@@ -2710,8 +2710,8 @@ ORDER BY cnt DESC;
 ### Файлы
 | Файл | Описание |
 |---|---|
-| `campaign_copy_routes.py` | Blueprint `campaign_copy_bp`, 5 endpoints |
-| `campaign_copy.html` | Фронтенд — 4-шаговый мастер |
+| `management/campaign_copy_routes.py` | Blueprint `campaign_copy_bp`, 5 endpoints |
+| `management/campaign_copy.html` | Фронтенд — 4-шаговый мастер |
 | `app.py` | `from campaign_copy_routes import campaign_copy_bp` + `app.register_blueprint(campaign_copy_bp)` |
 
 ### Шаги мастера
@@ -2926,22 +2926,22 @@ UI в `bq_stats.html` отображает понятное сообщение �
 
 | Файл | Blueprint | Описание |
 |---|---|---|
-| `campaign_builder_routes.py` | `campaign_builder_bp` | `/campaign-builder` — массовое создание кампаний |
-| `campaign_copy_routes.py` | `campaign_copy_bp` | `/campaign-copy` — копирование кампаний между гео |
-| `bq_stats_routes.py` | `bq_stats_bp` | `/bq-stats` — статистика BigQuery, ad-hoc SQL |
-| `search_terms_routes.py` | `search_terms_bp` | `/search-terms` — анализ поисковых запросов |
+| `management/campaign_builder_routes.py` | `campaign_builder_bp` | `/campaign-builder` — массовое создание кампаний |
+| `management/campaign_copy_routes.py` | `campaign_copy_bp` | `/campaign-copy` — копирование кампаний между гео |
+| `resources/bq_stats_routes.py` | `bq_stats_bp` | `/bq-stats` — статистика BigQuery, ad-hoc SQL |
+| `analytics/search_terms_routes.py` | `search_terms_bp` | `/search-terms` — анализ поисковых запросов |
 
 ### Новые HTML страницы
 
 | Файл | URL | Описание |
 |---|---|---|
-| `campaign_builder.html` | `/campaign-builder` | Массовое создание SP кампаний (Google Sheets-like) |
-| `campaign_copy.html` | `/campaign-copy` | Копирование кампании в другой маркетплейс с ASIN-маппингом |
-| `bq_stats.html` | `/bq-stats` | Статистика хранилища и запросов BigQuery, SQL explorer |
-| `search_terms.html` | `/search-terms` | Анализ поисковых запросов, массовое добавление минусов |
-| `campaigns_deleting.html` | `/campaigns-deleting` | Архивация и удаление кампаний |
-| `budget_analysis.html` | `/budget-analysis` | Анализ утилизации бюджетов |
-| `targets.html` | `/targets` | Управление таргетами и группами |
+| `management/campaign_builder.html` | `/campaign-builder` | Массовое создание SP кампаний (Google Sheets-like) |
+| `management/campaign_copy.html` | `/campaign-copy` | Копирование кампании в другой маркетплейс с ASIN-маппингом |
+| `resources/bq_stats.html` | `/bq-stats` | Статистика хранилища и запросов BigQuery, SQL explorer |
+| `analytics/search_terms.html` | `/search-terms` | Анализ поисковых запросов, массовое добавление минусов |
+| `management/campaigns_deleting.html` | `/campaigns-deleting` | Архивация и удаление кампаний |
+| `analytics/budget_analysis.html` | `/budget-analysis` | Анализ утилизации бюджетов |
+| `analytics/targets.html` | `/targets` | Управление таргетами и группами |
 
 ### Архитектура Flask (обновлено)
 
@@ -2972,8 +2972,8 @@ app.py
 ### Файлы
 | Файл | Blueprint | Описание |
 |---|---|---|
-| `search_terms_optimizer_routes.py` | `st_optimizer_bp` | 6 API-эндпоинтов |
-| `search_terms_optimizer.html` | — | Фронтенд страницы |
+| `automation/search_terms_optimizer_routes.py` | `st_optimizer_bp` | 6 API-эндпоинтов |
+| `automation/search_terms_optimizer.html` | — | Фронтенд страницы |
 | Зарегистрирован в `app.py` | | `app.register_blueprint(st_optimizer_bp)` |
 
 Карточка добавлена на `index.html` в секцию "Автоматизация".
@@ -3182,8 +3182,8 @@ function coverage(term, campaignId, adGroupId) {
 ### Файлы
 | Файл | Blueprint | Описание |
 |---|---|---|
-| `bid_automation_routes.py` | `bid_automation_bp` | API + движок правил |
-| `bid_automation.html` | — | Фронтенд страницы |
+| `automation/bid_automation_routes.py` | `bid_automation_bp` | API + движок правил |
+| `automation/bid_automation.html` | — | Фронтенд страницы |
 | Зарегистрирован в `app.py` | | `app.register_blueprint(bid_automation_bp)` |
 
 Карточка и пункт меню добавлены на `index.html` в секцию "Автоматизация".
@@ -3308,17 +3308,39 @@ raise/lower → коридор [min_bid, max_bid]
 
 ## Навигационное меню (единое на всех страницах)
 
-Все страницы используют один и тот же выпадающий nav (`.nav-bar` → `.nav-drop` →
-`.nav-drop-menu` / `.nav-link`), идентичный главной `index.html`. Состав:
+### Где лежит и как подставляется (август 2026)
+
+Разметка шапки с меню — **`partials/nav.html`**, единственное место, где её нужно
+править. Страница вместо `<header>…</header>` содержит маркер:
+
+```html
+<!--HEADER-->                       <!-- обычная страница -->
+<!--HEADER:Панель управления-->     <!-- + текст справа в шапке -->
+```
+
+Хук `inline_common_parts` в `app.py` подставляет шапку в HTML-ответ (не отдельным
+запросом — по той же причине, что и CSS: блокировщики режут подзапросы на домен
+`ads.*`) и **сам помечает активный пункт** по `request.path`. Вручную
+`class="active"` проставлять больше не нужно.
+
+Добавить пункт меню = отредактировать `partials/nav.html`; изменение сразу
+на всех страницах. Файл читается с кешем по mtime, Reload не требуется.
+
+Исключение: `campaign_builder.html` — своя компактная шапка редактора, маркера
+не содержит и общее меню не получает.
+
+### Состав меню
+
+Выпадающий nav (`.nav-bar` → `.nav-drop` → `.nav-drop-menu` / `.nav-link`):
 - **Аналитика:** Кампании, Продукты, Таргеты, Поисковые запросы, Сравнение продаж, Бюджет
 - **Управление:** Очередь изменений, Портфолио, Слияние ASIN, Campaign Builder, Копирование кампаний, Минус слова, ~~Удаление кампаний~~ (пункт **неактивен** — `<span class="nav-link">` с `pointer-events:none`)
 - **Импорт:** Каталог Merch, Импорт рекламы, Продажи KDP, Продажи Merch, Кампании SP API
 - **Ресурсы:** BQ Stats
 - **Автоматизация:** Оптимизация запросов, **Управление ставками**
 
-При добавлении новой страницы копировать блок `<div class="nav-bar">…</div>` из
-`index.html` (с `active` на нужном пункте). Ссылку «Удаление кампаний» в меню
-держать неактивной (`<span>`), сама страница `/campaigns-deleting` доступна
+При добавлении новой страницы копировать блок `<div class="nav-bar">…</div>` не
+нужно — достаточно поставить маркер `<!--HEADER-->`. Ссылку «Удаление кампаний» в
+меню держать неактивной (`<span>`), сама страница `/campaigns-deleting` доступна
 напрямую.
 
 ---
@@ -3356,8 +3378,8 @@ raise/lower → коридор [min_bid, max_bid]
 ### Файлы
 | Файл | Назначение |
 |---|---|
-| `placements.html` | страница: фильтр-бар (как в аналитике кампаний), таблица, инлайн-редактирование % |
-| `placements_routes.py` | `/automation/placements` и `/automation/placements/data` |
+| `automation/placements.html` | страница: фильтр-бар (как в аналитике кампаний), таблица, инлайн-редактирование % |
+| `automation/placements_routes.py` | `/automation/placements` и `/automation/placements/data` |
 | `collect_placements.py` | CLI-сбор отчёта плейсментов → `placement_stats_*` |
 | `placement_stats_schema.sql` | DDL таблиц статистики |
 
