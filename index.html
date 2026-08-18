@@ -6,41 +6,26 @@
 <title>Amazon Ads Automation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/common.css?v=1">
 <style>
-:root{
-  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
-  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
-  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
-  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
-  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
-  --purple:#6c3fc9;--purple-bg:rgba(108,63,201,.07);--purple-bd:rgba(108,63,201,.2);
-  --amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.2);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
-
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--purple:#6c3fc9;--purple-bg:rgba(108,63,201,.07);--purple-bd:rgba(108,63,201,.2);--amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.2)}
+body{min-height:100vh}
 /* Header */
-header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
-.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .header-right{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:99px}
-
 /* Layout */
-main{max-width:900px;margin:0 auto;padding:40px 32px}
-
+main{max-width:900px;padding:40px 32px}
 /* Hero */
 .hero{margin-bottom:36px}
 .hero-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:10px}
 .hero-title{font-size:28px;font-weight:600;line-height:1.2;margin-bottom:8px;letter-spacing:-.02em}
 .hero-sub{font-size:14px;color:var(--muted);line-height:1.6}
-
 /* Section */
 .section{margin-bottom:32px}
 .section-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:10px;padding-left:2px}
-
 /* Cards */
 .cards{display:flex;flex-direction:column;gap:8px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:16px;padding:16px 20px;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card{text-decoration:none;color:var(--text);display:flex;align-items:center;gap:16px;padding:16px 20px;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .card:hover{border-color:var(--border2);box-shadow:0 3px 12px rgba(0,0,0,.08);transform:translateY(-1px)}
 .card.accent:hover{border-color:var(--accent-bd)}
 .card.green:hover{border-color:var(--green-bd)}
@@ -48,7 +33,6 @@ main{max-width:900px;margin:0 auto;padding:40px 32px}
 .card.purple:hover{border-color:var(--purple-bd)}
 .card.amber:hover{border-color:var(--amber-bd)}
 .card.disabled{opacity:.5;cursor:not-allowed;pointer-events:none;border-style:dashed}
-
 .ci{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ci.accent{background:var(--accent-bg)}
 .ci.green{background:var(--green-bg)}
@@ -56,35 +40,31 @@ main{max-width:900px;margin:0 auto;padding:40px 32px}
 .ci.purple{background:var(--purple-bg)}
 .ci.amber{background:var(--amber-bg)}
 .ci.dim{background:var(--surface2)}
-
 .cb{flex:1;min-width:0}
 .ct{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:3px}
-.ct.accent{color:var(--accent)}.ct.green{color:var(--green)}.ct.blue{color:var(--blue)}.ct.purple{color:var(--purple)}.ct.amber{color:var(--amber)}.ct.dim{color:var(--dim)}
+.ct.accent{color:var(--accent)}
+.ct.green{color:var(--green)}
+.ct.blue{color:var(--blue)}
+.ct.purple{color:var(--purple)}
+.ct.amber{color:var(--amber)}
+.ct.dim{color:var(--dim)}
 .cn{font-size:14px;font-weight:600;margin-bottom:2px}
 .cd{font-size:12px;color:var(--muted);line-height:1.5}
-
 .ca{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .card:hover .ca{background:var(--text);border-color:var(--text)}
 .card:hover .ca svg{stroke:#fff}
-
 .soon{font-family:'DM Mono',monospace;font-size:9px;background:var(--surface2);border:1px solid var(--border);color:var(--dim);padding:2px 7px;border-radius:99px;flex-shrink:0}
-
 /* Nav */
-.nav-bar{display:flex;align-items:center;gap:2px}
-.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
-.nav-home:hover{color:var(--text);background:var(--surface2)}
+.nav-home{border-radius:6px;transition:color .15s,background .15s}
+.nav-home:hover{background:var(--surface2)}
 .nav-home.active{color:var(--accent);background:var(--accent-bg)}
-.nav-drop{position:relative;display:inline-flex;align-items:center}
-.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
-.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-drop{display:inline-flex;align-items:center}
+.nav-drop-btn{transition:color .15s,background .15s}
 .nav-drop.open .nav-drop-btn{color:var(--text)}
 .nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
 .nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
-.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
-.nav-drop.open .nav-drop-menu{display:block}
-.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
-.nav-link:hover{background:var(--surface2)}
-.nav-link.active{background:var(--accent-bg);color:var(--accent)}
+.nav-drop-menu{right:0}
+.nav-link{font-weight:500;transition:background .15s}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 </style>
 </head>

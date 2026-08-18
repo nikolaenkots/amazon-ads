@@ -6,42 +6,24 @@
 <title>Копировать кампанию · Amazon Ads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/common.css?v=1">
 <style>
-:root{
-  --bg:#f4f4f6;--surface:#fff;--surface2:#f0f0f3;--border:#e2e2e8;--border2:#ccccd4;
-  --text:#18181c;--muted:#6b6b7a;--dim:#aaaab8;
-  --accent:#c84b14;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);
-  --green:#1a8f5c;--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);
-  --blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);
-  --amber:#b07800;--amber-bg:rgba(176,120,0,.08);
-  --red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
-
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--amber:#b07800;--amber-bg:rgba(176,120,0,.08);--red:#d94040;--red-bd:rgba(217,64,64,.22);--red-bg:rgba(217,64,64,.07)}
+body{min-height:100vh}
 /* ── Header ── */
-header{display:flex;align-items:center;gap:10px;padding:0 28px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.logo{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
-.logo-dot{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+header{gap:10px;padding:0 28px;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .hdr-title{font-size:14px;font-weight:600}
 .hdr-sep{flex:1}
-.nav-bar{display:flex;align-items:center;gap:2px}
-.nav-home{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
-.nav-home:hover{color:var(--text);background:var(--surface2)}
-.nav-drop{position:relative;display:inline-flex;align-items:center}
-.nav-drop-btn{height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;transition:color .15s,background .15s}
-.nav-drop-btn:hover,.nav-drop.open .nav-drop-btn{color:var(--text);background:var(--surface2)}
+.nav-home{border-radius:6px;transition:color .15s,background .15s}
+.nav-home:hover{background:var(--surface2)}
+.nav-drop{display:inline-flex;align-items:center}
+.nav-drop-btn{transition:color .15s,background .15s}
 .nav-drop-btn svg{transition:transform .2s}
 .nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
-.nav-drop-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:220px;padding:6px;z-index:500}
-.nav-drop.open .nav-drop-menu{display:block}
-.nav-link{display:block;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text);text-decoration:none;transition:background .15s}
-.nav-link:hover{background:var(--surface2)}
-.nav-link.active{background:var(--accent-bg);color:var(--accent)}
-
+.nav-drop-menu{right:0}
+.nav-link{font-weight:500;transition:background .15s}
 /* ── Layout ── */
-main{padding:24px 28px;max-width:1100px;margin:0 auto}
-
+main{padding:24px 28px;max-width:1100px}
 /* ── Stepper ── */
 .stepper{display:flex;align-items:center;gap:0;margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px}
 .step{display:flex;align-items:center;gap:10px;flex:1;position:relative}
@@ -52,21 +34,18 @@ main{padding:24px 28px;max-width:1100px;margin:0 auto}
 .step.active .step-lbl{color:var(--text);font-weight:600}
 .step.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
 .step.done .step-lbl{color:var(--muted)}
-
 /* ── Card ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card{border-radius:12px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .card-title{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .card-title svg{opacity:.5}
-
 /* ── Form controls ── */
-.row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.row{gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .fld{display:flex;flex-direction:column;gap:5px;min-width:120px}
 .fld label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 select,input[type=text],input[type=number]{height:36px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);outline:none;transition:border .15s}
 select:focus,input:focus{border-color:var(--accent)}
 input[type=number]{width:100px}
 .fld.wide{flex:1;min-width:200px}
-
 /* ── Campaign list ── */
 .camp-list{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow-y:auto;margin-top:6px}
 .camp-row{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .12s,border .12s;user-select:none}
@@ -74,14 +53,13 @@ input[type=number]{width:100px}
 .camp-row.selected{background:var(--accent-bg);border-color:var(--accent-bd)}
 .camp-name{font-size:13px;font-weight:500;flex:1}
 .camp-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap}
-.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.04em}
+.badge{align-items:center;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.04em}
 .badge.auto{background:var(--blue-bg);color:var(--blue)}
 .badge.manual{background:var(--green-bg);color:var(--green)}
 .badge.paused{background:var(--amber-bg);color:var(--amber)}
 .badge.enabled{background:var(--green-bg);color:var(--green)}
 .search-box{width:100%;height:34px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:8px}
 .search-box:focus{border-color:var(--accent)}
-
 /* ── ASIN map table ── */
 .asin-table{width:100%;border-collapse:collapse;font-size:13px}
 .asin-table th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border)}
@@ -95,7 +73,6 @@ input[type=number]{width:100px}
 .asin-inp.miss{border-color:var(--amber)}
 .arrow-cell{color:var(--dim);font-size:18px;padding:0 6px}
 .tag-grp{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--muted)}
-
 /* ── Preview tree ── */
 .tree{display:flex;flex-direction:column;gap:6px}
 .tree-camp{border:1px solid var(--border);border-radius:10px;overflow:hidden}
@@ -111,7 +88,6 @@ input[type=number]{width:100px}
 .tree-kw .mt{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)}
 .tree-asin{font-size:11px;font-family:'DM Mono',monospace;background:var(--blue-bg);color:var(--blue);padding:2px 6px;border-radius:4px;border:1px solid var(--blue-bd)}
 .tree-more{font-size:11px;color:var(--muted)}
-
 /* ── Bid/budget row ── */
 .adj-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .adj-card{border:1px solid var(--border);border-radius:10px;padding:14px 16px}
@@ -121,9 +97,8 @@ input[type=number]{width:100px}
 .num-row{display:flex;align-items:center;gap:6px;font-size:12px}
 .num-row input{width:90px}
 .unit{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
-
 /* ── Buttons ── */
-.btn{height:36px;padding:0 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;gap:7px}
+.btn{height:36px;padding:0 18px;border-radius:8px;font-weight:600;transition:background .15s,opacity .15s;display:inline-flex;align-items:center;gap:7px}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:#b33e0e}
 .btn-primary:disabled{opacity:.45;pointer-events:none}
@@ -137,7 +112,6 @@ input[type=number]{width:100px}
 .foot-back:hover{background:var(--surface2)}
 .err-inline{font-size:12px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;padding:8px 12px;margin-top:10px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 0}
 .success-box{background:var(--green-bg);border:1px solid var(--green-bd);border-radius:10px;padding:20px 24px;text-align:center}
 .success-box h3{font-size:16px;font-weight:600;color:var(--green);margin-bottom:6px}
