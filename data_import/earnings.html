@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Импорт продаж · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css?v=1">
+<style>
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--red:#d94040;--red-bg:rgba(217,64,64,.07);--red-bd:rgba(217,64,64,.22);--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.22);--accent-border:var(--accent-bd);--green-border:var(--green-bd);--red-border:var(--red-bd);--skip:#1a6fd4;--skip-bg:rgba(26,111,212,.07);--skip-border:rgba(26,111,212,.2)}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body{font-family:'DM Sans', sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{justify-content:space-between;padding:18px 40px}
+.logo{font-size:14px;font-weight:500}
+.logo-dot{width:22px;height:22px;background:#c8440a;border-radius:5px}
+.header-tag{color:var(--green);background:var(--green-bg);border:1px solid var(--green-border)}
+main{flex:1;display:grid;grid-template-columns:1fr 380px;max-width:1100px;width:100%;padding:40px;gap:28px}
+.panel-title{font-family:'DM Sans',sans-serif}
+.drop-title{font-family:'DM Sans',sans-serif}
+input[type=file] { display: none; }
+.step-circle.active { border-color: var(--accent); background: var(--accent); color: white; }
+@keyframes pulse { from { opacity: .5; } to { opacity: 1; } }
+.step-label.active { color: var(--text); font-weight: 500; }
+.prog-wrap { margin-top: 24px; display: none; }
+.btn-import:hover:not(:disabled) { filter: brightness(1.1); }
+.stat-val{font-family:'DM Sans',sans-serif}
+.stat-val.green { color: var(--green); }
+.stat-val.red   { color: var(--red); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.blue  { color: var(--skip); }
+@keyframes blink { from { opacity: .3; } to { opacity: 1; } }
+.log-body{padding:10px 16px;font-family:'DM Mono', monospace;font-size:11.5px;color:var(--muted)}
+.log-line { display: flex; gap: 8px; padding: 1px 0; }
+.log-skip .log-msg { color: var(--skip); }
+/* Nav */
+.nav-home{border-radius:6px;transition:color .15s,background .15s}
+.nav-home:hover{background:var(--surface2)}
+.nav-home.active{color:var(--accent);background:var(--accent-bg)}
+.nav-drop{display:inline-flex;align-items:center}
+.nav-drop-btn{transition:color .15s,background .15s}
+.nav-drop.open .nav-drop-btn{color:var(--text)}
+.nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{right:0}
+.nav-link{font-weight:500;transition:background .15s}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!--HEADER-->
+
+<main>
+  <div>
+    <div class="panel-title">Загрузка продаж</div>
+    <div class="panel-sub">Отчёт о доходах MBA · CSV файл · Дедупликация по хэшу строки</div>
+
+    <div class="drop-zone" id="dropZone"
+         onclick="document.getElementById('fi').click()"
+         ondragover="onOver(event)"
+         ondragleave="onLeave()"
+         ondrop="onDrop(event)">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="drop-title">Перетащи CSV сюда</div>
+      <div class="drop-hint">или нажми чтобы выбрать · только .csv</div>
+    </div>
+    <input type="file" id="fi" accept=".csv" onchange="onFile(this)">
+
+    <div class="file-info" id="fileInfo">
+      <div class="file-ico">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div class="file-name" id="fileName">—</div>
+        <div class="file-size" id="fileSize">—</div>
+      </div>
+      <button class="file-remove" onclick="removeFile()">Удалить</button>
+    </div>
+
+    <div class="steps-wrap">
+      <div class="step-row">
+        <div class="step-circle" id="s1">1</div>
+        <div class="step-label"  id="sl1">Парсинг CSV файла</div>
+      </div>
+      <div class="step-row">
+        <div class="step-circle" id="s2">2</div>
+        <div class="step-label"  id="sl2">Проверка дублей по хэшу</div>
+      </div>
+      <div class="step-row">
+        <div class="step-circle" id="s3">3</div>
+        <div class="step-label"  id="sl3">Загрузка новых строк в BigQuery</div>
+      </div>
+    </div>
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-label">
+        <span id="progText">Обработка...</span>
+        <span id="progPct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <button class="btn-import" id="btnImport" disabled onclick="startImport()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg>
+      Импортировать в BigQuery
+    </button>
+  </div>
+
+  <div class="right-panel">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Обработано</div>
+        <div class="stat-val" id="stTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Загружено</div>
+        <div class="stat-val green" id="stInserted">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Пропущено</div>
+        <div class="stat-val blue" id="stSkipped">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ошибок</div>
+        <div class="stat-val red" id="stErrors">—</div>
+      </div>
+      <div class="stat-card" style="grid-column: span 2">
+        <div class="stat-label">В таблице итого</div>
+        <div class="stat-val amber" id="stTable">—</div>
+      </div>
+    </div>
+
+    <div class="done-banner" id="doneBanner">
+      <div class="done-icon">✓</div>
+      <div class="done-text" id="doneText">Импорт завершён</div>
+    </div>
+
+    <div class="error-card" id="errorCard">
+      <div class="error-header">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Ошибки импорта
+      </div>
+      <div class="error-body" id="errorBody"></div>
+    </div>
+
+    <div class="log-card">
+      <div class="log-header">
+        <div class="log-title">
+          <div class="log-dot" id="logDot"></div>
+          Лог
+        </div>
+        <button class="log-clear" onclick="clearLog()">очистить</button>
+      </div>
+      <div class="log-body" id="logBody">
+        <div class="log-empty">Загрузи файл и нажми Импортировать</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+let file      = null;
+let pollTimer = null;
+
+function onOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('over'); }
+function onLeave()  { document.getElementById('dropZone').classList.remove('over'); }
+function onDrop(e)  {
+  e.preventDefault(); onLeave();
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.csv')) setFile(f);
+}
+function onFile(input) { if (input.files[0]) setFile(input.files[0]); }
+
+function setFile(f) {
+  file = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = (f.size/1024/1024).toFixed(1) + ' MB · ' + f.name;
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('btnImport').disabled = false;
+}
+function removeFile() {
+  file = null;
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('btnImport').disabled = true;
+  document.getElementById('fi').value = '';
+}
+
+function addLog(msg, type = '') {
+  const body  = document.getElementById('logBody');
+  const empty = body.querySelector('.log-empty');
+  if (empty) empty.remove();
+  const now  = new Date().toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line log-' + type;
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+function clearLog() {
+  document.getElementById('logBody').innerHTML = '<div class="log-empty">Лог очищен</div>';
+}
+
+function setStep(n, state) {
+  const circle = document.getElementById('s' + n);
+  const label  = document.getElementById('sl' + n);
+  circle.className = 'step-circle ' + state;
+  label.className  = 'step-label '  + state;
+  circle.innerHTML = state === 'done' ? '✓' : String(n);
+}
+function resetSteps() { [1,2,3].forEach(n => setStep(n, '')); }
+
+function setProgress(pct, text) {
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent  = pct + '%';
+  document.getElementById('progText').textContent = text;
+}
+
+function handleMsg(msg) {
+  if (msg.event === 'step') {
+    const n = msg.data.step;
+    [1,2,3].forEach(i => {
+      if      (i < n)  setStep(i, 'done');
+      else if (i === n) setStep(i, 'spinning');
+      else              setStep(i, '');
+    });
+    addLog(msg.data.msg, 'info');
+  }
+  else if (msg.event === 'progress') {
+    const d = msg.data;
+    setProgress(d.pct, `Загружено ${d.inserted.toLocaleString()} из ${d.total.toLocaleString()}...`);
+    document.getElementById('stTotal').textContent   = d.total.toLocaleString();
+    document.getElementById('stInserted').textContent = d.inserted.toLocaleString();
+    document.getElementById('stSkipped').textContent  = d.skipped.toLocaleString();
+    document.getElementById('stErrors').textContent   = d.errors;
+  }
+  else if (msg.event === 'done') {
+    stopPolling();
+    const d = msg.data;
+    setProgress(100, 'Готово');
+    [1,2,3].forEach(n => setStep(n, 'done'));
+    document.getElementById('logDot').classList.remove('live');
+    document.getElementById('stTotal').textContent    = d.total.toLocaleString();
+    document.getElementById('stInserted').textContent = d.inserted.toLocaleString();
+    document.getElementById('stSkipped').textContent  = d.skipped.toLocaleString();
+    document.getElementById('stErrors').textContent   = d.errors;
+    document.getElementById('stTable').textContent    = d.total_in_table.toLocaleString();
+    addLog(`✓ Готово — ${d.inserted.toLocaleString()} строк загружено, ${d.skipped.toLocaleString()} пропущено (дубли)`, 'ok');
+
+    const banner = document.getElementById('doneBanner');
+    banner.style.display = 'flex';
+    document.getElementById('doneText').innerHTML =
+      `<strong>Импорт завершён</strong><br>${d.inserted.toLocaleString()} новых · ${d.skipped.toLocaleString()} дублей · ${d.total_in_table.toLocaleString()} в таблице`;
+
+    if (d.errors_log && d.errors_log.length > 0) {
+      document.getElementById('errorCard').style.display = 'block';
+      document.getElementById('errorBody').innerHTML = d.errors_log.map(e => `<div>${e}</div>`).join('');
+      d.errors_log.forEach(e => addLog(e, 'err'));
+    }
+    document.getElementById('btnImport').disabled = false;
+  }
+  else if (msg.event === 'error') {
+    stopPolling();
+    addLog('Ошибка: ' + msg.data.msg, 'err');
+    document.getElementById('logDot').classList.remove('live');
+    document.getElementById('btnImport').disabled = false;
+  }
+}
+
+function startPolling(jobId) {
+  pollTimer = setInterval(async () => {
+    try {
+      const r    = await fetch('/earnings_progress/' + jobId);
+      const msgs = await r.json();
+      msgs.forEach(handleMsg);
+    } catch (e) {
+      addLog('Ошибка опроса: ' + e.message, 'err');
+    }
+  }, 1500);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+async function startImport() {
+  if (!file) return;
+  stopPolling();
+  resetSteps();
+  document.getElementById('btnImport').disabled      = true;
+  document.getElementById('progWrap').style.display  = 'block';
+  document.getElementById('doneBanner').style.display = 'none';
+  document.getElementById('errorCard').style.display  = 'none';
+  document.getElementById('logDot').classList.add('live');
+  setProgress(0, 'Загрузка файла...');
+  ['stTotal','stInserted','stSkipped','stErrors','stTable'].forEach(id => {
+    document.getElementById(id).textContent = '...';
+  });
+
+  addLog('Отправка файла на сервер...', 'info');
+
+  const form = new FormData();
+  form.append('file', file);
+
+  let jobId;
+  try {
+    const r = await fetch('/upload_earnings', {method: 'POST', body: form});
+    const d = await r.json();
+    if (d.error) { addLog('Ошибка: ' + d.error, 'err'); document.getElementById('btnImport').disabled = false; return; }
+    jobId = d.job_id;
+    addLog('Файл принят · начинаем импорт...', 'ok');
+  } catch (e) {
+    addLog('Ошибка соединения: ' + e.message, 'err');
+    document.getElementById('btnImport').disabled = false;
+    return;
+  }
+
+  startPolling(jobId);
+}
+</script>
+<script>
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.nav-drop').forEach(function(d){
+    if(!d.contains(e.target))d.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

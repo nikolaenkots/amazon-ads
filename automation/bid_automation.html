@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Управление ставками</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css?v=1">
+<style>
+:root{--border2:#ccccd4;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--purple:#6c3fc9;--purple-bg:rgba(108,63,201,.07);--purple-bd:rgba(108,63,201,.2);--amber:#b07800;--amber-bg:rgba(176,120,0,.07);--amber-bd:rgba(176,120,0,.2);--red:#c0392b;--red-bg:rgba(192,57,43,.07)}
+body{min-height:100vh;font-size:13px}
+header{justify-content:space-between;padding:0 24px;height:48px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{gap:8px}
+.logo-dot{width:24px;height:24px;border-radius:6px}
+.nav-bar{gap:4px}
+.nav-drop-btn{transition:color .15s,background .15s}
+.nav-drop-menu{top:calc(100% + 4px);left:0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300}
+.nav-link{padding:7px 12px;border-radius:5px;color:var(--muted);transition:all .12s}
+.nav-link:hover{color:var(--text)}
+.nav-link.active{font-weight:500}
+.nav-home{padding:0 8px}
+/* Layout — card-based, matching the campaigns analytics page */
+.page{max-width:1640px;margin:0 auto;padding:18px 32px}
+.toolbar{display:flex;align-items:center;gap:8px;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+/* Filter panel (search-terms-optimizer style) */
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{gap:4px}
+.atb{border-radius:6px;transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pdw{position:relative}
+.pdt{color:var(--text);transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none}
+.pdd{overflow-y:auto}
+.pdd.on{display:block}
+.pds{background:var(--surface2);color:var(--text);outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mode-row{gap:6px;padding:8px 0 0;margin-top:8px;flex-wrap:wrap}
+.mode-lbl{white-space:nowrap}
+.mbt{border-radius:5px;font-size:11px;transition:all .12s}
+.mbt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.msep{width:1px;height:18px;background:var(--border);margin:0 2px}
+.content{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.table-wrap{overflow:auto;max-height:calc(100vh - 320px)}
+/* Toolbar controls */
+select,input[type=text],input[type=number]{height:32px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .12s}
+select:focus,input:focus{border-color:var(--accent)}
+.btn{height:32px;padding:0 14px;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#a83d10}
+.btn-s:hover{background:var(--surface2)}
+.btn-g:hover{filter:brightness(.9)}
+.btn-g:disabled{opacity:.5;cursor:not-allowed}
+.sep{height:24px;margin:0 4px}
+.badge{align-items:center;padding:2px 8px;font-weight:500}
+.badge-new{background:var(--blue-bg);color:var(--blue)}
+.badge-med{background:var(--amber-bg);color:var(--amber)}
+.badge-mat{background:var(--green-bg);color:var(--green)}
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{position:sticky;top:0;background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 11px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none;z-index:10}
+thead th:hover{color:var(--text)}
+thead th.sorted{color:var(--accent)}
+thead th .sort-arrow{font-size:9px;margin-left:2px;opacity:.6}
+/* перетаскиваемая граница колонки */
+.col-resizer{right:-4px;height:100%}
+.col-resizer::after{content:'';position:absolute;top:20%;bottom:20%;right:3px;width:1px;background:transparent}
+.col-resizer:hover::after,.col-resizer.active::after{background:var(--accent)}
+body.col-resizing{cursor:col-resize;user-select:none}
+tbody tr.main-row{border-bottom:1px solid var(--border)}
+tbody tr.main-row:hover td{background:var(--surface2)}
+tbody tr.main-row.selected td{background:var(--accent-bg)}
+tbody tr.main-row.blocked td{opacity:.5}
+td{padding:6px 8px;vertical-align:middle}
+td.mono{font-family:'DM Mono',monospace;font-size:11px}
+.expand-row td{padding:0;background:var(--bg);border-bottom:2px solid var(--border2)}
+.expand-inner{padding:10px 16px;display:flex;flex-direction:column;gap:10px}
+/* Checkbox */
+input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent)}
+/* State dot */
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-on{background:var(--green)}
+.dot-off{background:var(--dim)}
+/* Bid button */
+.bid-wrap{display:flex;align-items:center;gap:4px}
+.bid-btn{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;color:var(--text);transition:border-color .12s;white-space:nowrap}
+.sttab-btn{height:24px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);text-transform:none;letter-spacing:0;transition:all .12s}
+.sttab-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cur-bid{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.newbid-btn{font-weight:600}
+.pause-chip{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#7a1f1f;background:rgba(122,31,31,.08);border:1px solid rgba(122,31,31,.25);border-radius:5px;padding:2px 7px;white-space:nowrap}
+.rec-bid{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
+.rec-pct{font-size:9px;opacity:.8}
+.bid-btn:hover{border-color:var(--accent)}
+.bid-edit{gap:3px}
+.bid-inp{width:70px;height:24px;font-size:11px}
+.bid-ok{height:24px;padding:0 8px;font-size:11px;border-radius:5px;border:none;background:var(--green);cursor:pointer;font-family:'DM Sans',sans-serif}
+.bid-cx{height:24px;width:24px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;line-height:1;font-family:sans-serif}
+/* Rule indicator */
+.rule-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;border:2px solid transparent}
+.rule-raise{background:var(--green);border-color:var(--green-bd)}
+.rule-lower{background:var(--red);border-color:rgba(192,57,43,.3)}
+.rule-hold{background:var(--dim);border-color:var(--border2)}
+.rule-new{background:var(--blue);border-color:var(--blue-bd)}
+/* Recommendation cell */
+.rec-inp{width:100%;height:26px;padding:0 6px;font-size:12px;border:1px solid var(--border);border-radius:5px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text)}
+.rec-inp:focus{border-color:var(--accent);outline:none}
+.rec-inp::placeholder{color:var(--dim)}
+/* Attention badge */
+.att-badge{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:5px;padding:1px 6px;font-size:10px;font-weight:600;white-space:nowrap}
+/* Expand panel */
+.exp-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.exp-head{padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border)}
+.st-table{width:100%;border-collapse:collapse;font-size:11px}
+.st-table th{background:var(--surface2);padding:5px 8px;font-weight:600;color:var(--muted);text-align:left;border-bottom:1px solid var(--border)}
+.st-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace}
+.st-table td:first-child{font-family:'DM Sans',sans-serif;font-family:inherit}
+.st-table tr:last-child td{border-bottom:none}
+.neg-btn{height:22px;padding:0 7px;font-size:10px;border-radius:4px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .12s;white-space:nowrap}
+.neg-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* History */
+.hist-row{display:flex;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px}
+.hist-row:last-child{border-bottom:none}
+.hist-date{color:var(--muted);white-space:nowrap}
+.hist-arrow{color:var(--dim)}
+.hist-old{color:var(--muted);font-family:'DM Mono',monospace}
+.hist-new{color:var(--text);font-family:'DM Mono',monospace;font-weight:500}
+/* Rules panel */
+.rules-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin:0 0 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.rules-head{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;font-weight:500;font-size:13px}
+.rules-head:hover{background:var(--surface2)}
+.rules-body{padding:14px;border-top:1px solid var(--border);display:none}
+.rules-body.open{display:block}
+.rules-grid{display:block;overflow-x:auto}
+.rule-card{border:1px solid var(--border);border-radius:7px;padding:12px;background:var(--bg)}
+.rule-card h4{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.rule-field{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.rule-field label{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.rule-field input{height:28px;padding:0 8px;border:1px solid var(--border);border-radius:5px;font-family:'DM Mono',monospace;font-size:12px;width:100%;background:var(--surface)}
+.rule-field input:focus{border-color:var(--accent);outline:none}
+/* Status bar */
+.statusbar{padding:6px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.statusbar b{color:var(--text)}
+/* Loading / error */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.err-msg{color:var(--accent);font-size:12px}
+/* Attention filter active */
+.att-active .att-filter-btn{background:var(--amber-bg)!important;border-color:var(--amber-bd)!important;color:var(--amber)!important}
+/* Modal */
+.modal-bg.op{display:flex}
+.modal{border:1px solid var(--border);padding:24px;width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-row{display:flex;flex-direction:column;gap:5px}
+.modal-acts{margin-top:16px}
+.rad-row{display:flex;gap:16px;font-size:13px}
+.rad-row label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.terms-preview{display:flex;flex-wrap:wrap;gap:5px;max-height:160px;overflow-y:auto;padding:8px;background:var(--surface2);border-radius:6px}
+.term-tag{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:12px;font-family:'DM Mono',monospace}
+.term-tag.asin{border-color:var(--blue-bd);color:var(--blue)}
+.toast{bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9000;box-shadow:0 4px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!--HEADER-->
+
+<div class="page" id="mainPage">
+
+  <!-- Filter panel -->
+  <div class="fp">
+    <div class="fr">
+      <div class="fg">
+        <div class="fl">Аккаунт</div>
+        <div class="at">
+          <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+          <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Маркетплейс</div>
+        <select id="selMkt" style="width:100px" onchange="loadPortfolios()">
+          <option>US</option><option>UK</option><option>DE</option>
+          <option>FR</option><option>IT</option><option>ES</option>
+          <option>CA</option><option>JP</option><option>AU</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Портфолио</div>
+        <div class="pdw" id="pdw">
+          <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
+          <svg class="pda" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="pdd" id="pdd">
+            <input class="pds" id="pds" placeholder="Поиск…" oninput="pfSearch(this.value)">
+            <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="fl">Тип кампании</div>
+        <select id="selTgtType" style="width:110px">
+          <option value="">Все</option>
+          <option value="MANUAL">MANUAL</option>
+          <option value="AUTO">AUTO</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус кампании</div>
+        <select id="selCampState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус группы</div>
+        <select id="selGroupState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Статус таргета</div>
+        <select id="selState" style="width:120px">
+          <option value="">Все</option>
+          <option value="ENABLED" selected>Активные</option>
+          <option value="PAUSED">На паузе</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">Период анализа</div>
+        <select id="periodMode" style="width:170px" onchange="onPeriodMode()">
+          <option value="days">Последние N дней</option>
+          <option value="range">Выбранный период</option>
+        </select>
+      </div>
+      <div class="fg" id="daysWrap">
+        <div class="fl">Дней</div>
+        <input type="number" id="selDays" value="30" min="1" max="365" style="width:80px">
+      </div>
+      <div class="fg" id="rangeWrap" style="display:none">
+        <div class="fl">Период (с — по)</div>
+        <div style="display:flex;gap:6px">
+          <input type="date" id="dateFrom" style="width:140px">
+          <input type="date" id="dateTo" style="width:140px">
+        </div>
+      </div>
+      <div class="fg" style="justify-content:flex-end">
+        <button class="btn btn-p" onclick="loadData()">Загрузить</button>
+      </div>
+    </div>
+    <div class="mode-row">
+      <label class="mode-lbl" style="display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text)">
+        <input type="checkbox" id="chkFromLastChange" checked> Учитывать последние изменения
+      </label>
+      <span style="font-size:11px;color:var(--dim)">аналитика считается с даты последнего изменения ставки каждого ключа, но не раньше начала выбранного периода (берётся то, что короче)</span>
+      <div class="msep"></div>
+      <span class="mode-lbl">Рекомендация</span>
+      <select id="selRecFilter" onchange="setRecFilter(this.value)" style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px">
+        <option value="">Все</option>
+        <option value="lower">Снизить</option>
+        <option value="raise">Повысить</option>
+        <option value="boost">Разгон</option>
+        <option value="pause">Выключить</option>
+        <option value="hold">Удерживать</option>
+        <option value="new">Новые (мало данных)</option>
+        <option value="changed">С изменением ставки</option>
+      </select>
+      <div class="msep"></div>
+      <input type="text" id="inpFilter" placeholder="Поиск по тексту..." style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 8px;font-size:12px;width:180px" oninput="debounceLoad()">
+      <span id="loadStatus" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+    </div>
+  </div>
+
+  <!-- Rules panel -->
+  <div class="rules-panel">
+    <div class="rules-head" onclick="toggleRules()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14M8.46 8.46a5 5 0 0 0 0 7.07"/></svg>
+      Правила изменения ставок
+      <span style="margin-left:auto;font-size:11px;color:var(--dim)" id="rulesToggleLabel">развернуть</span>
+    </div>
+    <div class="rules-body" id="rulesBody">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Правила хранятся в базе и применяются на сервере. Два независимых набора: <b>Оптимизация</b> — по кликам ключа и ACOS (при достаточной статистике), <b>Разгон</b> — по показам (только для таргетов с малым числом показов). Наборы не перекрывают друг друга: оптимизация имеет приоритет, разгон срабатывает когда данных мало. Приоритет области: портфолио+таргетинг → портфолио → глобальное+таргетинг → глобальное.</div>
+      <div class="rules-grid" id="rulesGrid">
+        <!-- filled by JS -->
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-p" onclick="saveRules()">Сохранить правила</button>
+        <button class="btn btn-s" onclick="resetRules()">Сбросить</button>
+        <span id="rulesSaveStatus" style="font-size:12px;color:var(--green)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="content">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px;font-weight:600">Ключевые слова и таргеты</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)" id="thCount"></span>
+    </div>
+    <div class="table-wrap" id="tableWrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th style="width:32px">
+              <input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)" title="Выбрать все">
+            </th>
+            <th style="width:12px"></th><!-- rule dot -->
+            <th onclick="sortBy('keyword_text')">Ключ / Таргет <span class="sort-arrow" id="sa_keyword_text"></span></th>
+            <th onclick="sortBy('match_type')" style="width:80px">Тип <span class="sort-arrow" id="sa_match_type"></span></th>
+            <th onclick="sortBy('bid')" style="width:150px">Ставка → реком. <span class="sort-arrow" id="sa_bid"></span></th>
+            <th onclick="sortBy('impressions')" style="width:65px">Показы <span class="sort-arrow" id="sa_impressions"></span></th>
+            <th onclick="sortBy('clicks')" style="width:60px">Клики <span class="sort-arrow" id="sa_clicks"></span></th>
+            <th style="width:70px" title="Всего кликов на ASIN по всем кампаниям — для анализа, в правилах не участвует">ASIN кл.</th>
+            <th onclick="sortBy('cost')" style="width:70px">Расходы <span class="sort-arrow" id="sa_cost"></span></th>
+            <th onclick="sortBy('sales')" style="width:70px">Продажи <span class="sort-arrow" id="sa_sales"></span></th>
+            <th onclick="sortBy('acos')" style="width:65px">ACoS <span class="sort-arrow" id="sa_acos"></span></th>
+            <th style="width:60px" title="Средняя цена клика">CPC</th>
+            <th onclick="sortBy('last_change_date')" style="width:95px">Посл. изм. <span class="sort-arrow" id="sa_last_change_date"></span></th>
+            <th style="width:65px">Пред. ставка</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="tableMsg" style="padding:40px;text-align:center;color:var(--muted);font-size:13px"></div>
+    </div>
+
+    <!-- Action bar (appears when rows selected) -->
+    <div id="actionBar" style="display:none;padding:10px 16px;background:var(--surface);border-top:2px solid var(--accent-bd);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span id="selCount" style="font-size:13px;font-weight:500">0 выбрано</span>
+      <div class="sep"></div>
+      <button class="btn btn-s" onclick="applyRuleSelected()">Применить правила к выбранным</button>
+      <button class="btn btn-p" onclick="queueSelected()">Поставить в очередь</button>
+      <button class="btn btn-s" onclick="clearSelection()">Снять выбор</button>
+    </div>
+
+    <div class="statusbar" id="statusbar">
+      <span>Строк: <b id="sbTotal">—</b></span>
+      <span>Кликов: <b id="sbClicks">—</b></span>
+      <span>Расходов: <b id="sbCost">—</b></span>
+      <span>Продаж: <b id="sbSales">—</b></span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="color:var(--muted)">На странице:</span>
+        <select id="selPerPage" onchange="changePerPage()" style="height:26px;border:1px solid var(--border);border-radius:5px;padding:0 6px;font-size:12px">
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+          <option value="1000">1000</option>
+        </select>
+        <button class="btn btn-s" id="pgPrev" onclick="prevPage()" style="height:26px;padding:0 10px">‹</button>
+        <span id="sbPage" style="min-width:120px;text-align:center"></span>
+        <button class="btn btn-s" id="pgNext" onclick="nextPage()" style="height:26px;padding:0 10px">›</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add negatives -->
+<div class="modal-bg" id="modalNeg">
+  <div class="modal">
+    <div class="modal-title">Добавить минус слова</div>
+    <div class="modal-row" id="negMtRow">
+      <div class="modal-label">Форма (для текстовых запросов)</div>
+      <div class="rad-row">
+        <label><input type="radio" name="negMt" value="EXACT" checked> EXACT</label>
+        <label><input type="radio" name="negMt" value="PHRASE"> PHRASE</label>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Запросы (<span id="negTermCount">0</span>) — по одному в строке, можно редактировать</div>
+      <div id="negTypeNote" style="display:none;font-size:11px;color:var(--amber);margin-bottom:6px"></div>
+      <textarea id="negTermsArea" oninput="negCountUpdate()" style="width:100%;min-height:120px;max-height:300px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:8px;outline:none;resize:vertical"></textarea>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Группа</div>
+      <div style="font-size:12px;color:var(--muted)" id="negGroupInfo"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-s" onclick="closeModal('modalNeg')">Отмена</button>
+      <button class="btn btn-p" onclick="submitNeg()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+var rows = [];
+var expandedRows = {};
+var selectedIds = new Set();
+var blockedIds = new Set();
+var recommendations = {};  // entity_id → string
+var bidOverrides = {};     // entity_id → manually edited new bid
+var recFilter = '';        // '' | raise | lower | hold | new
+var panelCtx = {};         // expand index → {agId, campId, account, mkt, negTexts, negAsins}
+var _negTerms = [];        // terms staged for the negatives modal
+var _negCtx = null;
+var attFilterOn = false;
+var sortCol = 'clicks';
+var sortDir = 'DESC';
+var debTimer = null;
+var page = 1;
+var perPage = 100;
+var totalRows = 0;
+
+// Rules now live in BigQuery (loaded via /rules). Each rule matches by scope
+// (global/portfolio), targeting_type (ANY/AUTO/MANUAL) and optionally ASIN-age.
+var rules = [];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function toggleNav(id) {
+  var d = document.getElementById(id);
+  document.querySelectorAll('.nav-drop').forEach(function(x){ if(x!==d) x.classList.remove('open'); });
+  d.classList.toggle('open');
+}
+
+function fmt2(v) { return v == null ? '—' : '$' + parseFloat(v).toFixed(2); }
+function fmtPct(v) { return v == null ? '—' : parseFloat(v).toFixed(1) + '%'; }
+function fmtN(v) { return v == null || v === 0 ? '—' : v.toLocaleString(); }
+function fmtDate(s) {
+  if (!s) return '—';
+  var d = new Date(s);
+  return d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Produce a single-quoted JS string literal safe to embed inside a double-quoted
+// HTML attribute (onclick="..."). JSON.stringify uses double quotes and breaks the attr.
+function q(s) { return "'" + String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;') + "'"; }
+
+// Age = product maturity, total ASIN clicks across all campaigns (from backend).
+function ageClicks(row) {
+  return row.group_total_clicks != null ? row.group_total_clicks : (row.clicks || 0);
+}
+
+// Action and new bid are now computed server-side (rules live in BigQuery).
+function getRuleAction(row) { return row.action || 'hold'; }
+
+function getRuleColor(action) {
+  if (action === 'raise') return '#1a8f5c';
+  if (action === 'lower') return '#c0392b';
+  if (action === 'pause') return '#7a1f1f';
+  if (action === 'boost') return '#6c3fc9';
+  if (action === 'new')   return '#1a6fd4';
+  return '#aaaab8';
+}
+
+function calcNewBid(row) {
+  return row.new_bid != null ? row.new_bid : (row.bid || 0);
+}
+
+// The new bid actually used: manual override if the user edited it, else the rule.
+function effectiveNewBid(row) {
+  var o = bidOverrides[row.entity_id];
+  if (o != null && !isNaN(o)) return o;
+  return calcNewBid(row);
+}
+
+// ── Account / portfolio / period ────────────────────────────────────────────
+var acct = 'MERCH';
+var allPortfolios = [];
+var selectedPortfolios = [];
+
+function setAcct(a) {
+  acct = a;
+  document.getElementById('tbM').classList.toggle('on', a === 'MERCH');
+  document.getElementById('tbK').classList.toggle('on', a === 'KDP');
+  loadPortfolios();
+  loadRules();
+}
+
+function pfToggle(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('pdd'), dt = document.getElementById('pdt');
+  var open = dd.classList.contains('on');
+  dd.classList.toggle('on', !open);
+  dt.classList.toggle('on', !open);
+  if (!open) document.getElementById('pds').focus();
+}
+function pfSearch(query) {
+  var lq = query.toLowerCase();
+  document.querySelectorAll('#pdlist .pdi').forEach(function(el) {
+    el.style.display = el.querySelector('span').textContent.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+function pfLabel() {
+  var lbl = document.getElementById('pdl');
+  if (selectedPortfolios.length === 0) lbl.textContent = 'Все';
+  else if (selectedPortfolios.length === 1) {
+    var p = allPortfolios.find(function(x){ return x.id === selectedPortfolios[0]; });
+    lbl.textContent = p ? p.name : selectedPortfolios[0];
+  } else lbl.textContent = selectedPortfolios.length + ' портфолио';
+}
+function renderPortfolios(list) {
+  var cont = document.getElementById('pdlist');
+  if (!list.length) { cont.innerHTML = '<div class="pd-empty">Нет портфолио</div>'; return; }
+  cont.innerHTML = list.map(function(p) {
+    var checked = selectedPortfolios.includes(p.id) ? 'checked' : '';
+    return '<label class="pdi"><input type="checkbox" value="' + esc(p.id) + '" ' + checked + ' onchange="pfChange(this)"><span>' + esc(p.name) + '</span></label>';
+  }).join('');
+}
+function pfChange(el) {
+  if (el.checked) { if (!selectedPortfolios.includes(el.value)) selectedPortfolios.push(el.value); }
+  else selectedPortfolios = selectedPortfolios.filter(function(x){ return x !== el.value; });
+  pfLabel();
+}
+function loadPortfolios() {
+  selectedPortfolios = [];
+  pfLabel();
+  var mkt = document.getElementById('selMkt').value;
+  document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Загрузка...</div>';
+  fetch('/automation/search-terms/portfolios?account_type=' + acct + '&marketplace=' + mkt)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ allPortfolios = d.portfolios || []; renderPortfolios(allPortfolios); if (rules.length) renderRulesPanel(); })
+    .catch(function(){ document.getElementById('pdlist').innerHTML = '<div class="pd-empty">Ошибка загрузки</div>'; });
+}
+document.addEventListener('click', function(){
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdt').classList.remove('on');
+});
+
+function onPeriodMode() {
+  var mode = document.getElementById('periodMode').value;
+  document.getElementById('daysWrap').style.display  = mode === 'days'  ? '' : 'none';
+  document.getElementById('rangeWrap').style.display = mode === 'range' ? '' : 'none';
+}
+
+// ── Data loading ───────────────────────────────────────────────────────────
+function prevPage() { if (page > 1) { page--; fetchRows(); } }
+function nextPage() { if (page < Math.ceil(totalRows / perPage)) { page++; fetchRows(); } }
+function changePerPage() {
+  perPage = parseInt(document.getElementById('selPerPage').value) || 100;
+  loadData();
+}
+
+function debounceLoad() {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(loadData, 400);
+}
+
+function loadData() {
+  page = 1;
+  fetchRows();
+}
+
+function fetchRows() {
+  var mkt        = document.getElementById('selMkt').value;
+  var tgtType    = document.getElementById('selTgtType').value;
+  var state      = document.getElementById('selState').value;
+  var campState  = document.getElementById('selCampState').value;
+  var groupState = document.getElementById('selGroupState').value;
+  var filter     = document.getElementById('inpFilter').value.trim();
+  var periodMode = document.getElementById('periodMode').value;
+  var fromLast   = document.getElementById('chkFromLastChange').checked;
+
+  var params = new URLSearchParams({
+    account_type: acct,
+    marketplace:  mkt,
+    sort_by:      sortCol,
+    sort_dir:     sortDir,
+    page:         page,
+    per_page:     perPage
+  });
+  if (tgtType)    params.set('targeting_type', tgtType);
+  if (state)      params.set('state_filter', state);
+  if (campState)  params.set('camp_state', campState);
+  if (groupState) params.set('group_state', groupState);
+  if (filter)     params.set('name_filter', filter);
+  if (fromLast)   params.set('from_last_change', '1');
+  if (recFilter)  params.set('rec_filter', recFilter);
+  if (selectedPortfolios.length) params.set('portfolio_ids', selectedPortfolios.join(','));
+  if (periodMode === 'range') {
+    params.set('date_from', document.getElementById('dateFrom').value);
+    params.set('date_to',   document.getElementById('dateTo').value);
+  } else {
+    params.set('days', document.getElementById('selDays').value);
+  }
+
+  document.getElementById('loadStatus').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('tableMsg').innerHTML = '';
+  document.getElementById('tbody').innerHTML = '';
+
+  var ctrl = new AbortController();
+  var tmo = setTimeout(function(){ ctrl.abort(); }, 60000);
+
+  fetch('/automation/bid-automation/keywords?' + params.toString(), { signal: ctrl.signal })
+    .then(function(r){ clearTimeout(tmo); return r.json(); })
+    .then(function(d) {
+      document.getElementById('loadStatus').textContent = '';
+      if (d.error) {
+        document.getElementById('tableMsg').innerHTML = '<span class="err-msg">' + esc(d.error) + '</span>';
+        return;
+      }
+      rows = d.rows || [];
+      totalRows = d.total || 0;
+      expandedRows = {};
+      selectedIds = new Set();
+      renderTable();
+      renderStatusBar();
+    })
+    .catch(function(e) {
+      clearTimeout(tmo);
+      document.getElementById('loadStatus').textContent = '';
+      var msg = e.name === 'AbortError' ? 'Запрос слишком долгий, попробуйте ещё раз' : e.message;
+      document.getElementById('tableMsg').innerHTML = '<span class="err-msg">' + esc(msg) + '</span>';
+    });
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function renderTable() {
+  var tb = document.getElementById('tbody');
+  if (!rows.length) {
+    document.getElementById('tableMsg').textContent = 'Нет данных';
+    tb.innerHTML = '';
+    return;
+  }
+  document.getElementById('tableMsg').textContent = '';
+
+  var visibleRows = rows;
+  // Recommendation filter is applied server-side; "Требует внимания" (notes) stays client-side.
+  if (attFilterOn) visibleRows = visibleRows.filter(function(r){ return recommendations[r.entity_id]; });
+
+  // Reflect the filtered count in the table header
+  var thc = document.getElementById('thCount');
+  if (thc) {
+    if (visibleRows.length !== rows.length) thc.textContent = visibleRows.length.toLocaleString() + ' из ' + totalRows.toLocaleString();
+    else thc.textContent = totalRows.toLocaleString() + ' строк';
+  }
+  if (!visibleRows.length) {
+    document.getElementById('tableMsg').textContent = 'Нет строк под фильтр';
+  }
+
+  var html = '';
+  for (var i = 0; i < visibleRows.length; i++) {
+    var r = visibleRows[i];
+    var rid = esc(r.entity_id);
+    var isSelected = selectedIds.has(r.entity_id);
+    var isBlocked  = blockedIds.has(r.entity_id);
+    var action = isBlocked ? 'hold' : getRuleAction(r);
+    var rColor = getRuleColor(action);
+    var rec = recommendations[r.entity_id] || '';
+    var catColor = r.rule_color || '#aaaab8';
+    var catText  = r.rule_name || '—';
+    var stateClass = (r.keyword_state === 'ENABLED') ? 'dot-on' : 'dot-off';
+    var kwText = r.keyword_text || r.targeting || '—';
+    var matchType = normalizeMatch(r.match_type || r.keyword_type || '');
+
+    html += '<tr class="main-row' + (isSelected ? ' selected' : '') + (isBlocked ? ' blocked' : '') + '" id="mr-' + rid + '">';
+    html += '<td><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="toggleRow(this,' + q(r.entity_id) + ')"></td>';
+    html += '<td><span class="rule-dot" style="background:' + rColor + ';border-color:' + rColor + '22" title="' + actionLabel(action) + '"></span></td>';
+    html += '<td>';
+    html += '  <div style="display:flex;align-items:center;gap:6px">';
+    html += '    <button class="expand-btn" onclick="toggleExpand(' + i + ',' + q(r.entity_id) + ',' + q(r.entity_type) + ')" id="eb-' + i + '" style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:11px;flex-shrink:0">+</button>';
+    html += '    <span class="dot ' + stateClass + '"></span>';
+    html += '    <span style="font-size:12px">' + esc(kwText) + '</span>';
+    html += '    <span class="badge" style="background:' + catColor + '1a;color:' + catColor + '" title="Правило · кликов на ASIN по всем кампаниям (для анализа): ' + ageClicks(r).toLocaleString() + '">' + esc(catText) + ' · ' + ageClicks(r).toLocaleString() + '</span>';
+    html += '  </div>';
+    var campDot = '<span class="dot ' + (r.campaign_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Кампания: ' + esc(r.campaign_state||'') + '"></span>';
+    var grpDot  = '<span class="dot ' + (r.ad_group_state === 'ENABLED' ? 'dot-on' : 'dot-off') + '" style="width:6px;height:6px" title="Группа: ' + esc(r.ad_group_state||'') + '"></span>';
+    html += '  <div style="font-size:10px;color:var(--dim);margin-top:1px;padding-left:26px;display:flex;align-items:center;gap:4px">' + campDot + '<span>' + esc(r.campaign_name||'') + '</span><span>/</span>' + grpDot + '<span>' + esc(r.ad_group_name||'') + '</span></div>';
+    html += '</td>';
+    html += '<td class="mono">' + esc(matchType) + '</td>';
+    html += '<td>';
+    html += '  <div class="bid-wrap">';
+    // Current bid (read-only)
+    html += '    <span class="cur-bid" title="Текущая ставка">' + fmt2(r.bid) + '</span>';
+    var hasOverride = bidOverrides[r.entity_id] != null;
+    if (action === 'pause' && !isBlocked && !hasOverride) {
+      // Recommend switching the keyword/target off rather than changing the bid
+      html += '    <span style="color:var(--dim);font-size:11px">→</span>';
+      html += '    <span class="pause-chip" title="Клики без продаж — рекомендуем выключить">⏸ Выключить</span>';
+    } else {
+      html += '    <span style="color:var(--dim);font-size:11px">→</span>';
+      // New bid (editable). Shows the override if set, otherwise the recommendation.
+      var nb = effectiveNewBid(r);
+      var base = r.bid || 0;
+      var pct = base > 0 ? Math.round((nb - base) / base * 100) : 0;
+      var sign = pct > 0 ? '+' : '';
+      var changed = Math.abs(nb - base) >= 0.01;
+      var nbColor = changed ? rColor : 'var(--muted)';
+      html += '    <button class="bid-btn newbid-btn" onclick="openBidEdit(' + q(rid) + ')" id="bbt-' + rid + '" style="color:' + nbColor + ';border-color:' + (changed ? nbColor : 'var(--border)') + '" title="Нажмите чтобы изменить новую ставку">$' + nb.toFixed(2) + (changed ? ' <span class="rec-pct">' + sign + pct + '%</span>' : '') + '</button>';
+      html += '    <div class="bid-edit" id="be-' + rid + '" data-eid="' + esc(r.entity_id) + '" data-oldbid="' + (r.bid||0) + '">';
+      html += '      <input class="bid-inp" id="bi-' + rid + '" type="number" step="0.01" min="0.02" value="' + nb.toFixed(2) + '">';
+      html += '      <button class="bid-ok" onclick="saveNewBid(' + q(rid) + ')">OK</button>';
+      html += '      <button class="bid-cx" onclick="closeBidEdit(' + q(rid) + ')">×</button>';
+      html += '    </div>';
+    }
+    html += '  </div>';
+    html += '</td>';
+    html += '<td class="mono">' + fmtN(r.impressions) + '</td>';
+    html += '<td class="mono">' + fmtN(r.clicks) + '</td>';
+    html += '<td class="mono" style="color:var(--muted)">' + fmtN(r.group_total_clicks) + '</td>';
+    html += '<td class="mono">' + fmt2(r.cost) + '</td>';
+    html += '<td class="mono">' + fmt2(r.sales) + '</td>';
+    html += '<td class="mono' + acosClass(r.acos) + '">' + fmtPct(r.acos) + '</td>';
+    var cpc = (r.clicks && r.clicks > 0) ? (r.cost / r.clicks) : null;
+    html += '<td class="mono">' + (cpc != null ? fmt2(cpc) : '—') + '</td>';
+    html += '<td class="mono" style="font-size:10px">' + fmtDate(r.last_change_date) + '</td>';
+    html += '<td class="mono">' + (r.prev_bid != null ? fmt2(r.prev_bid) : '—') + '</td>';
+    html += '</tr>';
+    // Expand row placeholder
+    html += '<tr class="expand-row" id="er-' + i + '" style="display:none"><td colspan="14"><div class="expand-inner" id="ei-' + i + '"></div></td></tr>';
+  }
+  tb.innerHTML = html;
+  updateSelectionUI();
+}
+
+function acosClass(v) {
+  if (v == null) return '';
+  if (v > 40) return '" style="color:var(--accent)';
+  if (v < 10) return '" style="color:var(--green)';
+  return '';
+}
+
+function normalizeMatch(s) {
+  if (!s) return '';
+  var m = s.toLowerCase();
+  if (m.includes('exact'))   return 'exact';
+  if (m.includes('phrase'))  return 'phrase';
+  if (m.includes('broad'))   return 'broad';
+  if (m.includes('close'))   return 'close';
+  if (m.includes('loose'))   return 'loose';
+  if (m.includes('substitute')) return 'subst.';
+  if (m.includes('complement')) return 'compl.';
+  return s.toLowerCase();
+}
+
+function actionLabel(a) {
+  if (a === 'raise') return 'Повысить ставку';
+  if (a === 'lower') return 'Снизить ставку';
+  if (a === 'pause') return 'Выключить (клики без продаж)';
+  if (a === 'boost') return 'Разгон (мало показов — поднять ставку)';
+  if (a === 'new')   return 'Новый — мало данных';
+  return 'Удерживать';
+}
+
+// ── Expand panel ───────────────────────────────────────────────────────────
+function toggleExpand(i, entityId, entityType) {
+  var er = document.getElementById('er-' + i);
+  var eb = document.getElementById('eb-' + i);
+  if (expandedRows[i]) {
+    expandedRows[i] = false;
+    er.style.display = 'none';
+    eb.textContent = '+';
+    return;
+  }
+  expandedRows[i] = true;
+  er.style.display = '';
+  eb.textContent = '–';
+  var ei = document.getElementById('ei-' + i);
+  ei.innerHTML = '<span class="spinner"></span>';
+  loadExpandPanel(i, entityId, entityType, ei);
+}
+
+function loadExpandPanel(i, entityId, entityType, cont) {
+  var account = acct;
+  var mkt     = document.getElementById('selMkt').value;
+  var useDates = document.getElementById('periodMode').value === 'range';
+  var days    = document.getElementById('selDays').value;
+  var dateFrom = document.getElementById('dateFrom').value;
+  var dateTo   = document.getElementById('dateTo').value;
+
+  // Load search terms and bid history in parallel
+  var stParams = new URLSearchParams({ account_type: account, marketplace: mkt, keyword_id: entityId });
+  if (useDates && dateFrom && dateTo) {
+    stParams.set('date_from', dateFrom);
+    stParams.set('date_to', dateTo);
+  } else {
+    stParams.set('days', days);
+  }
+
+  var histParams = new URLSearchParams({ account_type: account, entity_id: entityId });
+
+  var row = rows.filter(function(r){ return r.entity_id === entityId; })[0] || {};
+  var action = blockedIds.has(entityId) ? 'hold' : getRuleAction(row);
+  var newBid = calcNewBid(row);
+
+  var negParams = new URLSearchParams({ account_type: account, marketplace: mkt, ad_group_id: row.ad_group_id || '' });
+
+  Promise.all([
+    fetch('/automation/bid-automation/search-terms?' + stParams).then(function(r){ return r.json(); }),
+    fetch('/automation/bid-automation/bid-history?' + histParams).then(function(r){ return r.json(); }),
+    fetch('/automation/bid-automation/negatives?' + negParams).then(function(r){ return r.json(); })
+  ]).then(function(results) {
+    var stData   = results[0];
+    var histData = results[1];
+    var negData  = results[2] || {};
+
+    // negData.texts = { lowercase_text: match_type }
+    var negTexts = negData.texts || {};
+    var negAsins = {};
+    (negData.asins || []).forEach(function(a){ negAsins[a] = true; });
+
+    // Store panel context for the modal
+    panelCtx[i] = {
+      agId: row.ad_group_id, campId: row.campaign_id, account: account, mkt: mkt,
+      agName: row.ad_group_name, campName: row.campaign_name,
+      negTexts: negTexts, negAsins: negAsins
+    };
+
+    var html = '';
+
+    // Action suggestion
+    if (!blockedIds.has(entityId)) {
+      html += '<div style="display:flex;align-items:center;gap:10px;font-size:12px">';
+      html += '  <span style="color:var(--muted)">Рекомендация:</span>';
+      html += '  <span style="font-weight:600;color:' + getRuleColor(action) + '">' + actionLabel(action) + '</span>';
+      if (action !== 'hold') {
+        html += '  <span style="color:var(--muted)">→ новая ставка:</span>';
+        html += '  <span style="font-family:DM Mono,monospace;font-weight:600">$' + newBid.toFixed(2) + '</span>';
+      }
+      html += '</div>';
+    }
+
+    // Search terms + negatives tabs
+    var negList = negData.text_list || [];
+    var negCount = negList.length + (negData.asins || []).length;
+    html += '<div class="exp-section">';
+    html += '<div class="exp-head" style="display:flex;align-items:center;gap:8px">';
+    html += '  <button class="sttab-btn on" id="sttabb-q-' + i + '" onclick="stTab(' + i + ',\'q\')">Поисковые запросы</button>';
+    html += '  <button class="sttab-btn" id="sttabb-n-' + i + '" onclick="stTab(' + i + ',\'n\')">Минусы группы (' + negCount + ')</button>';
+    html += '  <label id="stselall-' + i + '" style="text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:12px"><input type="checkbox" onchange="stToggleAll(' + i + ',this.checked)"> выбрать все</label>';
+    html += '  <button class="btn btn-s" id="stnegbtn-' + i + '" style="height:24px;padding:0 10px;font-size:11px;margin-left:auto" onclick="openNegModal(' + i + ')">✕ В минус слова</button>';
+    html += '</div>';
+
+    // Tab: queries
+    html += '<div id="sttab-q-' + i + '">';
+    if (stData.error) {
+      html += '<div style="padding:10px;color:var(--accent);font-size:12px">' + esc(stData.error) + '</div>';
+    } else if (!stData.rows || !stData.rows.length) {
+      html += '<div style="padding:10px;color:var(--dim);font-size:12px">Нет данных за период</div>';
+    } else {
+      html += '<table class="st-table">';
+      html += '<thead><tr><th style="width:28px"></th><th>Запрос</th><th>Кликов</th><th>Расходы</th><th>Продажи</th><th>ACoS</th></tr></thead><tbody>';
+      stData.rows.forEach(function(st) {
+        var term = st.search_term || '';
+        var isAsinTerm = /^[Bb]0[0-9A-Za-z]{8}$/.test(term);
+        var negType = isAsinTerm ? (negAsins[term.toUpperCase()] ? 'product' : null)
+                                 : (negTexts[term.trim().toLowerCase()] || null);
+        var exists = !!negType;
+        var badge = exists ? ' <span class="att-badge" style="background:var(--red-bg);color:var(--red);border-color:var(--red)">в минусах · ' + esc(negType) + '</span>' : '';
+        html += '<tr' + (exists ? ' style="opacity:.55"' : '') + '>';
+        html += '<td><input type="checkbox" class="stcb-' + i + '" value="' + esc(term) + '" ' + (exists ? 'disabled' : '') + '></td>';
+        html += '<td>' + esc(term) + badge + '</td>';
+        html += '<td>' + fmtN(st.clicks) + '</td>';
+        html += '<td>' + fmt2(st.cost) + '</td>';
+        html += '<td>' + fmt2(st.sales) + '</td>';
+        html += '<td>' + fmtPct(st.acos) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // Tab: negatives in the group
+    html += '<div id="sttab-n-' + i + '" style="display:none">';
+    if (!negCount) {
+      html += '<div style="padding:10px;color:var(--dim);font-size:12px">В этой группе нет минус-слов</div>';
+    } else {
+      html += '<div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">';
+      negList.forEach(function(o){ html += '<span class="term-tag">' + esc(o.text) + ' <span style="color:var(--dim);font-size:10px">' + esc(o.type) + '</span></span>'; });
+      (negData.asins || []).forEach(function(a){ html += '<span class="term-tag asin">' + esc(a) + ' <span style="color:var(--dim);font-size:10px">product</span></span>'; });
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // Bid history
+    html += '<div class="exp-section">';
+    html += '<div class="exp-head">История ставок</div>';
+    if (histData.error) {
+      html += '<div style="padding:10px;color:var(--accent);font-size:12px">' + esc(histData.error) + '</div>';
+    } else if (!histData.rows || !histData.rows.length) {
+      html += '<div style="padding:10px;color:var(--dim);font-size:12px">Нет изменений</div>';
+    } else {
+      html += '<div style="padding:8px 12px">';
+      histData.rows.forEach(function(h) {
+        var arrow = parseFloat(h.new_value||0) > parseFloat(h.old_value||0) ? '↑' : '↓';
+        var color = arrow === '↑' ? 'var(--green)' : 'var(--accent)';
+        html += '<div class="hist-row">';
+        html += '<span class="hist-date">' + fmtDate(h.sent_at) + '</span>';
+        html += '<span class="hist-old">$' + parseFloat(h.old_value||0).toFixed(2) + '</span>';
+        html += '<span class="hist-arrow" style="color:' + color + '">' + arrow + '</span>';
+        html += '<span class="hist-new">$' + parseFloat(h.new_value||0).toFixed(2) + '</span>';
+        if (h.note) html += '<span style="color:var(--muted);font-size:10px">' + esc(h.note) + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    cont.innerHTML = html;
+  }).catch(function(e) {
+    cont.innerHTML = '<span class="err-msg">' + esc(e.message) + '</span>';
+  });
+}
+
+// ── Bid edit ───────────────────────────────────────────────────────────────
+function openBidEdit(rid) {
+  document.getElementById('bbt-' + rid).style.display = 'none';
+  var be = document.getElementById('be-' + rid);
+  be.style.display = 'flex';
+  be.querySelector('input').focus();
+}
+function closeBidEdit(rid) {
+  document.getElementById('bbt-' + rid).style.display = '';
+  document.getElementById('be-' + rid).style.display = 'none';
+}
+// Save the manually edited NEW bid as an override (staged, not sent until queued)
+function saveNewBid(rid) {
+  var be = document.getElementById('be-' + rid);
+  var entityId = be.dataset.eid;
+  var inp = document.getElementById('bi-' + rid);
+  var newBid = parseFloat(inp.value);
+  if (isNaN(newBid) || newBid < 0.02) { inp.style.borderColor='var(--accent)'; return; }
+  bidOverrides[entityId] = Math.round(newBid * 100) / 100;
+  closeBidEdit(rid);
+  renderTable();
+}
+
+// ── Selection ──────────────────────────────────────────────────────────────
+function toggleRow(cb, entityId) {
+  if (cb.checked) selectedIds.add(entityId);
+  else selectedIds.delete(entityId);
+  updateSelectionUI();
+}
+function toggleAll(checked) {
+  var visibleRows = attFilterOn ? rows.filter(function(r){ return recommendations[r.entity_id]; }) : rows;
+  visibleRows.forEach(function(r) {
+    if (checked) selectedIds.add(r.entity_id);
+    else selectedIds.delete(r.entity_id);
+  });
+  renderTable();
+}
+function clearSelection() {
+  selectedIds.clear();
+  renderTable();
+}
+function updateSelectionUI() {
+  var n = selectedIds.size;
+  var bar = document.getElementById('actionBar');
+  bar.style.display = n > 0 ? 'flex' : 'none';
+  document.getElementById('selCount').textContent = n + ' выбрано';
+}
+
+// ── Block ──────────────────────────────────────────────────────────────────
+function toggleBlock(entityId, blocked) {
+  if (blocked) blockedIds.add(entityId);
+  else blockedIds.delete(entityId);
+  // update rule dot
+  var rowObj = rows.find(function(r){ return r.entity_id === entityId; });
+  if (rowObj) {
+    var action = blocked ? 'hold' : getRuleAction(rowObj);
+    var mr = document.getElementById('mr-' + entityId);
+    if (mr) {
+      var dot = mr.querySelector('.rule-dot');
+      if (dot) { dot.style.background = getRuleColor(action); dot.style.borderColor = getRuleColor(action) + '22'; dot.title = actionLabel(action); }
+      if (blocked) mr.classList.add('blocked'); else mr.classList.remove('blocked');
+    }
+  }
+}
+
+// ── Attention filter ───────────────────────────────────────────────────────
+function toggleAttFilter() {
+  attFilterOn = !attFilterOn;
+  document.getElementById('mainPage').classList.toggle('att-active', attFilterOn);
+  renderTable();
+}
+
+function setRecFilter(v) {
+  recFilter = v;
+  loadData();   // server-side filter
+}
+
+// ── Recommendations ────────────────────────────────────────────────────────
+function saveRec(entityId, val) {
+  if (val) recommendations[entityId] = val;
+  else delete recommendations[entityId];
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) sortDir = (sortDir === 'DESC' ? 'ASC' : 'DESC');
+  else { sortCol = col; sortDir = 'DESC'; }
+  document.querySelectorAll('.sort-arrow').forEach(function(el){ el.textContent = ''; });
+  var sa = document.getElementById('sa_' + col);
+  if (sa) sa.textContent = sortDir === 'DESC' ? '▼' : '▲';
+  loadData();
+}
+
+// ── Queue selected ─────────────────────────────────────────────────────────
+function applyRuleSelected() {
+  var account = acct;
+  var mkt     = document.getElementById('selMkt').value;
+  var items = [];
+  var pauseCount = 0;
+  selectedIds.forEach(function(entityId) {
+    if (blockedIds.has(entityId)) return;
+    var rowObj = rows.find(function(r){ return r.entity_id === entityId; });
+    if (!rowObj) return;
+    var hasOverride = bidOverrides[entityId] != null;
+    var action = getRuleAction(rowObj);
+    // Pause action (clicks without sales) → state change, unless the user set a
+    // manual bid override (then we respect the bid edit instead).
+    if (action === 'pause' && !hasOverride) {
+      if (rowObj.keyword_state === 'PAUSED') return;  // already off
+      pauseCount++;
+      items.push({
+        account_type: account, marketplace: mkt,
+        entity_type:  rowObj.entity_type, entity_id: entityId,
+        field_name:   'state', new_value: 'PAUSED', old_value: String(rowObj.keyword_state || '')
+      });
+      return;
+    }
+    var nb = effectiveNewBid(rowObj);   // uses manual override if set
+    if (Math.abs(nb - (rowObj.bid || 0)) < 0.01) return;  // no change → skip
+    items.push({
+      account_type: account,
+      marketplace:  mkt,
+      entity_type:  rowObj.entity_type,
+      entity_id:    entityId,
+      field_name:   'bid',
+      new_value:    String(nb),
+      old_value:    String(rowObj.bid || '')
+    });
+  });
+  if (!items.length) { alert('Нет строк с изменениями (заблокированные или без изменения исключены)'); return; }
+  var msg = 'Добавить ' + items.length + ' изменений в очередь?';
+  if (pauseCount) msg += '\n(из них выключений ключей: ' + pauseCount + ')';
+  if (!confirm(msg)) return;
+  queueItems(items);
+}
+
+function queueSelected() {
+  applyRuleSelected();
+}
+
+function queueItems(items) {
+  fetch('/control/add_batch_update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: items })
+  }).then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.error) { alert('Ошибка: ' + d.error); return; }
+      alert('Добавлено ' + (d.inserted || items.length) + ' изменений в очередь');
+      clearSelection();
+    })
+    .catch(function(e){ alert('Ошибка: ' + e.message); });
+}
+
+// ── Negatives: select-all + modal ───────────────────────────────────────────
+var isAsin = function(t){ return /^[Bb]0[0-9A-Za-z]{8}$/.test(t || ''); };
+
+function stToggleAll(i, checked) {
+  document.querySelectorAll('.stcb-' + i).forEach(function(cb){ if (!cb.disabled) cb.checked = checked; });
+}
+
+function stTab(i, which) {
+  var q = which === 'q';
+  document.getElementById('sttab-q-' + i).style.display = q ? '' : 'none';
+  document.getElementById('sttab-n-' + i).style.display = q ? 'none' : '';
+  document.getElementById('sttabb-q-' + i).classList.toggle('on', q);
+  document.getElementById('sttabb-n-' + i).classList.toggle('on', !q);
+  // select-all + negative button only make sense on the queries tab
+  document.getElementById('stselall-' + i).style.display = q ? '' : 'none';
+  document.getElementById('stnegbtn-' + i).style.display = q ? '' : 'none';
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('op'); }
+function closeModal(id) { document.getElementById(id).classList.remove('op'); }
+
+var _negPanelIdx = null;
+
+function negCountUpdate() {
+  var terms = negTermsFromArea();
+  document.getElementById('negTermCount').textContent = terms.length;
+  var hasAsins = terms.some(isAsin);
+  var hasText  = terms.some(function(t){ return !isAsin(t); });
+  var note = document.getElementById('negTypeNote');
+  if (hasAsins && hasText) {
+    note.textContent = '⚠ Есть и ASIN, и текстовые запросы — добавятся как минус-продукты и минус-слова';
+    note.style.display = '';
+  } else if (hasAsins) {
+    note.textContent = 'Только ASIN — добавятся как минус-продукты';
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+function negTermsFromArea() {
+  var raw = document.getElementById('negTermsArea').value || '';
+  var terms = raw.split('\n').map(function(t){ return t.trim(); }).filter(function(t){ return t; });
+  return terms.filter(function(t,idx){ return terms.indexOf(t) === idx; });
+}
+
+function openNegModal(i) {
+  var ctx = panelCtx[i];
+  if (!ctx) return;
+  var terms = [];
+  document.querySelectorAll('.stcb-' + i + ':checked').forEach(function(cb){ terms.push(cb.value); });
+  terms = terms.filter(function(t,idx){ return terms.indexOf(t) === idx; });
+  if (!terms.length) { toast('Не выбрано ни одного запроса', true); return; }
+
+  _negCtx      = ctx;
+  _negPanelIdx = i;
+
+  document.getElementById('negTermsArea').value = terms.join('\n');
+  document.getElementById('negGroupInfo').textContent = (ctx.campName || '') + ' / ' + (ctx.agName || '');
+  negCountUpdate();
+  openModal('modalNeg');
+}
+
+function submitNeg() {
+  var terms = negTermsFromArea();
+  if (!_negCtx || !terms.length) { closeModal('modalNeg'); return; }
+  var mt = (document.querySelector('input[name="negMt"]:checked') || {}).value || 'EXACT';
+  var ctx = _negCtx;
+  var items = [];
+  terms.forEach(function(term) {
+    if (isAsin(term)) {
+      items.push({
+        account_type: ctx.account, marketplace: ctx.mkt,
+        entity_type: 'negative_product_add', entity_id: ctx.agId, field_name: '—',
+        new_value: JSON.stringify({ asin: term.toUpperCase(), ad_group_id: ctx.agId, campaign_id: ctx.campId })
+      });
+    } else {
+      items.push({
+        account_type: ctx.account, marketplace: ctx.mkt,
+        entity_type: 'negative_add', entity_id: ctx.agId, field_name: '—',
+        new_value: JSON.stringify({ text: term, match_type: mt, ad_group_id: ctx.agId, campaign_id: ctx.campId })
+      });
+    }
+  });
+  fetch('/control/add_batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: items })
+  }).then(function(r){ return r.json(); })
+    .then(function(d) {
+      closeModal('modalNeg');
+      if (d.error) { toast('Ошибка: ' + d.error, true); return; }
+      toast('Добавлено ' + (d.inserted || items.length) + ' минус слов');
+      // mark added terms as existing in local context
+      terms.forEach(function(t){
+        if (isAsin(t)) ctx.negAsins[t.toUpperCase()] = true;
+        else ctx.negTexts[t.trim().toLowerCase()] = mt.toLowerCase();
+      });
+      // uncheck the source checkboxes + select-all in that expand panel
+      if (_negPanelIdx != null) {
+        document.querySelectorAll('.stcb-' + _negPanelIdx).forEach(function(cb){ cb.checked = false; });
+        var selAll = document.querySelector('#stselall-' + _negPanelIdx + ' input[type=checkbox]');
+        if (selAll) selAll.checked = false;
+      }
+    })
+    .catch(function(e){ closeModal('modalNeg'); toast('Ошибка: ' + e.message, true); });
+}
+
+function toast(msg, isErr) {
+  var t = document.createElement('div');
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.classList.add('show'); }, 10);
+  setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); }, 250); }, 2600);
+}
+
+// ── Status bar ─────────────────────────────────────────────────────────────
+function renderStatusBar() {
+  document.getElementById('sbTotal').textContent = totalRows.toLocaleString();
+  document.getElementById('thCount').textContent = totalRows.toLocaleString() + ' строк';
+  var tc = 0, tco = 0, ts = 0;
+  rows.forEach(function(r){ tc += (r.clicks||0); tco += (r.cost||0); ts += (r.sales||0); });
+  document.getElementById('sbClicks').textContent = tc.toLocaleString();
+  document.getElementById('sbCost').textContent   = '$' + tco.toFixed(2);
+  document.getElementById('sbSales').textContent  = '$' + ts.toFixed(2);
+  var p = Math.max(1, Math.ceil(totalRows / perPage));
+  document.getElementById('sbPage').textContent = 'Страница ' + page + ' / ' + p;
+  document.getElementById('pgPrev').disabled = page <= 1;
+  document.getElementById('pgNext').disabled = page >= p;
+}
+
+// ── Rules (stored in BigQuery) ──────────────────────────────────────────────
+// Два независимых набора правил: оптимизация (клики ключа + ACOS)
+// и разгон (показы). Возраст ASIN в правилах не используется.
+var OPT_RULE_COLS = [
+  { key:'high_acos', label:'ACoS> сниз.' },
+  { key:'high_pct',  label:'−%' },
+  { key:'high_acos2',label:'ACoS≫ сниз.' },
+  { key:'high_pct2', label:'−−%' },
+  { key:'low_acos', label:'ACoS< повыс.' },
+  { key:'low_pct',  label:'+%' },
+  { key:'min_bid',  label:'мин $' },
+  { key:'max_bid',  label:'макс $' },
+  { key:'min_clicks',   label:'мин кл. ключа' },
+  { key:'no_sale_clicks', label:'кл. без продаж→off' }
+];
+var BOOST_RULE_COLS = [
+  { key:'low_impr',     label:'показов ≤' },
+  { key:'boost_clicks', label:'кликов ≤' },
+  { key:'boost_pct',    label:'+%' },
+  { key:'boost_max',    label:'макс $' }
+];
+
+function loadRules() {
+  fetch('/automation/bid-automation/rules?account_type=' + acct)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) { toast('Правила: ' + d.error, true); rules = []; }
+      else rules = d.rules || [];
+      rules.forEach(function(r){ if (r.rule_type !== 'boost') r.rule_type = 'opt'; });
+      renderRulesPanel();
+    })
+    .catch(function(e){ toast('Правила: ' + e.message, true); });
+}
+
+function pfOptionsHtml(selected) {
+  var h = '<option value="">— портфолио —</option>';
+  allPortfolios.forEach(function(p){
+    h += '<option value="' + esc(p.id) + '"' + (p.id === selected ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+  });
+  return h;
+}
+
+function rulesTableHtml(type, title, subtitle, cols) {
+  var html = '<div style="margin-bottom:14px">';
+  html += '<div style="font-size:12px;font-weight:600;margin-bottom:2px">' + title + '</div>';
+  html += '<div style="font-size:10px;color:var(--muted);margin-bottom:6px">' + subtitle + '</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">';
+  html += '<thead><tr>';
+  var heads = ['', 'Название', 'Область', 'Портфолио', 'Таргетинг'];
+  heads.forEach(function(l){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + l + '</th>'; });
+  cols.forEach(function(c){ html += '<th style="text-align:left;padding:4px 6px;font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;color:var(--muted);white-space:nowrap">' + c.label + '</th>'; });
+  html += '<th></th></tr></thead><tbody>';
+  rules.forEach(function(r, idx){ if ((r.rule_type||'opt') === type) html += ruleRowHtml(r, idx, cols); });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:8px"><button class="btn btn-s" onclick="addRule(\'' + type + '\')" style="height:28px;font-size:12px">+ Добавить правило</button></div>';
+  html += '</div>';
+  return html;
+}
+
+function renderRulesPanel() {
+  var html = rulesTableHtml('opt', 'Оптимизация',
+    'По кликам ключа и ACOS: клики ≥ «мин кл. ключа» → корректировка по ACOS; «кл. без продаж» без единой продажи → выключить. Две ступени снижения: ACoS выше первого порога → −%, выше второго (ACoS≫) → −−%. Пустое ACoS≫ = одна ступень.',
+    OPT_RULE_COLS);
+  html += rulesTableHtml('boost', 'Разгон',
+    'Показов ≤ порога, кликов ≤ порога (пустое = 7) и ставка ниже «макс $» → поднять ставку на +%. Порог кликов не даёт разгонять ключи, уже накопившие клики без продаж. Не применяется, если сработала оптимизация.',
+    BOOST_RULE_COLS);
+  document.getElementById('rulesGrid').innerHTML = html;
+}
+
+function ruleRowHtml(r, idx, cols) {
+  var inpStyle = 'width:100%;height:26px;padding:0 6px;border:1px solid var(--border);border-radius:5px;font-family:\'DM Mono\',monospace;font-size:11px;background:var(--surface)';
+  var selStyle = 'height:26px;padding:0 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;background:var(--surface)';
+  var isPf = r.scope === 'portfolio';
+  var h = '<tr data-ridx="' + idx + '">';
+  // color
+  h += '<td style="padding:3px 4px"><input type="color" value="' + (r.color||'#888888') + '" onchange="ruleEdit(' + idx + ',\'color\',this.value)" style="width:22px;height:22px;border:none;background:none;cursor:pointer;padding:0"></td>';
+  // name
+  h += '<td style="padding:3px 4px"><input type="text" value="' + esc(r.name||'') + '" onchange="ruleEdit(' + idx + ',\'name\',this.value)" style="' + inpStyle + ';font-family:inherit;min-width:90px"></td>';
+  // scope
+  h += '<td style="padding:3px 4px"><select onchange="ruleEdit(' + idx + ',\'scope\',this.value)" style="' + selStyle + '">' +
+       '<option value="global"' + (!isPf?' selected':'') + '>Глобально</option>' +
+       '<option value="portfolio"' + (isPf?' selected':'') + '>Портфолио</option></select></td>';
+  // portfolio
+  h += '<td style="padding:3px 4px">' + (isPf
+       ? '<select onchange="ruleEdit(' + idx + ',\'portfolio_id\',this.value)" style="' + selStyle + ';max-width:140px">' + pfOptionsHtml(r.portfolio_id||'') + '</select>'
+       : '<span style="color:var(--dim);font-size:11px">—</span>') + '</td>';
+  // targeting
+  h += '<td style="padding:3px 4px"><select onchange="ruleEdit(' + idx + ',\'targeting_type\',this.value)" style="' + selStyle + '">' +
+       ['ANY','AUTO','MANUAL'].map(function(t){ return '<option value="' + t + '"' + ((r.targeting_type||'ANY')===t?' selected':'') + '>' + t + '</option>'; }).join('') +
+       '</select></td>';
+  // numeric columns
+  cols.forEach(function(c){
+    var v = r[c.key]; if (v == null) v = '';
+    h += '<td style="padding:3px 4px"><input type="number" value="' + esc(v) + '" onchange="ruleEdit(' + idx + ',\'' + c.key + '\',this.value)" style="' + inpStyle + '"></td>';
+  });
+  h += '<td style="padding:3px 4px;text-align:center"><button class="btn btn-s" onclick="removeRule(' + idx + ')" style="height:24px;width:24px;padding:0;font-size:13px;color:var(--red)" title="Удалить">×</button></td>';
+  h += '</tr>';
+  return h;
+}
+
+function ruleEdit(idx, key, val) {
+  if (!rules[idx]) return;
+  if (key === 'name' || key === 'color' || key === 'scope' || key === 'portfolio_id' || key === 'targeting_type') {
+    rules[idx][key] = val;
+    if (key === 'scope') renderRulesPanel();   // toggle portfolio select
+  } else {
+    var f = parseFloat(val);
+    rules[idx][key] = isNaN(f) ? null : f;   // пустое поле = ступень/параметр выключен
+  }
+}
+
+function addRule(type) {
+  if (type === 'boost') {
+    rules.push({
+      rule_type:'boost', name:'Разгон', color:'#6c3fc9', scope:'global', portfolio_id:'', targeting_type:'ANY',
+      low_impr:500, boost_clicks:7, boost_pct:20, boost_max:0.60, priority:100, enabled:true
+    });
+  } else {
+    rules.push({
+      rule_type:'opt', name:'Новое', color:'#1a8f5c', scope:'global', portfolio_id:'', targeting_type:'ANY',
+      high_acos:30, high_pct:10, high_acos2:50, high_pct2:20, low_acos:12, low_pct:15,
+      min_bid:0.20, max_bid:5.00, min_clicks:10, no_sale_clicks:25,
+      priority:100, enabled:true
+    });
+  }
+  renderRulesPanel();
+}
+
+function removeRule(idx) {
+  rules.splice(idx, 1);
+  renderRulesPanel();
+}
+
+function saveRules() {
+  var st = document.getElementById('rulesSaveStatus');
+  st.style.color = 'var(--green)';
+  st.textContent = 'Сохранение…';
+  fetch('/automation/bid-automation/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_type: acct, rules: rules })
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) { st.style.color = 'var(--accent)'; st.textContent = 'Ошибка: ' + d.error; return; }
+      st.textContent = 'Сохранено';
+      setTimeout(function(){ st.textContent = ''; }, 2000);
+      loadData();   // recompute recommendations server-side
+    })
+    .catch(function(e){ st.style.color = 'var(--accent)'; st.textContent = 'Ошибка: ' + e.message; });
+}
+
+function resetRules() {
+  if (!confirm('Сбросить правила к стандартным? Сохранённые в БД заменятся после «Сохранить».')) return;
+  loadRules();
+}
+
+function toggleRules() {
+  var body = document.getElementById('rulesBody');
+  var lbl  = document.getElementById('rulesToggleLabel');
+  body.classList.toggle('open');
+  lbl.textContent = body.classList.contains('open') ? 'свернуть' : 'развернуть';
+}
+
+// ── Column resize (ширина колонок, сохраняется в localStorage) ─────────────
+function initColResize() {
+  var table = document.getElementById('mainTable');
+  var ths   = table.querySelectorAll('thead th');
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('baColWidths') || '{}'); } catch(e) {}
+
+  function persist() {
+    var widths = {};
+    table.querySelectorAll('thead th').forEach(function(th, i){
+      if (th.style.width) widths[i] = parseInt(th.style.width, 10);
+    });
+    try { localStorage.setItem('baColWidths', JSON.stringify(widths)); } catch(e) {}
+  }
+
+  ths.forEach(function(th, i){
+    if (saved[i]) { th.style.width = saved[i] + 'px'; th.style.minWidth = saved[i] + 'px'; }
+
+    var h = document.createElement('div');
+    h.className = 'col-resizer';
+    h.title = 'Потянуть — изменить ширину, двойной клик — сбросить';
+    // не даём клику по ручке запускать сортировку колонки
+    h.addEventListener('click', function(e){ e.stopPropagation(); });
+    h.addEventListener('dblclick', function(e){
+      e.stopPropagation();
+      th.style.width = ''; th.style.minWidth = '';
+      persist();
+    });
+    h.addEventListener('mousedown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var startX = e.pageX, startW = th.offsetWidth;
+      h.classList.add('active');
+      document.body.classList.add('col-resizing');
+      function mv(ev){
+        var w = Math.max(30, startW + (ev.pageX - startX));
+        th.style.width = w + 'px';
+        th.style.minWidth = w + 'px';
+      }
+      function up(){
+        document.removeEventListener('mousemove', mv);
+        document.removeEventListener('mouseup', up);
+        h.classList.remove('active');
+        document.body.classList.remove('col-resizing');
+        persist();
+      }
+      document.addEventListener('mousemove', mv);
+      document.addEventListener('mouseup', up);
+    });
+    th.appendChild(h);
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+// Set default dates
+(function() {
+  var today = new Date();
+  var d30   = new Date(); d30.setDate(today.getDate() - 30);
+  document.getElementById('dateTo').value   = today.toISOString().split('T')[0];
+  document.getElementById('dateFrom').value = d30.toISOString().split('T')[0];
+})();
+
+loadPortfolios();
+loadRules();
+loadData();
+initColResize();
+</script>
+</body>
+</html>

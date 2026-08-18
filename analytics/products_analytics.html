@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products · Amazon Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/common.css?v=1">
+<style>
+:root{--border2:#ccccd4;--dim:#aaaaB8;--accent-bg:rgba(200,75,20,.07);--accent-bd:rgba(200,75,20,.22);--green-bg:rgba(26,143,92,.08);--green-bd:rgba(26,143,92,.2);--red:#d94040;--red-bd:rgba(217,64,64,.22);--amber:#b07800;--blue:#1a6fd4;--blue-bg:rgba(26,111,212,.07);--blue-bd:rgba(26,111,212,.2);--purple:#6c3fc9}
+html{overflow-anchor:none}
+/* prevent browser scroll anchoring */
+body{min-height:100vh}
+/* ── Header ── */
+header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+nav a{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:color .15s,background .15s}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);background:var(--accent-bg)}
+/* ── Filters ── */
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.at{gap:4px}
+.atb{border-radius:6px;transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#a83d10}
+.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* ── Portfolio dropdown ── */
+.pdw{position:relative}
+.pdt{min-width:200px;color:var(--text);transition:border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
+.pdt:hover,.pdt.on{border-color:var(--accent)}
+.pda{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none}
+.pdd{overflow-y:auto}
+.pdd.on{display:block}
+.pds{background:var(--surface2);color:var(--text);outline:none}
+.pds:focus{border-color:var(--accent)}
+.pdi{display:flex;align-items:center;gap:8px}
+.pdi input{accent-color:var(--accent);flex-shrink:0;width:14px;height:14px}
+.pdi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── Stats ── */
+.sr{grid-template-columns:repeat(8,1fr)}
+.sv.b{color:var(--blue)}
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.s{color:var(--accent)}
+thead th.ns{cursor:default}
+thead th.ns:hover{color:var(--muted)}
+tr.dr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+tr.dr:last-child{border-bottom:none}
+tr.dr:hover{background:#fafafa}
+tr.dr.exp{background:var(--accent-bg)}
+td{padding:9px 11px;vertical-align:middle}
+/* ── ASIN cell ── */
+.ac{display:flex;align-items:center;gap:10px}
+.ai{width:42px;height:42px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.ap{width:42px;height:42px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--dim)}
+.ak{font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);font-weight:500}
+.at2{font-size:12px;color:var(--muted);margin-top:1px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.abs{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+/* ── Badges ── */
+.b{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:500;white-space:nowrap}
+.be{border:1px solid var(--green-bd)}
+.bp{border:1px solid var(--border)}
+.bu{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.bm{border:1px solid var(--border)}
+.ba{border:1px solid var(--blue-bd)}
+.btype{background:rgba(108,63,201,.07);color:var(--purple);border:1px solid rgba(108,63,201,.15)}
+/* ── Num ── */
+td.r{text-align:right}
+.ok{color:var(--green);font-weight:600}
+/* ── Expand panel ── */
+tr.er td{padding:0}
+/* ── Camp panel ── */
+.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sd.en{background:var(--green)}
+.sd.pa{background:var(--dim)}
+.cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cchev.op{transform:rotate(180deg)}
+/* ── Structure ── */
+.cst.op{display:block}
+/* ── Groups ── */
+.ggb.op{display:block}
+.gga.op{transform:rotate(180deg)}
+/* ── Tabs ── */
+.tabs{border-bottom:1px solid var(--border);background:#fafafa;padding:0 11px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab.on .tbb{background:var(--accent-bg);color:var(--accent)}
+.tp.on{display:block}
+/* ── Items ── */
+.ih span{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:right}
+.ii.st .sg-item-r:first-child{text-align:left}
+.ih span:first-child{text-align:left}
+.ih span:nth-child(2){text-align:left}
+/* ── etc ── */
+.eb{background:rgba(217,64,64,.07)}
+.sp{display:inline-block;width:14px;height:14px;border-top-color:var(--accent);animation:spin .6s linear infinite}
+.pb{display:flex;gap:4px}
+.pbb.on{background:var(--accent);border-color:var(--accent);color:#fff}
+thead th.s .sa{opacity:1;color:var(--accent)}
+.rchev.op{transform:rotate(180deg)}
+/* ── API controls ── */
+.cch:hover .pencil-btn,.ggh:hover .pencil-btn{opacity:1}
+.name-edit-wrap.on{display:inline-flex}
+.bid-btn{transition:all .15s;white-space:nowrap}
+.bid-btn:hover{background:var(--accent-bg)}
+.bid-edit{display:inline-flex;vertical-align:middle}
+.bid-inp{height:28px;outline:none;background:var(--surface);color:var(--text)}
+.bid-ok{height:28px;min-width:32px;padding:0 10px;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bid-ok:hover{background:#a83d10}
+.bid-cx{height:28px;min-width:28px;padding:0 10px;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bid-cx:hover{background:var(--surface2)}
+/* camp action bar */
+.camp-acts{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:#fafafa;flex-wrap:wrap}
+.act-group{display:flex;align-items:center;gap:6px}
+.act-lbl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.act-inp{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:0 8px;outline:none;width:90px}
+.act-inp:focus{border-color:var(--accent)}
+.act-btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.act-btn.pri:hover{background:#a83d10}
+.act-btn.dan{color:var(--red);border-color:var(--red-bd)}
+.act-btn.dan:hover{background:var(--red-bd)}
+/* add-kw modal */
+.modal-bg.op{display:flex}
+.modal{border:1px solid var(--border);padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-row{display:flex;flex-direction:column;gap:5px}
+.modal-inp{font-family:'DM Sans',sans-serif}
+textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;font-family:'DM Mono',monospace}
+.modal-acts{margin-top:16px}
+.toast{right:24px;display:flex;flex-direction:column;gap:6px}
+.toast-item.ok{border-color:var(--green-bd)}
+.toast-item.err{border-color:var(--red-bd);color:var(--red)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+/* ── Column filter popups ── */
+.th-sort{cursor:pointer;display:flex;align-items:center;gap:2px;flex:1;min-width:0}
+.th-fi{transition:color .1s}
+.th-fi:hover{color:var(--accent);background:var(--accent-bg)}
+.th-fi.on{color:var(--accent)}
+.npop.op{display:block}
+.npop-title{font-family:'DM Mono',monospace}
+.npop-op:focus{border-color:var(--accent)}
+.npop-v:focus{border-color:var(--accent)}
+/* Nav */
+.nav-home{border-radius:6px;transition:color .15s,background .15s}
+.nav-home:hover{background:var(--surface2)}
+.nav-home.active{color:var(--accent);background:var(--accent-bg)}
+.nav-drop{display:inline-flex;align-items:center}
+.nav-drop-btn{transition:color .15s,background .15s}
+.nav-drop.open .nav-drop-btn{color:var(--text)}
+.nav-drop-btn svg{transition:transform .2s;flex-shrink:0}
+.nav-drop.open .nav-drop-btn svg{transform:rotate(180deg)}
+.nav-drop-menu{right:0}
+.nav-link{font-weight:500;transition:background .15s}
+.nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+</style>
+</head>
+<body>
+<!--HEADER-->
+
+<main>
+  <div class="fp">
+    <div class="fr">
+      <div class="fg"><div class="fl">Аккаунт</div>
+        <div class="at">
+          <button class="atb on" id="tbM" onclick="setAcct('MERCH')">MERCH</button>
+          <button class="atb" id="tbK" onclick="setAcct('KDP')">KDP</button>
+        </div>
+      </div>
+      <div class="fg"><div class="fl">Дата от</div><input type="date" id="df" style="width:148px"></div>
+      <div class="fg"><div class="fl">Дата до</div><input type="date" id="dt" style="width:148px"></div>
+      <div class="fg"><div class="fl">Маркетплейс</div><select id="mkt" style="width:100px"></select></div>
+      <div class="fg"><div class="fl">Портфолио</div>
+        <div class="pdw" id="pdw">
+          <div class="pdt" id="pdt" onclick="pfToggle(event)"><span id="pdl">Все</span></div>
+          <svg class="pda" width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+          <div class="pdd" id="pdd">
+            <input class="pds" type="text" placeholder="Поиск..." id="pdsrch" oninput="pfSearch(this.value)">
+            <div id="pdlist"><div class="pd-empty">Загрузка...</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fg"><div class="fl">ASIN</div><input type="text" id="fasin" placeholder="B0H1..." style="width:148px" onkeydown="if(event.key==='Enter')go()"></div>
+      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none">
+          <input type="checkbox" id="activeOnly" onchange="S.sc={};go()" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Только активные
+        </label>
+      </div>
+      <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
+        <button class="btn btn-p" id="btnGo" onclick="go()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Применить
+        </button>
+        <button class="btn btn-s" onclick="rst()">Сброс</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="eb" id="eb" style="display:none"></div>
+
+  <div class="sr" id="sr" style="display:none">
+    <div class="sc"><div class="sl">ASIN</div><div class="sv" id="s0">—</div></div>
+    <div class="sc"><div class="sl">Показы</div><div class="sv b" id="s1">—</div></div>
+    <div class="sc"><div class="sl">Клики</div><div class="sv" id="s2">—</div></div>
+    <div class="sc"><div class="sl">CTR</div><div class="sv" id="s3">—</div></div>
+    <div class="sc"><div class="sl">Расходы</div><div class="sv a" id="s4">—</div></div>
+    <div class="sc"><div class="sl">Продажи 14d</div><div class="sv g" id="s5">—</div></div>
+    <div class="sc"><div class="sl">Заказы 14d</div><div class="sv" id="s6">—</div></div>
+    <div class="sc"><div class="sl">ACOS</div><div class="sv" id="s7">—</div></div>
+  </div>
+
+  <div class="tw">
+    <div class="thr">
+      <div class="tt">Рекламируемые товары</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="tc" id="tc">—</div>
+        <div id="lsp" style="display:none"><div class="sp"></div></div>
+      </div>
+    </div>
+    <div class="tsx"><div id="tbl"><div class="te">Выберите период и нажмите <b>Применить</b></div></div></div>
+    <div class="pg" id="pg" style="display:none">
+      <div class="pi" id="pi"></div>
+      <div class="pb" id="pb"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+const S = {
+  acct:'MERCH', page:1, pp:50, total:0,
+  sb:'clicks', sd:'desc',
+  rows:[], pfs:[], sel:[],
+  eKey:null,    // expanded ASIN row key (asin|mkt)
+  eC:{},        // camp expand state {campId: bool}
+  sc:{},        // struct cache {campId: data}
+  ts:{},        // tab sort state {key: {field, dir}} — per group+tab
+  nf:{},        // numeric filters {field: {op,v1,v2}}
+  activeOnly: false,
+};
+
+// ── Init ──────────────────────────────────────────────────
+(()=>{
+  const to=new Date(), fr=new Date();
+  fr.setDate(fr.getDate()-30);
+  document.getElementById('dt').value=to.toISOString().slice(0,10);
+  document.getElementById('df').value=fr.toISOString().slice(0,10);
+  setMkts('MERCH');
+  loadPfs();
+})();
+
+function setMkts(a){
+  const opts=a==='KDP'?['','US','CA','UK','DE','FR','IT','ES','AU']:['','US','UK','DE','FR','IT','ES'];
+  document.getElementById('mkt').innerHTML=opts.map(v=>`<option value="${v}">${v||'Все'}</option>`).join('');
+}
+function setAcct(a){
+  S.acct=a;
+  document.getElementById('tbM').classList.toggle('on',a==='MERCH');
+  document.getElementById('tbK').classList.toggle('on',a==='KDP');
+  setMkts(a); S.sel=[]; pfLabel(); loadPfs();
+}
+
+// ── Portfolio ─────────────────────────────────────────────
+function pfToggle(e){
+  e.stopPropagation();
+  const d=document.getElementById('pdd'), t=document.getElementById('pdt');
+  const o=d.classList.toggle('on'); t.classList.toggle('on',o);
+  if(o) setTimeout(()=>document.getElementById('pdsrch').focus(),10);
+}
+document.addEventListener('click',()=>{
+  document.getElementById('pdd').classList.remove('on');
+  document.getElementById('pdt').classList.remove('on');
+});
+document.getElementById('pdd').addEventListener('click',e=>e.stopPropagation());
+
+function pfSearch(q){
+  document.querySelectorAll('#pdlist .pdi').forEach(el=>{
+    el.style.display=!q||el.dataset.n.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+function pfLabel(){
+  const el=document.getElementById('pdl');
+  if(!S.sel.length){el.textContent='Все';return;}
+  if(S.sel.length===1){const f=S.pfs.find(p=>p.id===S.sel[0]);el.textContent=(f?f.name:S.sel[0]).slice(0,26);}
+  else el.textContent=S.sel.length+' выбрано';
+}
+function pfCk(cb){
+  if(cb.checked){if(!S.sel.includes(cb.value))S.sel.push(cb.value);}
+  else{S.sel=S.sel.filter(x=>x!==cb.value);}
+  pfLabel();
+}
+function pfRender(){
+  const el=document.getElementById('pdlist');
+  if(!S.pfs.length){el.innerHTML='<div class="pd-empty">Нет портфолио</div>';return;}
+  el.innerHTML=S.pfs.map(p=>`<label class="pdi" data-n="${xe(p.name)}"><input type="checkbox" value="${xe(p.id)}" ${S.sel.includes(p.id)?'checked':''} onchange="pfCk(this)"><span>${p.name}</span></label>`).join('');
+}
+async function loadPfs(){
+  document.getElementById('pdlist').innerHTML='<div class="pd-empty">Загрузка...</div>';
+  const urls=[
+    `/analytics/campaigns/portfolios?account_type=${S.acct}`,
+    `/portfolios/list`
+  ];
+  for(const url of urls){
+    try{
+      const r=await fetch(url); const d=await r.json();
+      let pfs=[];
+      if(Array.isArray(d.portfolios)&&d.portfolios.length){
+        const first=d.portfolios[0];
+        if(first.portfolio_id!==undefined){
+          // /portfolios/list format
+          pfs=d.portfolios.filter(p=>p.account_type===S.acct&&(p.portfolio_name||p.portfolio_id))
+            .map(p=>({id:p.portfolio_id,name:p.portfolio_name||p.portfolio_id}));
+        } else if(first.id!==undefined){
+          // /analytics/campaigns/portfolios format
+          pfs=d.portfolios.filter(p=>p.id&&p.name);
+        }
+      }
+      if(pfs.length>0){S.pfs=pfs;pfRender();return;}
+    }catch(e){}
+  }
+  document.getElementById('pdlist').innerHTML='<div class="pd-empty" style="color:var(--red)">Не удалось загрузить</div>';
+}
+
+// ── Params ────────────────────────────────────────────────
+function params(page){
+  const p=new URLSearchParams();
+  p.set('account_type',S.acct); p.set('page',page||S.page); p.set('per_page',S.pp);
+  p.set('sort_by',S.sb); p.set('sort_dir',S.sd);
+  const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
+  const mkt=document.getElementById('mkt').value, asin=document.getElementById('fasin').value.trim();
+  if(df)p.set('date_from',df); if(dt)p.set('date_to',dt);
+  if(mkt)p.set('marketplace',mkt); if(asin)p.set('asin',asin);
+  if(S.sel.length===1)p.set('portfolio_ids',S.sel[0]);
+  else if(S.sel.length>1)p.set('portfolio_ids',S.sel.join(','));
+  if(document.getElementById('activeOnly').checked) p.set('active_only','1');
+  buildNumParams(p);
+  return p;
+}
+
+function go(){S.page=1;closeExpand();fetchData();}
+function rst(){
+  const to=new Date(),fr=new Date(); fr.setDate(fr.getDate()-30);
+  document.getElementById('dt').value=to.toISOString().slice(0,10);
+  document.getElementById('df').value=fr.toISOString().slice(0,10);
+  document.getElementById('mkt').value='';
+  document.getElementById('fasin').value='';
+  S.sel=[]; pfLabel(); pfRender();
+  document.getElementById('activeOnly').checked=false;
+  S.page=1; fetchData();
+}
+
+async function fetchData(){
+  document.getElementById('btnGo').disabled=true;
+  document.getElementById('lsp').style.display='inline-block';
+  document.getElementById('eb').style.display='none';
+  try{
+    const r=await fetch('/analytics/products/data?'+params(S.page));
+    const d=await r.json(); if(d.error)throw new Error(d.error);
+    S.rows=d.rows||[]; S.total=d.total||0;
+    fillStats(d.summary||{}); buildTable(); buildPg();
+    document.getElementById('sr').style.display='grid';
+    document.getElementById('tc').textContent=S.total.toLocaleString('ru')+' товаров';
+  }catch(e){
+    document.getElementById('eb').textContent='Ошибка: '+e.message;
+    document.getElementById('eb').style.display='block';
+  }finally{
+    document.getElementById('btnGo').disabled=false;
+    document.getElementById('lsp').style.display='none';
+  }
+}
+
+function fillStats(s){
+  const f=(v,d=0)=>v==null?'—':+v==0&&d===0?'0':Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});
+  document.getElementById('s0').textContent=f(s.total_asins);
+  document.getElementById('s1').textContent=f(s.impressions);
+  document.getElementById('s2').textContent=f(s.clicks);
+  document.getElementById('s3').textContent=s.ctr!=null?s.ctr.toFixed(2)+'%':'—';
+  document.getElementById('s4').textContent=s.cost!=null?'$'+f(s.cost,2):'—';
+  document.getElementById('s5').textContent=s.sales_14d!=null?'$'+f(s.sales_14d,2):'—';
+  document.getElementById('s6').textContent=f(s.purchases_14d);
+  const ae=document.getElementById('s7');
+  if(s.acos!=null){ae.textContent=s.acos.toFixed(1)+'%';ae.className='sv '+(s.acos<25?'g':s.acos<50?'':'a');}
+  else{ae.textContent='—';ae.className='sv';}
+}
+
+// ── Build table ───────────────────────────────────────────
+function buildTable(){
+  const el=document.getElementById('tbl');
+  if(!S.rows.length){el.innerHTML='<div class="te">Нет данных</div>';return;}
+  const cols=[
+    {k:'asin',l:'Товар',s:1,w:'340px'},{k:'marketplace',l:'Маркет',s:1,w:'80px'},
+    {k:'campaign_count',l:'Кампании',s:0,w:'80px'},{k:'impressions',l:'Показы',s:1,w:'100px'},
+    {k:'clicks',l:'Клики',s:1,w:'76px'},{k:'ctr',l:'CTR %',s:1,w:'76px'},
+    {k:'cost',l:'Расходы',s:1,w:'100px'},{k:'sales_14d',l:'Продажи 14d',s:1,w:'108px'},
+    {k:'purchases_14d',l:'Заказы',s:1,w:'76px'},{k:'acos',l:'ACOS %',s:1,w:'80px'},
+  ];
+  const arr=k=>S.sb===k?`<span class="sa">${S.sd==='desc'?'↓':'↑'}</span>`:'<span class="sa">↕</span>';
+  // Filterable numeric columns
+  const NUM_COLS = new Set(['impressions','clicks','ctr','cost','sales_14d','purchases_14d','acos']);
+  const thCol=(col)=>{
+    const sorted=S.sb===col.k;
+    const hasF=S.nf[col.k]&&(S.nf[col.k].op||S.nf[col.k].v1);
+    const isLeft=col.k==='asin';
+    if(!col.s&&!NUM_COLS.has(col.k)) return `<th class="ns" style="width:${col.w}">${col.l}</th>`;
+    const sortPart=col.s?`<span class="th-sort${isLeft?' left':''}" onclick="sort('${col.k}')">${col.l} ${arr(col.k)}</span>`:`<span>${col.l}</span>`;
+    const filterPart=NUM_COLS.has(col.k)?`
+      <span class="th-fi${hasF?' on':''}" onclick="fpToggle(event,'npop_${col.k}')" title="Фильтр">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2h8M2.5 5h5M4 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </span>
+      <div class="npop" id="npop_${col.k}" onclick="event.stopPropagation()">
+        <div class="npop-title">${col.l}</div>
+        <div class="npop-row">
+          <select class="npop-op" id="npop_op_${col.k}" onchange="fpOpChange('${col.k}')">
+            <option value="">—</option>
+            <option value="gt">&gt;</option>
+            <option value="gte">&gt;=</option>
+            <option value="lt">&lt;</option>
+            <option value="lte">&lt;=</option>
+            <option value="eq">=</option>
+            <option value="range">диапазон</option>
+          </select>
+          <input type="number" class="npop-v" id="npv1_${col.k}" placeholder="значение" step="${col.k==='acos'||col.k==='ctr'?'0.1':'1'}">
+        </div>
+        <div id="nprow2_${col.k}" style="display:none" class="fp-row">
+          <span style="font-size:11px;color:var(--dim);flex-shrink:0">до</span>
+          <input type="number" class="npop-v" id="npv2_${col.k}" placeholder="до" step="${col.k==='acos'||col.k==='ctr'?'0.1':'1'}">
+        </div>
+        <div class="npop-acts">
+          <button class="npop-apply" onclick="fpApply('${col.k}')">Применить</button>
+          <button class="npop-clear" onclick="fpClear('${col.k}')">Сброс</button>
+        </div>
+      </div>`:'';
+    return `<th class="${sorted?'s':''} ${col.s?'':'ns'}" style="width:${col.w};position:relative">
+      <div class="th-wrap${isLeft?' left':''}">
+        ${sortPart}${filterPart}
+      </div>
+    </th>`;
+  };
+  let h=`<table><thead><tr>`;
+  cols.forEach(col=>{ h+=thCol(col); });
+  h+=`<th style="width:32px" class="ns"></th></tr></thead><tbody>`;
+
+  S.rows.forEach(row=>{
+    const key=row.asin+'|'+row.marketplace;
+    const isE=S.eKey===key;
+    const acC=row.acos==null?'dv':row.acos<25?'ok':row.acos<50?'hi':'cr';
+    const mB=row.marketplace==='US'?'bu':'bm';
+    const img=row.image_url?`<img class="ai" src="${xe(row.image_url)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:'';
+    const ph=`<div class="ap"${row.image_url?' style="display:none"':''}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    const pub=row.status?`<span class="b ${row.status==='Live'||row.status==='PUBLISHED'?'be':'bp'}">${row.status}</span>`:'';
+    const typ=row.product_type?`<span class="b btype">${row.product_type}</span>`:'';
+    const pr=row.price?`<span class="b bm">$${row.price}</span>`:'';
+    const sk2=key.replace(/[|.]/g,'_');
+    h+=`<tr class="dr${isE?' exp':''}" data-key="${key}" onclick="rowClick('${je(key)}','${je(row.asin)}','${je(row.marketplace)}')">
+      <td><div class="ac">${img}${ph}<div><div class="ak">${row.asin}</div><div class="at2">${row.title||'—'}</div><div class="abs">${pub}${typ}${pr}</div></div></div></td>
+      <td><span class="b ${mB}">${row.marketplace}</span></td>
+      <td class="r"><span class="n bn">${row.campaign_count||0}</span></td>
+      <td class="r"><span id="rst_imp_${sk2}" class="n bn">${f(row.impressions)}</span></td>
+      <td class="r"><span id="rst_clk_${sk2}" class="n">${f(row.clicks)}</span></td>
+      <td class="r"><span id="rst_ctr_${sk2}" class="n">${row.ctr!=null?row.ctr.toFixed(2)+'%':'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_cst_${sk2}" class="n an">${row.cost!=null?'$'+f(row.cost,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_sal_${sk2}" class="n gn">${row.sales_14d!=null?'$'+f(row.sales_14d,2):'<span class="dv">—</span>'}</span></td>
+      <td class="r"><span id="rst_pur_${sk2}" class="n">${f(row.purchases_14d)}</span></td>
+      <td class="r"><span id="rst_acos_${sk2}" class="n ${acC}">${row.acos!=null?row.acos.toFixed(1)+'%':'<span class="dv">—</span>'}</span></td>
+      <td style="text-align:center"><svg class="rchev${isE?' op':''}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+
+  // Re-attach expand row if state says something is open
+  if(S.eKey){
+    const tr=document.querySelector(`tr.dr[data-key="${S.eKey}"]`);
+    if(tr) insertExpand(tr, S.eKey);
+  }
+}
+
+// ── Row click — no scroll jump ────────────────────────────
+function rowClick(key, asin, mkt){
+  if(S.eKey===key){ closeExpand(); return; }
+  closeExpand();
+  S.eKey=key; S.eC={}; S.sc={};
+
+  const tr=document.querySelector(`tr.dr[data-key="${key}"]`);
+  if(!tr)return;
+  tr.classList.add('exp');
+  tr.querySelector('.rchev')?.classList.add('op');
+  insertExpand(tr, key);
+  loadCamps(asin, mkt);
+}
+
+function closeExpand(){
+  S.eKey=null; S.eC={}; S.sc={};
+  document.querySelectorAll('tr.er').forEach(t=>t.remove());
+  document.querySelectorAll('tr.dr.exp').forEach(t=>{
+    t.classList.remove('exp');
+    t.querySelector('.rchev')?.classList.remove('op');
+  });
+}
+
+function insertExpand(tr, key){
+  const sk=key.replace(/[|.]/g,'_');
+  const et=document.createElement('tr');
+  et.className='er';
+  et.innerHTML=`<td colspan="11"><div class="ei" id="ei_${sk}"><div class="stl"><div class="sp"></div> Загрузка...</div></div></td>`;
+  tr.after(et);
+}
+
+// ── Load campaigns ────────────────────────────────────────
+async function loadCamps(asin, mkt){
+  const key=asin+'|'+mkt; const sk=key.replace(/[|.]/g,'_');
+  const el=document.getElementById('ei_'+sk); if(!el)return;
+  try{
+    const p=params(); p.set('asin',asin); p.set('marketplace',mkt);
+    const r=await fetch('/analytics/products/campaigns?'+p);
+    const d=await r.json(); if(d.error)throw new Error(d.error);
+    const camps=d.campaigns||[];
+    if(!camps.length){el.innerHTML='<div class="stl" style="color:var(--muted)">Нет кампаний в выбранный период</div>';return;}
+
+    let h=`<div class="cpp"><div class="cpt">Кампании · ${camps.length} шт</div><div class="cpc">`;
+    camps.forEach(c=>{
+      const cid=c.campaign_id;
+      const enC=(c.campaign_state||'').toLowerCase()==='enabled';
+      const acC=c.acos==null?'dv':c.acos<25?'ok':c.acos<50?'hi':'cr';
+      h+=`<div class="cc" id="cc_${cid}">
+        <div class="cch" onclick="campClick('${je(cid)}','${je(asin)}','${je(c.marketplace||'')}','${je(c.targeting_type||'')}')">
+          <button class="stog ${enC?'en':'pa'}" title="${enC?'Enabled':'Paused'}"
+            onclick="toggleState(event,'campaign','${je(cid)}','${je(c.campaign_state||'ENABLED')}','${je(c.marketplace||'')}','${je(cid)}')" data-current="${je(c.campaign_state||'ENABLED')}"></button>
+          <span id="cn_${cid}" class="cn">${c.campaign_name||cid}</span>
+          <button class="pencil-btn" title="Переименовать" onclick="openNameEdit(event,'cn_${cid}','ne_${cid}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <span id="ne_${cid}" class="name-edit-wrap">
+            <input class="name-inp" id="nei_${cid}" value="${je(c.campaign_name||cid)}"
+              onkeydown="if(event.key==='Enter')saveName(event,'campaign','${je(cid)}','cn_${cid}','ne_${cid}','${je(c.marketplace||'')}');if(event.key==='Escape')closeNameEdit('cn_${cid}','ne_${cid}')" onclick="event.stopPropagation()">
+            <button class="bid-ok" onclick="saveName(event,'campaign','${je(cid)}','cn_${cid}','ne_${cid}','${je(c.marketplace||'')}')" >✓</button>
+            <button class="bid-cx" onclick="closeNameEdit('cn_${cid}','ne_${cid}')">✕</button>
+          </span>
+          <div class="camp-inline-meta" onclick="event.stopPropagation()">
+            <span class="act-lbl" style="font-size:9px">Бюджет</span>
+            <span id="budg_disp_${cid}">
+              <button class="bid-btn" style="font-size:11px" onclick="openBudgetEdit(event,'budg_wrap_${cid}')">
+                ${c.daily_budget?'$'+Number(c.daily_budget).toFixed(2):'—'}
+              </button>
+            </span>
+            <span id="budg_wrap_${cid}" class="bid-edit" style="display:none">
+              <input class="bid-inp" type="number" id="budg_${cid}" value="${c.daily_budget||''}" min="1" step="1" style="width:64px"
+                onkeydown="if(event.key==='Enter')saveBudget('${je(cid)}','${je(c.marketplace||'')}','${je(String(c.daily_budget||''))}')"
+                onclick="event.stopPropagation()">
+              <button class="bid-ok" onclick="saveBudget('${je(cid)}','${je(c.marketplace||'')}','${je(String(c.daily_budget||''))}')">✓</button>
+              <button class="bid-cx" onclick="closeBudgetEdit('budg_wrap_${cid}','budg_disp_${cid}')">✕</button>
+            </span>
+            <span class="act-lbl" style="font-size:9px;margin-left:8px">Дата</span>
+            <span id="edate_disp_${cid}">
+              <button class="bid-btn" style="font-size:11px;${c.campaign_end_date?'':'color:var(--dim)'}" onclick="openBudgetEdit(event,'edate_wrap_${cid}')">
+                ${c.campaign_end_date?c.campaign_end_date.slice(0,10):'∞'}
+              </button>
+            </span>
+            <span id="edate_wrap_${cid}" class="bid-edit" style="display:none">
+              <input class="bid-inp" type="date" id="edate_${cid}" value="${c.campaign_end_date?c.campaign_end_date.slice(0,10):''}" style="width:120px"
+                onclick="event.stopPropagation()">
+              <button class="bid-ok" onclick="saveEndDate('${je(cid)}','${je(c.marketplace||'')}','${je(c.campaign_end_date?c.campaign_end_date.slice(0,10):'')}')" >✓</button>
+              <button class="bid-cx" onclick="closeBudgetEdit('edate_wrap_${cid}','edate_disp_${cid}')">✕</button>
+            </span>
+          </div>
+          <div class="cm">
+            ${c.targeting_type?`<span class="b ${c.targeting_type==='AUTO'?'ba':'bman'}">${c.targeting_type}</span>`:''}
+            <span class="b ${enC?'be':'bp'}">${c.campaign_state||'—'}</span>
+            <span class="cs2"><span class="csl">Показы</span><span id="cst_imp_${cid}" class="csv bn">${f(c.impressions)}</span></span>
+            <span class="cs2"><span class="csl">Клики</span><span id="cst_clk_${cid}" class="csv">${f(c.clicks)}</span></span>
+            <span class="cs2"><span class="csl">Расходы</span><span id="cst_cst_${cid}" class="csv an">$${f(c.cost||0,2)}</span></span>
+            <span class="cs2"><span class="csl">Продажи</span><span id="cst_sal_${cid}" class="csv gn">$${f(c.sales_14d||0,2)}</span></span>
+            <span class="cs2"><span class="csl">Заказы</span><span id="cst_pur_${cid}" class="csv">${f(c.purchases_14d)}</span></span>
+            <span class="cs2"><span class="csl">ACOS</span><span id="cst_acos_${cid}" class="csv ${acC}">${c.acos!=null?c.acos.toFixed(1)+'%':'—'}</span></span>
+            ${c.portfolio_name?`<span class="cs2"><span class="csl">Портфолио</span><span class="csv" style="color:var(--muted);font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.portfolio_name}</span></span>`:''}
+          </div>
+          <svg class="cchev" id="chev_${cid}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+
+        <div class="cst" id="cs_${cid}"></div>
+      </div>`;
+    });
+    h+='</div></div>';
+    el.innerHTML=h;
+  }catch(e){
+    if(el)el.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
+  }
+}
+
+// Пересчёт stats кампании из stats групп (для active_only)
+function updateCampStats(cid, structData, filterAsin){
+  let groups=(structData.groups||[]).filter(g=>(g.state||'').toUpperCase()==='ENABLED');
+  // Применяем тот же ASIN-фильтр что и buildStruct
+  if(filterAsin){
+    const fa=filterAsin.toUpperCase();
+    const anyHasAsin=groups.some(g=>(g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa));
+    groups=groups.filter(g=>{
+      const ads=g.ads||[];
+      if(ads.some(a=>(a.asin||'').toUpperCase()===fa)) return true;
+      if(!anyHasAsin&&(g.stats||{}).clicks>0) return true;
+      if(ads.length>0&&ads.every(a=>!a.asin)&&(g.stats||{}).clicks>0) return true;
+      return false;
+    });
+  }
+  let imp=0,clk=0,cst=0,sal=0,pur=0;
+  groups.forEach(g=>{
+    const s=g.stats||{};
+    imp+=s.impressions||0; clk+=s.clicks||0;
+    cst+=s.cost||0;        sal+=s.sales_14d||0;
+    pur+=s.purchases_14d||0;
+  });
+  // Сохраняем computed stats на элементе для последующей суммировки
+  const cidEl=document.getElementById('cc_'+cid);
+  if(cidEl){cidEl.dataset.impA=imp;cidEl.dataset.clkA=clk;cidEl.dataset.cstA=cst;cidEl.dataset.salA=sal;cidEl.dataset.purA=pur;}
+
+  const acos=sal>0?Math.round(cst/sal*1000)/10:null;
+  const acC=acos==null?'dv':acos<25?'ok':acos<50?'hi':'cr';
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('cst_imp_'+cid, f(Math.round(imp)));
+  set('cst_clk_'+cid, f(Math.round(clk)));
+  const ec=document.getElementById('cst_cst_'+cid);
+  if(ec) ec.textContent='$'+f(Math.round(cst*100)/100,2);
+  const es=document.getElementById('cst_sal_'+cid);
+  if(es) es.textContent='$'+f(Math.round(sal*100)/100,2);
+  set('cst_pur_'+cid, f(Math.round(pur)));
+  const ea=document.getElementById('cst_acos_'+cid);
+  if(ea){ea.textContent=acos!=null?acos.toFixed(1)+'%':'—';ea.className='csv '+acC;}
+
+  // Обновляем строку продукта как сумму всех computed кампаний
+  const cc=document.getElementById('cc_'+cid);
+  const cpp=cc?.closest('.cpp');
+  const ei=cpp?.closest('[id^="ei_"]');
+  if(ei){
+    const rsk=ei.id.replace(/^ei_/,'');
+    let ri=0,rk=0,rc=0,rs=0,rp=0;
+    cpp.querySelectorAll('.cc').forEach(el=>{
+      if(el.dataset.impA!=null){
+        ri+=parseFloat(el.dataset.impA||0); rk+=parseFloat(el.dataset.clkA||0);
+        rc+=parseFloat(el.dataset.cstA||0); rs+=parseFloat(el.dataset.salA||0);
+        rp+=parseFloat(el.dataset.purA||0);
+      }
+    });
+    const racos=rs>0?Math.round(rc/rs*1000)/10:null;
+    const racC=racos==null?'dv':racos<25?'ok':racos<50?'hi':'cr';
+    const rset=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    rset('rst_imp_'+rsk, f(Math.round(ri)));
+    rset('rst_clk_'+rsk, f(Math.round(rk)));
+    const rctr=ri>0?Math.round(rk/ri*10000)/100:null;
+    const rctrEl=document.getElementById('rst_ctr_'+rsk);
+    if(rctrEl) rctrEl.innerHTML=rctr!=null?rctr.toFixed(2)+'%':'<span class="dv">—</span>';
+    const rcstEl=document.getElementById('rst_cst_'+rsk);
+    if(rcstEl) rcstEl.textContent='$'+f(Math.round(rc*100)/100,2);
+    const rsalEl=document.getElementById('rst_sal_'+rsk);
+    if(rsalEl) rsalEl.textContent='$'+f(Math.round(rs*100)/100,2);
+    rset('rst_pur_'+rsk, f(Math.round(rp)));
+    const racosEl=document.getElementById('rst_acos_'+rsk);
+    if(racosEl){racosEl.innerHTML=racos!=null?racos.toFixed(1)+'%':'<span class="dv">—</span>';racosEl.className='n '+racC;}
+  }
+}
+
+// ── Camp click ────────────────────────────────────────────
+async function campClick(cid, asin, mkt='', tgtType=''){
+  const isO=S.eC[cid];
+  S.eC[cid]=!isO;
+  const cs=document.getElementById('cs_'+cid);
+  const chev=document.getElementById('chev_'+cid);
+  const cc=document.getElementById('cc_'+cid);
+  if(!cs)return;
+  if(!isO){
+    cs.classList.add('op'); cc?.classList.add('co'); chev?.classList.add('op');
+    if(S.sc[cid]){
+      cs.innerHTML=buildStruct(S.sc[cid], asin, cid, mkt, tgtType);
+    }else{
+      cs.innerHTML='<div class="stl"><div class="sp"></div> Загрузка структуры...</div>';
+      const df=document.getElementById('df').value, dt=document.getElementById('dt').value;
+      try{
+        const ao=document.getElementById('activeOnly')?.checked?'&active_only=1':'';
+      const r=await fetch(`/analytics/campaigns/structure?campaign_id=${cid}&account_type=${S.acct}&date_from=${df}&date_to=${dt}${ao}`);
+        const d=await r.json(); if(d.error)throw new Error(d.error);
+        S.sc[cid]=d;
+        if(cs.classList.contains('op')) cs.innerHTML=buildStruct(d, asin, cid, mkt, tgtType);
+        if(document.getElementById('activeOnly')?.checked) updateCampStats(cid, d, asin);
+      }catch(e){
+        if(cs.classList.contains('op')) cs.innerHTML=`<div class="stl" style="color:var(--red)">Ошибка: ${e.message}</div>`;
+      }
+    }
+  }else{
+    cs.classList.remove('op'); cc?.classList.remove('co'); chev?.classList.remove('op');
+  }
+}
+
+// ── Build structure ───────────────────────────────────────
+// ── Tab sort helpers ─────────────────────────────────────
+function tabSortItems(arr, sortState, getStats){
+  const {field, dir} = sortState;
+  return [...arr].sort((a,b)=>{
+    const sa=getStats(a), sb=getStats(b);
+    let va, vb;
+    if(field==='acos'){
+      va = sa.cost&&sa.sales_14d ? sa.cost/sa.sales_14d*100 : null;
+      vb = sb.cost&&sb.sales_14d ? sb.cost/sb.sales_14d*100 : null;
+    } else {
+      va = sa[field]!=null ? Number(sa[field]) : null;
+      vb = sb[field]!=null ? Number(sb[field]) : null;
+    }
+    if(va==null&&vb==null) return 0;
+    if(va==null) return 1;
+    if(vb==null) return -1;
+    return dir==='desc' ? vb-va : va-vb;
+  });
+}
+
+function tabSortClick(e, key, el){
+  e.stopPropagation();
+  e.preventDefault();
+  const field = el.dataset.field;
+  const cur = S.ts[key] || {field:'clicks', dir:'desc'};
+  S.ts[key] = {
+    field,
+    dir: cur.field===field ? (cur.dir==='desc'?'asc':'desc') : 'desc'
+  };
+  const newSort = S.ts[key];
+
+  // Re-render only the rows inside the current .tp panel
+  // without touching any parent DOM — no group collapse
+  const panel = el.closest('.tp');
+  if(!panel) return;
+
+  // Determine if this is kw or st panel from key prefix
+  const isKw = key.startsWith('kw_');
+
+  // Find the .ih header row and all .ii rows in this panel
+  // Replace them with freshly sorted rows
+  // We need the data — get it from struct cache via campId
+  const campStruct = el.closest('.cst');
+  if(!campStruct) return;
+  const cid = campStruct.id.replace('cs_','');
+  const data = S.sc[cid];
+  if(!data) return;
+  const asin = S.eKey ? S.eKey.split('|')[0] : '';
+
+  // Find which group this panel belongs to — match by key suffix (g.id)
+  const gidSuffix = key.replace(/^(kw|st)_/,'');
+  const groups = (data.groups||[]);
+  let allGroups = [...groups];
+  if(asin){
+    const fa=asin.toUpperCase();
+    const anyHasAsin=allGroups.some(g=>(g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa));
+    allGroups=allGroups.filter(g=>{
+      if((g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa)) return true;
+      if(!anyHasAsin&&(g.stats||{}).clicks>0) return true;
+      if((g.ads||[]).length>0&&(g.ads||[]).every(a=>!a.asin)&&(g.stats||{}).clicks>0) return true;
+      return false;
+    });
+  }
+  const g = allGroups.find(g=>(g.id||'')===gidSuffix) || allGroups.find((_,i)=>String(i)===gidSuffix);
+  if(!g) return;
+
+  if(isKw){
+    // Re-render kw+targets rows
+    const items = tabSortItems([...(g.keywords||[]),...(g.targets||[])], newSort, it=>it.stats||{});
+    // Remove existing rows (everything after .ih)
+    const ih = panel.querySelector('.ih');
+    if(!ih) return;
+    // Remove all .ii rows
+    panel.querySelectorAll('.ii').forEach(el=>el.remove());
+    // Update header arrows
+    panel.querySelectorAll('.shdr').forEach(hdr=>{
+      const f=hdr.dataset.field;
+      const on=f===newSort.field;
+      hdr.classList.toggle('son',on);
+      const sar=hdr.querySelector('.sar');
+      if(sar) sar.textContent=on?(newSort.dir==='desc'?'↓':'↑'):'↕';
+    });
+    // Insert sorted rows after ih
+    const frag=document.createDocumentFragment();
+    items.forEach(it=>{
+      const s=it.stats||{};
+      const ac=s.acos==null?'dv':s.acos<25?'ok':s.acos<50?'hi':'cr';
+      const itEnC=(it.state||'ENABLED').toUpperCase()==='ENABLED';
+      const itType=it.match_type?'keyword':'target';
+      const bidId='bid_'+((it.id||it.text||Math.random()).toString().replace(/[^a-z0-9]/gi,'_').slice(0,20));
+      const bidVal=it.bid?Number(it.bid).toFixed(2):'';
+      const sortMkt=(S.eKey||'').split('|')[1]||'';
+      const div=document.createElement('div');
+      div.className='ii';
+      const bidHtml=bidVal?('<span id="'+bidId+'">'
+        +'<button class="bid-btn" onclick="openBidEdit(event,\''+bidId+'\')">$'+bidVal+'</button>'
+        +'<span class="bid-edit" style="display:none">'
+        +'<input class="bid-inp" type="number" value="'+bidVal+'" min="0.02" step="0.01"'
+        +' onkeydown="if(event.key===\'Enter\')saveBid(event,\''+bidId+'\',\''+itType+'\',\''+xe(String(it.id||''))+'\',\''+bidVal+'\',\''+xe(sortMkt)+'\')">'
+        +'<button class="bid-ok" onclick="saveBid(event,\''+bidId+'\',\''+itType+'\',\''+xe(String(it.id||''))+'\',\''+bidVal+'\',\''+xe(sortMkt)+'\')" >✓</button>'
+        +'<button class="bid-cx" onclick="closeBidEdit(\''+bidId+'\')">✕</button>'
+        +'</span></span>'):'—';
+      div.innerHTML=`
+        <button class="stog ${itEnC?'en':'pa'}" style="width:24px;height:14px"
+          onclick="toggleState(event,'${itType}','${xe(String(it.id||''))}','${itEnC?'ENABLED':'PAUSED'}','${xe(sortMkt)}','')"></button>
+        <span class="it" title="${xe(it.text||it.expression||'')}">${it.text||it.expression||'—'}</span>
+        <span class="ir">${it.match_type||''}</span>
+        <span class="ir" style="text-align:right">${bidHtml}</span>
+        <span class="ir">${f(s.impressions)}</span>
+        <span class="ir">${f(s.clicks)}</span>
+        <span class="ir">${f(s.purchases_14d)}</span>
+        <span class="ir an">${s.cost!=null?'$'+f(s.cost,2):'—'}</span>
+        <span class="ir gn">${s.sales_14d!=null?'$'+f(s.sales_14d,2):'—'}</span>
+        <span class="ir ${ac}">${s.acos!=null?s.acos.toFixed(1)+'%':'—'}</span>`;
+      frag.appendChild(div);
+    });
+    ih.after(frag);
+  } else {
+    // Re-render search terms rows
+    const allSt=[
+      ...(g.search_terms||[]),
+      ...(g.keywords||[]).flatMap(kw=>kw.search_terms||[]),
+      ...(g.targets||[]).flatMap(t=>t.search_terms||[]),
+    ];
+    const items = tabSortItems(allSt, newSort, st=>st);
+    const ih = panel.querySelector('.ih');
+    if(!ih) return;
+    panel.querySelectorAll('.ii').forEach(el=>el.remove());
+    panel.querySelectorAll('.shdr').forEach(hdr=>{
+      const fld=hdr.dataset.field;
+      const on=fld===newSort.field;
+      hdr.classList.toggle('son',on);
+      const sar=hdr.querySelector('.sar');
+      if(sar) sar.textContent=on?(newSort.dir==='desc'?'↓':'↑'):'↕';
+    });
+    const frag=document.createDocumentFragment();
+    items.forEach(st=>{
+      const ac=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
+      const isAuto=st.keyword_type&&st.keyword_type.includes('EXPRESSION');
+      const mt=isAuto?'AUTO':(st.match_type||'');
+      const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
+      const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+      const div=document.createElement('div');
+      div.className='ii st';
+      div.innerHTML=`
+        <span class="it" title="${xe(st.term||'')}">${st.term||'—'}</span>
+        <span class="ir" style="font-size:10px;text-align:right" title="${xe(mt+' '+kw)}">${combined}</span>
+        <span class="ir">${f(st.impressions)}</span>
+        <span class="ir">${f(st.clicks)}</span>
+        <span class="ir">${f(st.purchases_14d)}</span>
+        <span class="ir an">${st.cost!=null?'$'+f(st.cost,2):'—'}</span>
+        <span class="ir gn">${st.sales_14d!=null?'$'+f(st.sales_14d,2):'—'}</span>
+        <span class="ir ${ac}">${st.acos!=null?st.acos.toFixed(1)+'%':'—'}</span>`;
+      frag.appendChild(div);
+    });
+    ih.after(frag);
+  }
+}
+
+function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
+  let groups=data.groups||[];
+
+  // Hide paused groups when active_only is checked
+  if(document.getElementById('activeOnly')?.checked){
+    groups=groups.filter(g=>(g.state||'').toUpperCase()==='ENABLED');
+  }
+
+  // Filter groups: only those containing this ASIN
+  if(filterAsin){
+    const fa=filterAsin.toUpperCase();
+    // Check if any group has explicit ASIN in ads (MANUAL campaigns store ASIN)
+    const anyHasAsin=groups.some(g=>(g.ads||[]).some(a=>(a.asin||'').toUpperCase()===fa));
+    groups=groups.filter(g=>{
+      const ads=g.ads||[];
+      // Case 1: group explicitly contains this ASIN in ads
+      if(ads.some(a=>(a.asin||'').toUpperCase()===fa)) return true;
+      // Case 2: no explicit ASIN match (AUTO campaign or asin null in campaigns table)
+      // Show only groups with actual clicks in the selected period
+      if(!anyHasAsin&&(g.stats||{}).clicks>0) return true;
+      // Case 3: group has ads but none with matching ASIN — still show if has clicks
+      // (happens when ASIN in campaigns table is null but asin_stats knows it)
+      if(ads.length>0&&ads.every(a=>!a.asin)&&(g.stats||{}).clicks>0) return true;
+      return false;
+    });
+  }
+
+  if(!groups.length) return '<div class="ge" style="padding:16px">Нет групп с активностью для данного ASIN</div>';
+
+  // Add group button at top of structure
+  let h='';
+  const campIdForGrp = campId || '';
+  const mktForGrp = mkt || '';
+  const tgtTypeForGrp = (data.targeting_type || data.groups?.[0]?.targeting_type || tgtTypeFallback || '').toUpperCase();
+  h += `<div style="display:flex;justify-content:flex-end;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface2)">
+    <button class="act-btn" style="height:26px;font-size:11px" onclick="event.stopPropagation();openCreateGrp('${je(campIdForGrp)}','${je(mktForGrp)}','${je(tgtTypeForGrp)}')">+ Группа</button>
+  </div>`;
+
+  groups.forEach((g,gi)=>{
+    const gid='g'+gi;
+    const st=g.stats||{};
+    const enC=(g.state||'').toLowerCase()==='enabled';
+    const kwN=(g.keywords||[]).length+(g.targets||[]).length;
+    // Collect ALL search terms: group-level (auto) + per-keyword (manual)
+    const allSt=[
+      ...(g.search_terms||[]),
+      ...(g.keywords||[]).flatMap(kw=>kw.search_terms||[]),
+      ...(g.targets||[]).flatMap(t=>t.search_terms||[]),
+    ];
+    const stN=allSt.length;
+    const ngN=(g.negatives||[]).length;
+
+    h+=`<div class="gg">
+      <div class="ggh" onclick="grpClick(this)">
+        <button class="stog ${enC?'en':'pa'}" title="${enC?'Enabled':'Paused'}"
+          onclick="toggleState(event,'ad_group','${je(g.id||'')}','${je(g.state||'ENABLED')}','${je(mkt||'')}','')" data-current="${je(g.state||'ENABLED')}"></button>
+        <span id="gn_${g.id||gi}" class="ggn">${g.name||g.id}</span>
+        <button class="pencil-btn" title="Переименовать группу" onclick="openNameEdit(event,'gn_${g.id||gi}','gne_${g.id||gi}')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <span id="gne_${g.id||gi}" class="name-edit-wrap">
+          <input class="name-inp" id="gnei_${g.id||gi}" value="${je(g.name||g.id||'')}"
+            onkeydown="if(event.key==='Enter')saveName(event,'ad_group','${je(g.id||'')}','gn_${g.id||gi}','gne_${g.id||gi}','${je(mkt||'')}');if(event.key==='Escape')closeNameEdit('gn_${g.id||gi}','gne_${g.id||gi}')" onclick="event.stopPropagation()">
+          <button class="bid-ok" onclick="saveName(event,'ad_group','${je(g.id||'')}','gn_${g.id||gi}','gne_${g.id||gi}','${je(mkt||'')}')" >✓</button>
+          <button class="bid-cx" onclick="closeNameEdit('gn_${g.id||gi}','gne_${g.id||gi}')">✕</button>
+        </span>
+        <div class="ggs">
+          ${st.impressions!=null?`<span class="bn">${f(st.impressions)} пок</span>`:''}
+          ${st.clicks!=null?`<span>${f(st.clicks)} кл</span>`:''}
+          ${st.cost!=null?`<span class="an">$${f(st.cost,2)}</span>`:''}
+          ${st.sales_14d!=null&&st.sales_14d>0?`<span class="gn">$${f(st.sales_14d,2)}</span>`:''}
+          ${st.purchases_14d!=null&&st.purchases_14d>0?`<span>${f(st.purchases_14d)} зак</span>`:''}
+          ${st.acos!=null?`<span class="${st.acos<25?'ok':st.acos<50?'hi':'cr'}">${st.acos.toFixed(1)}%</span>`:''}
+        </div>
+        <svg class="gga" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="ggb">
+        <div class="tabs" style="justify-content:space-between">
+          <div style="display:flex">
+            <span class="tab on" onclick="tabClick(event,0)">Таргеты<span class="tbb">${kwN}</span></span>
+            <span class="tab" onclick="tabClick(event,1)">Поисковые запросы<span class="tbb">${stN}</span></span>
+            <span class="tab" onclick="tabClick(event,2)">Минус слова<span class="tbb">${ngN}</span></span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;padding:0 8px">
+            <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddKw('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">+ Ключевое слово</button>
+            <button class="act-btn" style="height:24px;font-size:11px" onclick="event.stopPropagation();openAddNeg('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">+ Минус</button>
+            <button class="act-btn st-neg-btn" id="stnb_${je(g.id||gi)}" style="height:24px;font-size:11px;display:none;background:var(--accent);color:#fff;border-color:var(--accent)" onclick="event.stopPropagation();openNegFromSt('${je(g.id||'')}','${je(campId||'')}','${je(mkt||'')}')">→ Минус (<span class="st-neg-cnt" id="stnc_${je(g.id||gi)}">0</span>)</button>
+          </div>
+        </div>
+        <div class="tp on">`;
+
+    // Tab 0: keywords + targets
+    if(kwN){
+      const kwKey=`kw_${g.id||gi}`;
+      const kwS=S.ts[kwKey]||{field:'clicks',dir:'desc'};
+      const kwH=(field,label,extra='')=>{
+        const on=kwS.field===field;
+        const arr=on?(kwS.dir==='desc'?'↓':'↑'):'↕';
+        return `<span class="shdr${on?' son':''}" ${extra} onclick="tabSortClick(event,'${kwKey}',this)"  data-field="${field}">${label}<span class="sar">${arr}</span></span>`;
+      };
+      h+=`<div class="ih">
+        <span></span><span>Ключевое слово / Таргет</span><span>Тип</span><span>Ставка</span>
+        ${kwH('impressions','Показы')}${kwH('clicks','Клики')}${kwH('purchases_14d','Заказы')}
+        ${kwH('cost','Расходы')}${kwH('sales_14d','Продажи')}${kwH('acos','ACOS')}
+      </div>`;
+      const kwItems=tabSortItems([...(g.keywords||[]),...(g.targets||[])],kwS,s=>s.stats||{});
+      kwItems.forEach(it=>{
+        const s=it.stats||{};
+        const ac=s.acos==null?'dv':s.acos<25?'ok':s.acos<50?'hi':'cr';
+        const itEnC=(it.state||'ENABLED').toUpperCase()==='ENABLED';
+        const itType=it.match_type?'keyword':'target';
+        const bidId='bid_'+((it.id||it.text||'x').toString().replace(/[^a-z0-9]/gi,'_').slice(0,20));
+        const bidVal=it.bid?Number(it.bid).toFixed(2):(g.bid?Number(g.bid).toFixed(2):'');
+        const bidIsGroup=!it.bid&&g.bid;  // ставка унаследована от группы
+        h+=`<div class="ii">
+          <button class="stog ${itEnC?'en':'pa'}" style="width:24px;height:14px"
+            onclick="toggleState(event,'${itType}','${xe(String(it.id||''))}','${itEnC?'ENABLED':'PAUSED'}','${xe(mkt)}','')"></button>
+          <span class="it" title="${xe(it.text||it.expression||'')}">${it.text||it.expression||'—'}</span>
+          <span class="ir">${it.match_type||''}</span>
+          <span class="ir" style="text-align:right">
+            ${bidVal?`<span id="${bidId}">
+              <button class="bid-btn" style="${bidIsGroup?'color:var(--dim);font-style:italic':''}" title="${bidIsGroup?'Ставка группы (нет своей ставки у KW)':''}" onclick="openBidEdit(event,'${bidId}')">$${bidVal}${bidIsGroup?' (г)':''}</button>
+              <span class="bid-edit" style="display:none">
+                <input class="bid-inp" type="number" value="${bidVal}" min="0.02" step="0.01"
+                  onkeydown="if(event.key==='Enter')saveBid(event,'${bidId}','${itType}','${xe(String(it.id||''))}','${bidVal}','${xe(mkt)}')">
+                <button class="bid-ok" onclick="saveBid(event,'${bidId}','${itType}','${xe(String(it.id||''))}','${bidVal}','${xe(mkt)}')">✓</button>
+                <button class="bid-cx" onclick="closeBidEdit('${bidId}')">✕</button>
+              </span>
+            </span>`:' — '}
+          </span>
+          <span class="ir">${f(s.impressions)}</span>
+          <span class="ir">${f(s.clicks)}</span>
+          <span class="ir">${f(s.purchases_14d)}</span>
+          <span class="ir an">${s.cost!=null?'$'+f(s.cost,2):'—'}</span>
+          <span class="ir gn">${s.sales_14d!=null?'$'+f(s.sales_14d,2):'—'}</span>
+          <span class="ir ${ac}">${s.acos!=null?s.acos.toFixed(1)+'%':'—'}</span>
+        </div>`;
+      });
+    }else{h+='<div class="ge">Нет таргетов</div>';}
+    h+=`</div><div class="tp">`;
+
+    // Tab 1: search terms
+    if(stN){
+      const stKey=`st_${g.id||gi}`;
+      const stS=S.ts[stKey]||{field:'clicks',dir:'desc'};
+      const stH=(field,label)=>{
+        const on=stS.field===field;
+        const arr=on?(stS.dir==='desc'?'↓':'↑'):'↕';
+        return `<span class="shdr${on?' son':''}" onclick="tabSortClick(event,'${stKey}',this)" data-field="${field}">${label}<span class="sar">${arr}</span></span>`;
+      };
+      h+=`<div class="ih st">
+        <span></span><span>Поисковый запрос</span><span>Таргет / тип</span>
+        ${stH('impressions','Показы')}${stH('clicks','Клики')}${stH('purchases_14d','Заказы')}
+        ${stH('cost','Расходы')}${stH('sales_14d','Продажи')}${stH('acos','ACOS')}
+      </div>`;
+      const stItems=tabSortItems(allSt,stS,s=>s);
+      stItems.forEach(st=>{
+        const ac=st.acos==null?'dv':st.acos<25?'ok':st.acos<50?'hi':'cr';
+        const isAuto=st.keyword_type&&st.keyword_type.includes('EXPRESSION');
+        const mt=isAuto?'AUTO':(st.match_type||'');
+        const kw=isAuto?(st.keyword||st.targeting||'—'):(st.keyword||'—');
+        const combined=mt?(mt+(kw&&kw!=='—'?' · '+kw.slice(0,16):'')):(kw.slice(0,20));
+        const stCbId=`stcb_${g.id||gi}_${stItems.indexOf(st)}`;
+        h+=`<div class="ii st">
+          <input type="checkbox" class="st-cb" data-term="${xe(st.term||'')}" data-gid="${je(g.id||gi)}"
+            style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+            onchange="stCbChange('${je(g.id||gi)}')" onclick="event.stopPropagation()">
+          <span class="it" title="${xe(st.term||'')}">${st.term||'—'}</span>
+          <span class="ir" style="font-size:10px;text-align:right" title="${xe(mt+' '+kw)}">${combined}</span>
+          <span class="ir">${f(st.impressions)}</span>
+          <span class="ir">${f(st.clicks)}</span>
+          <span class="ir">${f(st.purchases_14d)}</span>
+          <span class="ir an">${st.cost!=null?'$'+f(st.cost,2):'—'}</span>
+          <span class="ir gn">${st.sales_14d!=null?'$'+f(st.sales_14d,2):'—'}</span>
+          <span class="ir ${ac}">${st.acos!=null?st.acos.toFixed(1)+'%':'—'}</span>
+        </div>`;
+      });
+    }else{h+='<div class="ge">Нет поисковых запросов</div>';}
+    h+=`</div><div class="tp">`;
+
+    // Tab 2: negatives
+    if(ngN){
+      (g.negatives||[]).forEach(n=>{
+        h+=`<div class="in2"><span class="nt">${n.text||n.raw||'—'}</span>${n.match_type?`<span class="nb">${n.match_type}</span>`:''}${n.type?`<span class="nb">${n.type}</span>`:''}</div>`;
+      });
+    }else{h+='<div class="ge">Нет минус слов</div>';}
+    h+='</div></div></div>';
+  });
+  return h;
+}
+
+// ── Group toggle — NO scroll jump ─────────────────────────
+function grpClick(hdr){
+  // hdr = the .ggh div that was clicked
+  // body and arrow are siblings/children — no ID lookup needed
+  const gg=hdr.closest('.gg');
+  if(!gg)return;
+  const body=gg.querySelector('.ggb');
+  const arrow=hdr.querySelector('.gga');
+  if(!body)return;
+  const sy=window.scrollY;
+  const isO=body.classList.toggle('op');
+  arrow?.classList.toggle('op',isO);
+  // Double rAF: layout applied first frame, scroll restored second
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,sy)));
+}
+
+function tabClick(e,idx){
+  e.stopPropagation();
+  const grp=e.target.closest('.ggb'); if(!grp)return;
+  grp.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===idx));
+  grp.querySelectorAll('.tp').forEach((p,i)=>p.classList.toggle('on',i===idx));
+}
+
+// ── Sort ──────────────────────────────────────────────────
+function sort(col){
+  S.sd=S.sb===col?(S.sd==='desc'?'asc':'desc'):'desc';
+  S.sb=col; S.page=1; fetchData();
+}
+
+// ── Pagination ────────────────────────────────────────────
+// ── Numeric filter functions ─────────────────────────────
+function fpToggle(e, id){
+  e.stopPropagation();
+  const el=document.getElementById(id);
+  if(!el) return;
+  const wasOpen=el.classList.contains('op');
+  // Close all
+  document.querySelectorAll('.npop.op').forEach(fp=>fp.classList.remove('op'));
+  if(!wasOpen) el.classList.add('op');
+}
+document.addEventListener('click',()=>{
+  document.querySelectorAll('.npop.op').forEach(fp=>fp.classList.remove('op'));
+});
+
+function fpOpChange(field){
+  const op=document.getElementById('npop_op_'+field)?.value;
+  const row2=document.getElementById('nprow2_'+field);
+  if(row2) row2.style.display=op==='range'?'flex':'none';
+}
+
+function fpApply(field){
+  const op=document.getElementById('npop_op_'+field)?.value||'';
+  const v1=document.getElementById('npv1_'+field)?.value||'';
+  const v2=document.getElementById('npv2_'+field)?.value||'';
+  if(!op&&!v1){fpClear(field);return;}
+  S.nf[field]={op,v1,v2};
+  document.querySelectorAll('.npop.op').forEach(fp=>fp.classList.remove('op'));
+  S.page=1; closeExpand(); fetchData();
+}
+
+function fpClear(field){
+  S.nf[field]={};
+  const op=document.getElementById('npop_op_'+field);
+  const v1=document.getElementById('npv1_'+field);
+  const v2=document.getElementById('npv2_'+field);
+  const row2=document.getElementById('nprow2_'+field);
+  if(op) op.value='';
+  if(v1) v1.value='';
+  if(v2) v2.value='';
+  if(row2) row2.style.display='none';
+  document.querySelectorAll('.npop.op').forEach(fp=>fp.classList.remove('op'));
+  S.page=1; closeExpand(); fetchData();
+}
+
+function buildNumParams(p){
+  const OP_MAP={gt:'>',gte:'>=',lt:'<',lte:'<=',eq:'='};
+  Object.entries(S.nf).forEach(([field,nf])=>{
+    if(!nf||(!nf.op&&!nf.v1)) return;
+    if(nf.op==='range'){
+      if(nf.v1) p.set(field+'_min',nf.v1);
+      if(nf.v2) p.set(field+'_max',nf.v2);
+    } else if(nf.op&&nf.v1){
+      p.set(field+'_op',nf.op);
+      p.set(field+'_val',nf.v1);
+    }
+  });
+}
+
+function buildPg(){
+  const tot=Math.ceil(S.total/S.pp);
+  const pgEl=document.getElementById('pg');
+  if(tot<=1){pgEl.style.display='none';return;}
+  pgEl.style.display='flex';
+  const fr=(S.page-1)*S.pp+1, to=Math.min(S.page*S.pp,S.total);
+  document.getElementById('pi').textContent=`${fr}–${to} из ${S.total.toLocaleString('ru')}`;
+  let pages=[];
+  if(tot<=7) pages=Array.from({length:tot},(_,i)=>i+1);
+  else{
+    pages=[1,2]; if(S.page>4)pages.push('…');
+    for(let i=Math.max(3,S.page-1);i<=Math.min(tot-2,S.page+1);i++)pages.push(i);
+    if(S.page<tot-3)pages.push('…'); pages.push(tot-1,tot);
+  }
+  let h=`<button class="pbb" onclick="goP(${S.page-1})" ${S.page===1?'disabled':''}>‹</button>`;
+  pages.forEach(p=>{
+    if(p==='…'){h+=`<button class="pbb" style="cursor:default;opacity:.4">…</button>`;return;}
+    h+=`<button class="pbb${p===S.page?' on':''}" onclick="goP(${p})">${p}</button>`;
+  });
+  h+=`<button class="pbb" onclick="goP(${S.page+1})" ${S.page===tot?'disabled':''}>›</button>`;
+  document.getElementById('pb').innerHTML=h;
+}
+function goP(p){
+  const t=Math.ceil(S.total/S.pp); if(p<1||p>t)return;
+  S.page=p; closeExpand(); fetchData(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── Name edit helpers ────────────────────────────────────
+function openNameEdit(e, dispId, wrapId){
+  e.stopPropagation();
+  const disp=document.getElementById(dispId);
+  const wrap=document.getElementById(wrapId);
+  if(!disp||!wrap) return;
+  disp.style.display='none';
+  wrap.classList.add('on');
+  const inp=wrap.querySelector('.name-inp');
+  if(inp){inp.focus();inp.select();}
+}
+function closeNameEdit(dispId, wrapId){
+  const disp=document.getElementById(dispId);
+  const wrap=document.getElementById(wrapId);
+  if(disp) disp.style.display='';
+  if(wrap) wrap.classList.remove('on');
+}
+async function saveName(e, entityType, entityId, dispId, wrapId, mkt){
+  e.stopPropagation();
+  const wrap=document.getElementById(wrapId);
+  if(!wrap) return;
+  const inp=wrap.querySelector('.name-inp');
+  const newName=inp.value.trim();
+  if(!newName){toast('Введите название',false);return;}
+  const disp=document.getElementById(dispId);
+  const oldName=disp?disp.textContent.trim():'';
+  if(newName===oldName){closeNameEdit(dispId,wrapId);return;}
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'name',
+      old_value:oldName,new_value:newName});
+    if(d){
+      if(disp) disp.textContent=newName+' ✓';
+      closeNameEdit(dispId,wrapId);
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+}
+
+// ── API / Control helpers ─────────────────────────────────
+
+// Load profile map once
+fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
+function getProfileId(mkt){ return (window._pm||{})[S.acct+'_'+mkt]||''; }
+
+// Toast
+function toast(msg, ok=true){
+  const w=document.getElementById('toastWrap');
+  const d=document.createElement('div');
+  d.className='toast-item '+(ok?'ok':'err');
+  d.innerHTML=`<span>${ok?'✓':'✕'}</span> ${msg}`;
+  w.appendChild(d);
+  setTimeout(()=>d.remove(), 3500);
+}
+
+// POST to /control/add
+async function ctrlAdd(payload){
+  const r=await fetch('/control/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json();
+  if(r.status===409){toast('Уже есть ожидающее изменение',false);return null;}
+  if(d.error) throw new Error(d.error);
+  return d;
+}
+
+// Modal
+async function ctrlAddBatch(payloads){
+  // Один запрос для массива однотипных NO_DUP_CHECK операций
+  const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:payloads})});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||'Batch error');
+  return d; // {inserted, errors, ids}
+}
+ helpers
+function openModal(id){document.getElementById(id).classList.add('op');}
+function closeModal(id){document.getElementById(id).classList.remove('op');}
+
+// ── State toggle (campaign / ad_group / keyword / target) ─
+async function toggleState(e, entityType, entityId, currentState, mkt, campId){
+  e.stopPropagation();
+  const btn=e.currentTarget;
+  if(btn.classList.contains('ld')||btn.classList.contains('pend')) return;
+  const newState=currentState==='ENABLED'?'PAUSED':'ENABLED';
+  btn.classList.add('ld');
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'state',
+      old_value:currentState,new_value:newState});
+    if(d){
+      btn.classList.remove('en','pa','ld');
+      btn.classList.add('pend');
+      btn.dataset.current=newState;
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+  finally{btn.classList.remove('ld');}
+}
+
+// ── Bid inline edit ───────────────────────────────────────
+function openBidEdit(e, containerId){
+  e.stopPropagation();
+  const wrap=document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.querySelector('.bid-btn').style.display='none';
+  wrap.querySelector('.bid-edit').style.display='inline-flex';
+  wrap.querySelector('.bid-inp').focus();
+  wrap.querySelector('.bid-inp').select();
+}
+function closeBidEdit(containerId){
+  const wrap=document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.querySelector('.bid-btn').style.display='';
+  wrap.querySelector('.bid-edit').style.display='none';
+}
+// Budget/date inline edit — display and wrap are separate elements
+function openBudgetEdit(e, wrapId){
+  e.stopPropagation();
+  const wrap=document.getElementById(wrapId);
+  if(!wrap) return;
+  const disp=document.getElementById(wrapId.replace('_wrap_','_disp_'));
+  if(disp) disp.style.display='none';
+  wrap.style.display='inline-flex';
+  const inp=wrap.querySelector('.bid-inp');
+  if(inp){inp.focus();if(inp.type!=='date')inp.select();}
+}
+function closeBudgetEdit(wrapId, dispId){
+  const wrap=document.getElementById(wrapId);
+  const disp=document.getElementById(dispId);
+  if(wrap) wrap.style.display='none';
+  if(disp) disp.style.display='';
+}
+async function saveBid(e, containerId, entityType, entityId, oldBid, mkt){
+  e.stopPropagation();
+  const wrap=document.getElementById(containerId);
+  const inp=wrap.querySelector('.bid-inp');
+  const newBid=parseFloat(inp.value);
+  if(isNaN(newBid)||newBid<0.02){toast('Минимальная ставка $0.02',false);return;}
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:entityType,entity_id:entityId,field_name:'bid',
+      old_value:String(oldBid),new_value:String(newBid)});
+    if(d){
+      wrap.querySelector('.bid-btn').textContent='$'+newBid.toFixed(2)+' ✓';
+      closeBidEdit(containerId);
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+}
+
+// ── Campaign actions: budget, end_date ────────────────────
+async function saveBudget(campId, mkt, oldBudget){
+  const inp=document.getElementById('budg_'+campId);
+  const val=parseFloat(inp.value);
+  if(isNaN(val)||val<1){toast('Минимальный бюджет $1',false);return;}
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'campaign',entity_id:campId,field_name:'daily_budget',
+      old_value:String(oldBudget),new_value:String(val)});
+    if(d){
+      // Update display button text
+      const btn=document.querySelector('#budg_disp_'+campId+' .bid-btn');
+      if(btn) btn.textContent='$'+val.toFixed(2)+' ✓';
+      closeBudgetEdit('budg_wrap_'+campId,'budg_disp_'+campId);
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+}
+async function saveEndDate(campId, mkt, oldDate){
+  const inp=document.getElementById('edate_'+campId);
+  const val=inp.value||'';
+  try{
+    const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'campaign',entity_id:campId,field_name:'end_date',
+      old_value:oldDate,new_value:val});
+    if(d){
+      const btn=document.querySelector('#edate_disp_'+campId+' .bid-btn');
+      if(btn) btn.textContent=(val||'бессрочно')+' ✓';
+      closeBudgetEdit('edate_wrap_'+campId,'edate_disp_'+campId);
+      toast(d.label);
+    }
+  }catch(err){toast(err.message,false);}
+}
+
+// ── Add keyword modal ─────────────────────────────────────
+function openAddKw(groupId, campId, mkt){
+  document.getElementById('mkwGroupId').value=groupId;
+  document.getElementById('mkwCampId').value=campId;
+  document.getElementById('mkwMkt').value=mkt;
+  document.getElementById('mkwText').value='';
+  openModal('modalKw');
+}
+async function submitAddKw(){
+  const text=document.getElementById('mkwText').value.trim();
+  const match=document.getElementById('mkwMatch').value;
+  const bid=parseFloat(document.getElementById('mkwBid').value);
+  const groupId=document.getElementById('mkwGroupId').value;
+  const campId=document.getElementById('mkwCampId').value;
+  const mkt=document.getElementById('mkwMkt').value;
+  if(!text){toast('Введите ключевые слова',false);return;}
+  if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}
+  const kws=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const batchKw=await ctrlAddBatch(kws.map(kw=>({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+    entity_type:'keyword_add',entity_id:groupId,field_name:'—',old_value:'',
+    new_value:JSON.stringify({text:kw,match_type:match,bid,ad_group_id:groupId,campaign_id:campId})})));
+  const ok=batchKw.inserted;
+  const fail=batchKw.errors.length;
+  closeModal('modalKw');
+  toast(`Добавлено в очередь: ${ok} kw${fail?', ошибок: '+fail:''}`, fail===0);
+}
+
+// ── Search term checkboxes → Минус ───────────────────────
+function stCbChange(gid){
+  // Count checked boxes for this group
+  const cbs = document.querySelectorAll(`.st-cb[data-gid="${gid}"]:checked`);
+  const cnt = cbs.length;
+  const btn = document.getElementById('stnb_' + gid);
+  const cntEl = document.getElementById('stnc_' + gid);
+  if(btn){ btn.style.display = cnt > 0 ? 'inline-flex' : 'none'; }
+  if(cntEl){ cntEl.textContent = cnt; }
+}
+
+function isAsin(str){
+  // ASIN: 10 chars, starts with B (case insensitive), no spaces
+  str = str.trim();
+  return /^[Bb][0-9A-Za-z]{9}$/.test(str);
+}
+
+function openNegFromSt(groupId, campId, mkt){
+  const cbs = document.querySelectorAll(`.st-cb[data-gid="${groupId}"]:checked`);
+  if(!cbs.length){ toast('Выберите поисковые запросы', false); return; }
+  const terms = Array.from(cbs).map(cb => cb.dataset.term.trim()).filter(Boolean);
+  const asins = terms.filter(t => isAsin(t));
+  const words = terms.filter(t => !isAsin(t));
+
+  document.getElementById('mnegGroupId').value = groupId;
+  document.getElementById('mnegCampId').value = campId;
+  document.getElementById('mnegMkt').value = mkt;
+
+  if(asins.length > 0 && words.length === 0){
+    // Only ASINs — switch to product mode
+    document.querySelector('input[name="mnegType"][value="product"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="product"]'));
+    document.getElementById('mnegText').value = asins.join('\n');
+  } else if(words.length > 0 && asins.length === 0){
+    // Only words
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value = words.join('\n');
+  } else {
+    // Mixed — default to keywords, put all (user can split manually if needed)
+    document.querySelector('input[name="mnegType"][value="keyword"]').checked = true;
+    onNegTypeChange(document.querySelector('input[name="mnegType"][value="keyword"]'));
+    document.getElementById('mnegText').value = words.join('\n');
+    if(asins.length){
+      toast(`Обнаружено ${asins.length} ASIN — они добавлены отдельно автоматически`, true);
+      // Queue ASINs separately after modal closes
+      window._pendingNegAsins = {asins, groupId, campId, mkt};
+    }
+  }
+  openModal('modalNeg');
+}
+
+// ── Add negative modal ────────────────────────────────────
+function openAddNeg(groupId, campId, mkt){
+  document.getElementById('mnegGroupId').value=groupId;
+  document.getElementById('mnegCampId').value=campId;
+  document.getElementById('mnegMkt').value=mkt;
+  document.getElementById('mnegText').value='';
+  openModal('modalNeg');
+}
+function onNegTypeChange(radio){
+  const isProduct=radio.value==='product';
+  document.getElementById('mnegTextLabel').textContent=isProduct?'ASIN (по одному на строку)':'Слова (по одному на строку)';
+  document.getElementById('mnegText').placeholder=isProduct?'B0FT63YVTW\nB0FX36C3YS':'free\ncheap';
+  document.getElementById('mnegMatchRow').style.display=isProduct?'none':'';
+}
+async function submitAddNeg(){
+  const text=document.getElementById('mnegText').value.trim();
+  const match=document.getElementById('mnegMatch').value;
+  const groupId=document.getElementById('mnegGroupId').value;
+  const campId=document.getElementById('mnegCampId').value;
+  const mkt=document.getElementById('mnegMkt').value;
+  const negType=document.querySelector('input[name="mnegType"]:checked')?.value||'keyword';
+  if(!text){toast('Введите значения',false);return;}
+  const items=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const payloads=items.map(w=>negType==='product'
+    ?{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_product_add',entity_id:groupId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({asin:w.toUpperCase(),ad_group_id:groupId,campaign_id:campId})}
+    :{account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'negative_add',entity_id:groupId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({text:w,match_type:match,ad_group_id:groupId,campaign_id:campId})});
+  const batchNeg=await ctrlAddBatch(payloads);
+  const ok=batchNeg.inserted;
+  const fail=batchNeg.errors.length;
+  closeModal('modalNeg');
+  // Uncheck all search term checkboxes for this group
+  const gid = groupId;
+  document.querySelectorAll(`.st-cb[data-gid="${gid}"]`).forEach(cb=>{ cb.checked=false; });
+  stCbChange(gid);
+  // Handle pending ASIN negatives (mixed mode)
+  if(window._pendingNegAsins && window._pendingNegAsins.groupId === groupId){
+    const {asins, groupId: pgid, campId: pcid, mkt: pmkt} = window._pendingNegAsins;
+    window._pendingNegAsins = null;
+    (async()=>{
+      const aB=await ctrlAddBatch(asins.map(a=>({
+        account_type:S.acct,marketplace:pmkt,profile_id:getProfileId(pmkt),
+        entity_type:'negative_product_add',entity_id:pgid,field_name:'—',old_value:'',
+        new_value:JSON.stringify({asin:a.toUpperCase(),ad_group_id:pgid,campaign_id:pcid})})));
+      const aok=aB.inserted;
+      const afail=aB.errors.length;
+      toast(`ASIN минусы: ${aok} добавлено${afail?', '+afail+' ошибок':''}`, afail===0);
+    })();
+  }
+  toast(`Добавлено в очередь: ${ok}${fail?', ошибок: '+fail:''}`, fail===0);
+}
+
+// ── Create ad group modal ─────────────────────────────────
+function openCreateGrp(campId, mkt, targetingType){
+  document.getElementById('mgrpCampId').value=campId;
+  document.getElementById('mgrpMkt').value=mkt;
+  document.getElementById('mgrpType').value=targetingType||'';
+  document.getElementById('mgrpName').value='';
+  document.getElementById('mgrpAsins').value='';
+  document.getElementById('mgrpKwText').value='';
+  const isAuto=(targetingType||'').toUpperCase()==='AUTO';
+  const kwBlock=document.getElementById('mgrpKwBlock');
+  kwBlock.style.display=isAuto?'none':'';
+  document.getElementById('mgrpTitle').textContent=isAuto?'Создать AUTO группу':'Создать MANUAL группу';
+  openModal('modalGrp');
+}
+async function submitCreateGrp(){
+  const name=document.getElementById('mgrpName').value.trim();
+  const bid=parseFloat(document.getElementById('mgrpBid').value);
+  const campId=document.getElementById('mgrpCampId').value;
+  const mkt=document.getElementById('mgrpMkt').value;
+  const targetingType=document.getElementById('mgrpType').value.toUpperCase();
+  const isAuto=targetingType==='AUTO';
+  const asinsRaw=document.getElementById('mgrpAsins').value.trim();
+  const asins=asinsRaw.split(/\n/).map(l=>l.trim().toUpperCase()).filter(Boolean);
+
+  if(!name){toast('Введите название группы',false);return;}
+  if(isNaN(bid)||bid<0.02){toast('Минимальная ставка $0.02',false);return;}
+
+  let ok=0, fail=0;
+
+  // 1. Создать группу
+  try{
+    await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'ad_group_add',entity_id:campId,field_name:'—',old_value:'',
+      new_value:JSON.stringify({name,default_bid:bid,campaign_id:campId})});
+    ok++;
+  }catch(err){toast('Ошибка создания группы: '+err.message,false);return;}
+
+  // 2+3. Параллельно: ASIN объявления + ключевые слова
+  const bulkPayloads=[];
+  for(const asin of asins){
+    bulkPayloads.push({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+      entity_type:'product_ad_add',entity_id:campId,field_name:'—',old_value:'',
+      new_value:JSON.stringify({asin,campaign_id:campId,ad_group_name:name})});
+  }
+  if(!isAuto){
+    const kwRaw=document.getElementById('mgrpKwText').value.trim();
+    const kwMatch=document.getElementById('mgrpKwMatch').value;
+    const kwBid=parseFloat(document.getElementById('mgrpKwBid').value)||bid;
+    const kws=kwRaw.split(/\n/).map(l=>l.trim()).filter(Boolean);
+    for(const kw of kws){
+      bulkPayloads.push({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
+        entity_type:'keyword_add',entity_id:campId,field_name:'—',old_value:'',
+        new_value:JSON.stringify({text:kw,match_type:kwMatch,bid:kwBid,ad_group_name:name,campaign_id:campId})});
+    }
+  }
+  if(bulkPayloads.length){
+    const bulkRes=await ctrlAddBatch(bulkPayloads);
+    ok+=bulkRes.inserted;
+    fail+=bulkRes.errors.length;
+  }
+
+  closeModal('modalGrp');
+  toast(`В очередь: группа + ${asins.length} ASIN${!isAuto?` + ${document.getElementById('mgrpKwText').value.trim().split(/\n/).filter(Boolean).length} kw`:''}${fail?' ('+fail+' ошибок)':''}`, fail===0);
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function f(v,d=0){if(v==null||v==='')return'—';return Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function xe(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function je(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+</script>
+
+<!-- Toast -->
+<div class="toast" id="toastWrap"></div>
+
+<!-- Modal: добавить ключевое слово -->
+<div class="modal-bg" id="modalKw" onclick="if(event.target===this)closeModal('modalKw')">
+  <div class="modal">
+    <div class="modal-title">Добавить ключевые слова</div>
+    <div class="modal-row">
+      <div class="modal-label">Ключевые слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mkwText" placeholder="basketball shirt&#10;coach gift&#10;funny tshirt"></textarea>
+    </div>
+    <div class="modal-row" style="flex-direction:row;gap:10px">
+      <div style="flex:1">
+        <div class="modal-label">Match Type</div>
+        <select class="modal-inp" id="mkwMatch">
+          <option value="BROAD">BROAD</option>
+          <option value="PHRASE">PHRASE</option>
+          <option value="EXACT">EXACT</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="modal-label">Ставка ($)</div>
+        <input type="number" class="modal-inp" id="mkwBid" value="0.50" min="0.02" step="0.01">
+      </div>
+    </div>
+    <input type="hidden" id="mkwGroupId">
+    <input type="hidden" id="mkwCampId">
+    <input type="hidden" id="mkwMkt">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalKw')">Отмена</button>
+      <button class="act-btn pri" onclick="submitAddKw()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: добавить минус-слово / продукт -->
+<div class="modal-bg" id="modalNeg" onclick="if(event.target===this)closeModal('modalNeg')">
+  <div class="modal">
+    <div class="modal-title">Добавить минусы</div>
+    <div class="modal-row">
+      <div class="modal-label">Тип</div>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="keyword" checked onchange="onNegTypeChange(this)"> Слово
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="mnegType" value="product" onchange="onNegTypeChange(this)"> Продукт (ASIN)
+        </label>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label" id="mnegTextLabel">Слова (по одному на строку)</div>
+      <textarea class="modal-inp" id="mnegText" placeholder="free&#10;cheap"></textarea>
+    </div>
+    <div class="modal-row" id="mnegMatchRow">
+      <div class="modal-label">Match Type</div>
+      <select class="modal-inp" id="mnegMatch" style="height:34px">
+        <option value="NEGATIVE_EXACT">NEGATIVE_EXACT</option>
+        <option value="NEGATIVE_PHRASE">NEGATIVE_PHRASE</option>
+      </select>
+    </div>
+    <input type="hidden" id="mnegGroupId">
+    <input type="hidden" id="mnegCampId">
+    <input type="hidden" id="mnegMkt">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalNeg')">Отмена</button>
+      <button class="act-btn pri" onclick="submitAddNeg()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: создать группу объявлений -->
+<div class="modal-bg" id="modalGrp" onclick="if(event.target===this)closeModal('modalGrp')">
+  <div class="modal" style="width:560px">
+    <div class="modal-title" id="mgrpTitle">Создать группу объявлений</div>
+
+    <div class="modal-row">
+      <div class="modal-label">Название группы</div>
+      <input type="text" class="modal-inp" id="mgrpName" placeholder="B0FT63YVTW-KEYWORD-BROAD">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Ставка по умолчанию ($)</div>
+      <input type="number" class="modal-inp" id="mgrpBid" value="0.50" min="0.02" step="0.01">
+    </div>
+
+    <!-- ASIN объявлений (всегда) -->
+    <div class="modal-row">
+      <div class="modal-label">ASIN объявлений (по одному на строку)</div>
+      <textarea class="modal-inp" id="mgrpAsins" placeholder="B0FT63YVTW&#10;B0FX36C3YS" style="height:70px"></textarea>
+    </div>
+
+    <!-- MANUAL: ключевые слова -->
+    <div id="mgrpKwBlock">
+      <div class="modal-row">
+        <div class="modal-label">Ключевые слова (по одному на строку)</div>
+        <textarea class="modal-inp" id="mgrpKwText" placeholder="coach shirt&#10;funny tshirt" style="height:70px"></textarea>
+      </div>
+      <div class="modal-row" style="flex-direction:row;gap:10px">
+        <div style="flex:1">
+          <div class="modal-label">Match Type</div>
+          <select class="modal-inp" id="mgrpKwMatch">
+            <option value="BROAD">BROAD</option>
+            <option value="PHRASE">PHRASE</option>
+            <option value="EXACT">EXACT</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div class="modal-label">Ставка KW ($)</div>
+          <input type="number" class="modal-inp" id="mgrpKwBid" value="0.50" min="0.02" step="0.01">
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" id="mgrpCampId">
+    <input type="hidden" id="mgrpMkt">
+    <input type="hidden" id="mgrpType">
+    <div class="modal-acts">
+      <button class="act-btn" onclick="closeModal('modalGrp')">Отмена</button>
+      <button class="act-btn pri" onclick="submitCreateGrp()">Добавить в очередь</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.nav-drop').forEach(function(d){
+    if(!d.contains(e.target))d.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
