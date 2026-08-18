@@ -70,9 +70,11 @@ print("  ✓ страница открывается, шапка и стили �
 fake.data_rows = [
     {"asin": "B0TEST0001", "marketplace": "US", "impressions": 5000, "clicks": 42,
      "cost": 18.4, "sales_14d": 0.0, "purchases_14d": 0, "active_groups": 3,
+     "auto_groups": 1, "manual_groups": 2,
      "title": "Cat shirt", "image_url": None, "acos": None},
     {"asin": "B0TEST0002", "marketplace": "US", "impressions": 900, "clicks": 15,
      "cost": 6.1, "sales_14d": 0.0, "purchases_14d": 0, "active_groups": 1,
+     "auto_groups": 1, "manual_groups": 0,
      "title": "Dog shirt", "image_url": None, "acos": None},
 ]
 r = c.get('/automation/pause-asins/data?account_type=MERCH&marketplace=US'
@@ -97,10 +99,10 @@ print("  ✓ ASIN без активных групп отфильтрованы 
 fake.group_rows = [
     {"ad_group_id": "g1", "ad_group_name": "Grp 1", "campaign_id": "c1",
      "marketplace": "US", "profile_id": "111", "campaign_name": "Camp A",
-     "asins_total": 1, "asins_selected": 1, "sample_asins": "B0TEST0001"},
+     "asins_total": 1, "asins_selected": 1, "targeting_type": "AUTO"},
     {"ad_group_id": "g2", "ad_group_name": "Grp 2", "campaign_id": "c1",
      "marketplace": "US", "profile_id": "111", "campaign_name": "Camp A",
-     "asins_total": 4, "asins_selected": 1, "sample_asins": "B0TEST0001"},
+     "asins_total": 4, "asins_selected": 1, "targeting_type": "MANUAL"},
 ]
 r = c.get if False else c.post('/automation/pause-asins/groups', headers=H, json={
     "account_type": "MERCH", "marketplace": "US",
@@ -111,6 +113,34 @@ assert d['total'] == 2 and d['with_other'] == 1
 assert d['groups'][0]['has_other_asins'] is False
 assert d['groups'][1]['has_other_asins'] is True
 print("  ✓ предпросмотр: 2 группы, из них 1 с чужими ASIN — помечена предупреждением")
+
+
+# ── 3b. Фильтр по типу кампаний (авто / ручные) ───────────
+r = c.get('/automation/pause-asins/data?account_type=MERCH&marketplace=US&ttype=AUTO', headers=H)
+assert r.status_code == 200, r.get_json()
+sql = fake.queries[-1]
+assert "WHERE TRUE AND ct.targeting_type = 'AUTO'" in sql, "фильтр авто-кампаний не попал в запрос"
+assert 'grps AS' in sql and 'groups AS' not in sql, "GROUPS — зарезервированное слово BigQuery"
+assert 'auto_groups' in sql and 'manual_groups' in sql
+print("  ✓ фильтр «только авто» уходит в SQL, разбивка авто/ручные считается")
+
+r = c.get('/automation/pause-asins/data?account_type=MERCH&ttype=MANUAL', headers=H)
+assert "WHERE TRUE AND ct.targeting_type = 'MANUAL'" in fake.queries[-1]
+r = c.get('/automation/pause-asins/data?account_type=MERCH', headers=H)
+# в запросе всегда есть подсчёт разбивки IF(ct.targeting_type='AUTO'...),
+# поэтому проверяем именно условие фильтрации в WHERE
+assert "WHERE TRUE AND ct.targeting_type" not in fake.queries[-1], "без фильтра тип не ограничивается"
+print("  ✓ «только ручные» и «все» работают так же")
+
+# фильтр применяется и при выборе групп на остановку
+r = c.post('/automation/pause-asins/groups', headers=H, json={
+    "account_type": "MERCH", "marketplace": "US", "ttype": "AUTO",
+    "asins": ["B0TEST0001"]})
+d2 = r.get_json()
+assert r.status_code == 200, d2
+assert "c.targeting_type = 'AUTO'" in fake.queries[-1]
+assert d2['auto'] == 1 and d2['manual'] == 1   # фейк отдаёт обе, счётчики считаются
+print("  ✓ при остановке фильтр типа тоже учитывается, в ответе разбивка")
 
 
 # ── 4. Пакетная постановка пауз в очередь ─────────────────

@@ -88,6 +88,9 @@ td.num{text-align:right;font-family:'DM Mono',monospace;font-size:12px;white-spa
 .gi:last-child{border-bottom:none}
 .gi-c{color:var(--muted);max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gi-g{font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi-t{font-family:'DM Mono',monospace;font-size:9px;padding:1px 6px;border-radius:4px;border:1px solid;white-space:nowrap}
+.t-auto{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-bd)}
+.t-man{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-bd)}
 .gi-w{font-family:'DM Mono',monospace;font-size:10px;padding:1px 7px;border-radius:4px;
   background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);white-space:nowrap}
 .modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
@@ -126,6 +129,14 @@ td.num{text-align:right;font-family:'DM Mono',monospace;font-size:12px;white-spa
       <div class="fg">
         <span class="fl">Маркетплейс</span>
         <select id="mkt" onchange="load()"><option value="">Все</option></select>
+      </div>
+      <div class="fg">
+        <span class="fl">Тип кампаний</span>
+        <select id="ttype" onchange="load()">
+          <option value="">Все</option>
+          <option value="AUTO">Только авто</option>
+          <option value="MANUAL">Только ручные</option>
+        </select>
       </div>
       <div class="fg"><span class="fl">От</span><input type="date" id="df" onchange="load()"></div>
       <div class="fg"><span class="fl">До</span><input type="date" id="dt" onchange="load()"></div>
@@ -166,9 +177,11 @@ td.num{text-align:right;font-family:'DM Mono',monospace;font-size:12px;white-spa
             <th style="text-align:right">Продажи</th>
             <th style="text-align:right">Заказы</th>
             <th style="text-align:right">Групп</th>
+            <th style="text-align:right">Авто</th>
+            <th style="text-align:right">Ручные</th>
           </tr>
         </thead>
-        <tbody id="tb"><tr><td colspan="11" class="empty">Задайте критерии и нажмите «Найти»</td></tr></tbody>
+        <tbody id="tb"><tr><td colspan="13" class="empty">Задайте критерии и нажмите «Найти»</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -222,11 +235,12 @@ function renderMkts(){
 async function load(){
   const btn=document.getElementById('btnLoad');
   btn.disabled=true; btn.textContent='Ищем...';
-  document.getElementById('tb').innerHTML='<tr><td colspan="11" class="empty">Загрузка…</td></tr>';
+  document.getElementById('tb').innerHTML='<tr><td colspan="13" class="empty">Загрузка…</td></tr>';
   S.sel.clear(); renderBar();
   const p=new URLSearchParams({
     account_type:S.acct,
     marketplace:document.getElementById('mkt').value,
+    ttype:document.getElementById('ttype').value,
     date_from:document.getElementById('df').value,
     date_to:document.getElementById('dt').value,
     min_clicks:document.getElementById('minClicks').value||0,
@@ -240,7 +254,7 @@ async function load(){
     renderSum(d.summary||{});
     renderRows();
   }catch(e){
-    document.getElementById('tb').innerHTML=`<tr><td colspan="11" class="empty">Ошибка: ${xe(e.message)}</td></tr>`;
+    document.getElementById('tb').innerHTML=`<tr><td colspan="13" class="empty">Ошибка: ${xe(e.message)}</td></tr>`;
     toast('Ошибка загрузки: '+e.message,false);
   }finally{
     btn.disabled=false; btn.textContent='Найти';
@@ -260,7 +274,7 @@ function renderRows(){
   const tb=document.getElementById('tb');
   document.getElementById('cnt').textContent=S.rows.length?S.rows.length+' записей':'';
   if(!S.rows.length){
-    tb.innerHTML='<tr><td colspan="11" class="empty">Под критерии никто не подошёл — значит убыточных ASIN нет</td></tr>';
+    tb.innerHTML='<tr><td colspan="13" class="empty">Под критерии никто не подошёл — значит убыточных ASIN нет</td></tr>';
     return;
   }
   tb.innerHTML=S.rows.map((r,i)=>{
@@ -278,6 +292,8 @@ function renderRows(){
       <td class="num">$${f(r.sales_14d,2)}</td>
       <td class="num">${f(r.purchases_14d)}</td>
       <td class="num"><span class="gcnt">${f(r.active_groups)}</span></td>
+      <td class="num" style="color:var(--muted)">${f(r.auto_groups)}</td>
+      <td class="num" style="color:var(--muted)">${f(r.manual_groups)}</td>
     </tr>`;
   }).join('');
 }
@@ -295,10 +311,13 @@ function toggleAll(el){
 function clearSel(){ S.sel.clear(); document.getElementById('cbAll').checked=false; renderRows(); renderBar(); }
 function renderBar(){
   const n=S.sel.size;
+  const t=document.getElementById('ttype').value;
+  const fld=t==='AUTO'?'auto_groups':(t==='MANUAL'?'manual_groups':'active_groups');
   const groups=S.rows.filter(r=>S.sel.has(r.asin+'|'+r.marketplace))
-                     .reduce((s,r)=>s+(r.active_groups||0),0);
+                     .reduce((s,r)=>s+(r[fld]||0),0);
   document.getElementById('bar').classList.toggle('on',n>0);
-  document.getElementById('barTxt').textContent=`Выбрано ASIN: ${n} · активных групп: ${groups}`;
+  const tl=t==='AUTO'?' (только авто)':(t==='MANUAL'?' (только ручные)':'');
+  document.getElementById('barTxt').textContent=`Выбрано ASIN: ${n} · групп к остановке: ${groups}${tl}`;
 }
 
 // ── Предпросмотр: какие именно группы встанут ─────────────
@@ -315,11 +334,13 @@ async function preview(){
   try{
     const r=await fetch('/automation/pause-asins/groups',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({account_type:S.acct,marketplace:mkts[0],asins:chosen.map(x=>x.asin)})});
+      body:JSON.stringify({account_type:S.acct,marketplace:mkts[0],
+                           ttype:document.getElementById('ttype').value,
+                           asins:chosen.map(x=>x.asin)})});
     const d=await r.json();
     if(!r.ok||d.error) throw new Error(d.error||'Ошибка запроса');
     S.groups=d.groups||[];
-    showPreview(chosen.length, d.with_other||0);
+    showPreview(chosen.length, d.with_other||0, {auto:d.auto, manual:d.manual});
   }catch(e){
     toast('Ошибка: '+e.message,false);
   }finally{
@@ -327,10 +348,12 @@ async function preview(){
   }
 }
 
-function showPreview(asinCount, withOther){
+function showPreview(asinCount, withOther, byType){
   const n=S.groups.length;
+  const mix=byType&&(byType.auto||byType.manual)
+    ? ` (авто: ${byType.auto||0}, ручных: ${byType.manual||0})` : '';
   document.getElementById('pvSub').textContent=
-    `${n} групп по ${asinCount} ASIN будут поставлены в очередь на паузу. Изменения применятся после одобрения в «Очереди изменений».`;
+    `${n} групп${mix} по ${asinCount} ASIN будут поставлены в очередь на паузу. Изменения применятся после одобрения в «Очереди изменений».`;
   document.getElementById('pvWarn').innerHTML = withOther
     ? `<div class="warn">В ${withOther} из ${n} групп рекламируются и другие ASIN, которые вы не выбирали — остановка группы затронет и их. Такие группы отмечены в списке.</div>`
     : '';
@@ -338,6 +361,7 @@ function showPreview(asinCount, withOther){
     ? S.groups.map(g=>`<div class="gi">
         <span class="gi-c" title="${xe(g.campaign_name||'')}">${xe(g.campaign_name||'—')}</span>
         <span class="gi-g" title="${xe(g.ad_group_name||'')}">${xe(g.ad_group_name||g.ad_group_id)}</span>
+        ${g.targeting_type?`<span class="gi-t ${g.targeting_type==='AUTO'?'t-auto':'t-man'}">${g.targeting_type==='AUTO'?'АВТО':'РУЧНАЯ'}</span>`:''}
         ${g.has_other_asins?`<span class="gi-w">+${(g.asins_total-g.asins_selected)} чужих ASIN</span>`:''}
       </div>`).join('')
     : '<div class="empty">Активных групп не найдено</div>';
