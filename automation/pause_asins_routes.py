@@ -10,6 +10,7 @@ Endpoints:
   GET  /automation/pause-asins          — страница
   GET  /automation/pause-asins/data     — ASIN по критериям + число активных групп
   POST /automation/pause-asins/groups   — группы выбранных ASIN (превью и постановка)
+  GET  /automation/pause-asins/detail   — кампании и группы одного ASIN (раскрытие строки)
 """
 
 import decimal
@@ -62,7 +63,8 @@ def pause_asins_data():
         min_cost   = float(request.args.get('min_cost', 0))
         max_orders = float(request.args.get('max_orders', 0))
         max_sales  = float(request.args.get('max_sales', 0))
-        limit      = min(500, max(1, int(request.args.get('limit', 200))))
+        # сколько ASIN отдавать: по умолчанию 200, но список можно расширить
+        limit      = min(5000, max(1, int(request.args.get('limit', 200))))
     except ValueError:
         return jsonify({"error": "Неверные числовые параметры"}), 400
 
@@ -175,6 +177,9 @@ def pause_asins_data():
         return jsonify({
             "rows":  rows,
             "total": len(rows),
+            "limit": limit,
+            # список упёрся в лимит — значит подходящих ASIN может быть больше
+            "truncated": len(rows) >= limit,
             "summary": {
                 "asins":  len(rows),
                 "cost":   round(sum(r.get("cost") or 0 for r in rows), 2),
@@ -273,3 +278,128 @@ def pause_asins_groups():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@pause_asins_bp.route('/automation/pause-asins/detail')
+def pause_asins_detail():
+    """Кампании и группы одного ASIN — раскрытие строки таблицы.
+
+    Показывает то же, что страница «Аналитика товаров»: по каким кампаниям и
+    группам ASIN тратил бюджет за выбранный период, в каком они состоянии и
+    какого типа. Нужно, чтобы перед остановкой видеть, что именно встанет.
+    """
+    account_type = request.args.get('account_type', 'MERCH').upper()
+    asin         = request.args.get('asin', '').strip().upper()
+    marketplace  = request.args.get('marketplace', '').upper()
+    date_from    = request.args.get('date_from', '')
+    date_to      = request.args.get('date_to', '')
+    ttype        = request.args.get('ttype', '').upper()
+
+    if account_type not in ('MERCH', 'KDP'):
+        return jsonify({"error": "Неверный account_type"}), 400
+    if not asin:
+        return jsonify({"error": "Не указан ASIN"}), 400
+
+    suffix     = account_type.lower()
+    asin_table = f"{PROJECT_ID}.{DATASET}.asin_stats_{suffix}"
+    camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
+
+    conds = [f"a.advertised_asin = '{_q(asin)}'"]
+    if marketplace: conds.append(f"a.marketplace = '{_q(marketplace)}'")
+    if date_from:   conds.append(f"a.date >= '{_q(date_from)}'")
+    if date_to:     conds.append(f"a.date <= '{_q(date_to)}'")
+    where = ' AND '.join(conds)
+
+    mkt_cond   = f"AND marketplace = '{_q(marketplace)}'" if marketplace else ''
+    ttype_cond = (f"AND c.targeting_type = '{_q(ttype)}'"
+                  if ttype in ('AUTO', 'MANUAL') else '')
+
+    sql = f"""
+    WITH camps AS (
+      SELECT campaign_id, marketplace, campaign_name, campaign_state, targeting_type FROM (
+        SELECT campaign_id, marketplace, campaign_name, campaign_state, targeting_type,
+               ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY synced_at DESC) rn
+        FROM `{camp_table}`
+        WHERE entity_type = 'campaign' {mkt_cond}
+      ) WHERE rn = 1
+    ),
+    -- grps, а не groups: GROUPS — зарезервированное слово BigQuery
+    grps AS (
+      SELECT ad_group_id, marketplace, ad_group_name, ad_group_state FROM (
+        SELECT ad_group_id, marketplace, ad_group_name, ad_group_state,
+               ROW_NUMBER() OVER (PARTITION BY ad_group_id ORDER BY synced_at DESC) rn
+        FROM `{camp_table}`
+        WHERE entity_type = 'ad_group' {mkt_cond}
+      ) WHERE rn = 1
+    ),
+    st AS (
+      SELECT a.campaign_id, a.ad_group_id, a.marketplace,
+             SUM(a.impressions)         AS impressions,
+             SUM(a.clicks)              AS clicks,
+             ROUND(SUM(a.cost), 2)      AS cost,
+             ROUND(SUM(a.sales_14d), 2) AS sales_14d,
+             SUM(a.purchases_14d)       AS purchases_14d
+      FROM `{asin_table}` a
+      WHERE {where}
+      GROUP BY a.campaign_id, a.ad_group_id, a.marketplace
+    )
+    SELECT st.campaign_id, st.ad_group_id, st.marketplace,
+           c.campaign_name, c.campaign_state, c.targeting_type,
+           g.ad_group_name, g.ad_group_state,
+           st.impressions, st.clicks, st.cost, st.sales_14d, st.purchases_14d
+    FROM st
+    LEFT JOIN camps c ON c.campaign_id = st.campaign_id AND c.marketplace = st.marketplace
+    LEFT JOIN grps  g ON g.ad_group_id = st.ad_group_id AND g.marketplace = st.marketplace
+    WHERE TRUE {ttype_cond}
+    ORDER BY st.cost DESC
+    LIMIT 500
+    """
+    try:
+        rows = _rows(get_client().query(sql))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    # свернуть плоский список в кампании с вложенными группами
+    camps, order = {}, []
+    for r in rows:
+        cid = r.get('campaign_id')
+        c = camps.get(cid)
+        if c is None:
+            c = camps[cid] = {
+                "campaign_id":    cid,
+                "campaign_name":  r.get('campaign_name'),
+                "campaign_state": r.get('campaign_state'),
+                "targeting_type": r.get('targeting_type'),
+                "marketplace":    r.get('marketplace'),
+                "impressions": 0, "clicks": 0, "cost": 0.0,
+                "sales_14d": 0.0, "purchases_14d": 0,
+                "groups": [],
+            }
+            order.append(cid)
+        c["groups"].append({
+            "ad_group_id":    r.get('ad_group_id'),
+            "ad_group_name":  r.get('ad_group_name'),
+            "ad_group_state": r.get('ad_group_state'),
+            "impressions":    r.get('impressions') or 0,
+            "clicks":         r.get('clicks') or 0,
+            "cost":           r.get('cost') or 0,
+            "sales_14d":      r.get('sales_14d') or 0,
+            "purchases_14d":  r.get('purchases_14d') or 0,
+        })
+        for k in ("impressions", "clicks", "cost", "sales_14d", "purchases_14d"):
+            c[k] += r.get(k) or 0
+
+    out = []
+    for cid in order:
+        c = camps[cid]
+        c["cost"]      = round(c["cost"], 2)
+        c["sales_14d"] = round(c["sales_14d"], 2)
+        c["groups"].sort(key=lambda g: -(g["cost"] or 0))
+        out.append(c)
+    out.sort(key=lambda c: -(c["cost"] or 0))
+
+    return jsonify({
+        "campaigns": out,
+        "total":     len(out),
+        "groups":    sum(len(c["groups"]) for c in out),
+    })

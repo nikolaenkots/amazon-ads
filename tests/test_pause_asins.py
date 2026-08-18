@@ -26,12 +26,15 @@ class FakeBQ:
         self.queries, self.loaded = [], []
         self.data_rows = []
         self.group_rows = []
+        self.detail_rows = []
         self.pending = []          # уже стоящие в очереди (entity_type, entity_id, field_name)
     def query(self, sql):
         self.queries.append(sql)
         low = sql.lower()
         if 'from stats s' in low or 'grp_cnt' in low and 'active_groups' in low and 'cat' in low:
             return FakeJob(self.data_rows)
+        if 'st as (' in low:
+            return FakeJob(self.detail_rows)
         if 'grp_total' in low:
             return FakeJob(self.group_rows)
         if 'status = \'pending\'' in low:
@@ -141,6 +144,50 @@ assert r.status_code == 200, d2
 assert "c.targeting_type = 'AUTO'" in fake.queries[-1]
 assert d2['auto'] == 1 and d2['manual'] == 1   # фейк отдаёт обе, счётчики считаются
 print("  ✓ при остановке фильтр типа тоже учитывается, в ответе разбивка")
+
+
+# ── 3c. Лимит списка ASIN ─────────────────────────────────
+r = c.get('/automation/pause-asins/data?account_type=MERCH&limit=1000', headers=H)
+d3 = r.get_json()
+assert 'LIMIT 1000' in fake.queries[-1], "лимит не уходит в запрос"
+assert d3['limit'] == 1000 and d3['truncated'] is False
+r = c.get('/automation/pause-asins/data?account_type=MERCH&limit=1', headers=H)
+assert r.get_json()['truncated'] is True, "упёрлись в лимит — страница должна предупредить"
+r = c.get('/automation/pause-asins/data?account_type=MERCH', headers=H)
+assert 'LIMIT 200' in fake.queries[-1], "по умолчанию 200"
+print("  ✓ лимит списка настраивается (200 по умолчанию), упор в лимит помечается")
+
+
+# ── 3d. Раскрытие строки: кампании и группы ASIN ──────────
+fake.detail_rows = [
+    {"campaign_id": "c1", "ad_group_id": "g1", "marketplace": "US",
+     "campaign_name": "Camp A", "campaign_state": "ENABLED", "targeting_type": "AUTO",
+     "ad_group_name": "Grp 1", "ad_group_state": "ENABLED",
+     "impressions": 3000, "clicks": 20, "cost": 12.0, "sales_14d": 0.0, "purchases_14d": 0},
+    {"campaign_id": "c1", "ad_group_id": "g2", "marketplace": "US",
+     "campaign_name": "Camp A", "campaign_state": "ENABLED", "targeting_type": "AUTO",
+     "ad_group_name": "Grp 2", "ad_group_state": "PAUSED",
+     "impressions": 1000, "clicks": 5, "cost": 3.5, "sales_14d": 0.0, "purchases_14d": 0},
+    {"campaign_id": "c2", "ad_group_id": "g3", "marketplace": "US",
+     "campaign_name": "Camp B", "campaign_state": "ENABLED", "targeting_type": "MANUAL",
+     "ad_group_name": "Grp 3", "ad_group_state": "ENABLED",
+     "impressions": 500, "clicks": 3, "cost": 2.0, "sales_14d": 0.0, "purchases_14d": 0},
+]
+r = c.get('/automation/pause-asins/detail?account_type=MERCH&asin=B0TEST0001'
+          '&marketplace=US&date_from=2026-08-01&date_to=2026-08-17', headers=H)
+d4 = r.get_json()
+assert r.status_code == 200, d4
+assert d4['total'] == 2 and d4['groups'] == 3
+c1 = d4['campaigns'][0]
+assert c1['campaign_id'] == 'c1' and len(c1['groups']) == 2
+assert c1['clicks'] == 25 and c1['cost'] == 15.5, c1   # суммы по группам сходятся
+assert [g['ad_group_id'] for g in c1['groups']] == ['g1', 'g2']  # дороже — выше
+assert c1['groups'][1]['ad_group_state'] == 'PAUSED'
+print(f"  ✓ раскрытие строки: {d4['total']} кампании, {d4['groups']} группы со статусами и статистикой")
+
+r = c.get('/automation/pause-asins/detail?account_type=MERCH&asin=B0TEST0001&ttype=AUTO', headers=H)
+assert "WHERE TRUE AND c.targeting_type = 'AUTO'" in fake.queries[-1]
+print("  ✓ в раскрытии учитывается выбранный тип кампаний")
 
 
 # ── 4. Пакетная постановка пауз в очередь ─────────────────

@@ -73,3 +73,12 @@
 </div>
 {{RIGHT}}
 </header>
+
+<script>
+/* Закрытие выпадающих меню по клику вне их — общее для всех страниц,
+   поэтому лежит здесь, рядом с самой разметкой меню. */
+document.addEventListener('click', function (e) {
+  if (e.target.closest && e.target.closest('.nav-drop')) return;
+  document.querySelectorAll('.nav-drop.open').forEach(function (d) { d.classList.remove('open'); });
+});
+</script>
