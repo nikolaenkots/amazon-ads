@@ -1,4 +1,4 @@
-from bq_client import get_client
+from bq_client import get_client, load_rows, run_query
 import gzip
 import json
 import os
@@ -453,32 +453,18 @@ def ads_upload_to_bq():
             client = get_client()
             tbl    = _get_table(account_type, report_type)
             emit(job_id, "progress", {"msg": "Удаляем старые данные...", "pct": 20})
-            client.query(
-                f"DELETE FROM `{tbl}` WHERE date BETWEEN '{start_date}' AND '{end_date}' AND profile_id = '{profile_id}'"
-            ).result()
-            import time
-            total      = len(mapped)
-            inserted   = 0
-            CHUNK      = 50_000
-            BATCH_SIZE = 5
-            chunks     = [mapped[i:i+CHUNK] for i in range(0, total, CHUNK)]
-            emit(job_id, "progress", {"msg": f"Загружаем {total:,} строк ({len(chunks)} частей)...", "pct": 22})
-            for b_start in range(0, len(chunks), BATCH_SIZE):
-                batch = chunks[b_start:b_start+BATCH_SIZE]
-                jobs  = []
-                for ch in batch:
-                    j = client.load_table_from_json(
-                        ch, tbl,
-                        job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
-                    )
-                    jobs.append((j, len(ch)))
-                for j, n in jobs:
-                    j.result()
-                    inserted += n
-                    pct = 22 + int(inserted / total * 73)
-                    emit(job_id, "progress", {"msg": f"Загружено {inserted:,}/{total:,}", "pct": pct})
-                if b_start + BATCH_SIZE < len(chunks):
-                    time.sleep(2)
+            run_query(
+                f"DELETE FROM `{tbl}` WHERE date BETWEEN '{start_date}' AND '{end_date}' AND profile_id = '{profile_id}'",
+                progress=lambda d, t, m: emit(job_id, "progress", {"msg": m, "pct": 20})
+            )
+            total = len(mapped)
+
+            def _progress(done, tot, msg):
+                emit(job_id, "progress", {"msg": msg, "pct": 22 + int(done / max(tot, 1) * 73)})
+
+            # одним заданием: пачка мелких job упиралась в лимит частоты
+            # операций над таблицей (429 rateLimitExceeded)
+            inserted = load_rows(mapped, tbl, progress=_progress)
             try: os.remove(tmp)
             except: pass
             if entry_id:

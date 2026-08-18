@@ -81,11 +81,15 @@ class FakeBQ:
         self.deletes.append(sql); return FakeJob()
     def load_table_from_json(self, rows, table, job_config=None):
         self.loaded.append((table, len(rows))); return FakeJob()
+    def load_table_from_file(self, fh, table, job_config=None):
+        # данные грузятся одним заданием из NDJSON-файла
+        n = sum(1 for line in fh if line.strip())
+        self.loaded.append((table, n)); return FakeJob()
 
 
 fake_bq = FakeBQ()
 cr.req_lib.post = fake_post
-cr.bigquery.Client = lambda project=None: fake_bq
+import bq_client; bq_client._client = fake_bq
 time.sleep = lambda s: None
 
 PROFILES = [
@@ -100,7 +104,7 @@ auto_sync_campaigns._AMZ = cr._AMZ
 def run(label, empty=(), fail=()):
     global fake_bq
     scenario["empty"] = set(empty); scenario["fail"] = set(fail)
-    fake_bq = FakeBQ(); cr.bigquery.Client = lambda project=None: fake_bq
+    fake_bq = FakeBQ(); import bq_client; bq_client._client = fake_bq
     if os.path.exists(cr.SYNC_LOG):
         os.remove(cr.SYNC_LOG)
     print(f"\n{'='*60}\n  {label}\n{'='*60}")

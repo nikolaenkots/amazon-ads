@@ -31,7 +31,7 @@ os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
                       os.path.join(BASE_DIR, "config", "bigquery_key.json"))
 
 from data_import.ads_routes import REPORT_CONFIGS, _AMZ, _amz_headers, _amz_token, _get_table, _map_row
-from bq_client import get_client
+from bq_client import get_client, load_rows, run_query
 
 AUTO_LOG    = os.path.join(BASE_DIR, "auto_collect_log.json")
 DAYS_BACK   = 14      # период отчёта: последние 14 дней (по вчера включительно)
@@ -143,7 +143,6 @@ def load_to_bq(rows, profile, report_type, start_date, end_date):
     отдаёт пустой отчёт из-за сбоя на своей стороне, и DELETE стёр бы
     ранее собранную статистику за 14 дней.
     """
-    from google.cloud.bigquery import LoadJobConfig
     client     = get_client()
     table      = _get_table(profile["type"], report_type)
     profile_id = str(profile["id"])
@@ -157,17 +156,12 @@ def load_to_bq(rows, profile, report_type, start_date, end_date):
             return 0, f"пустой отчёт — в базе {cnt} строк, не тронуты"
         return 0, "нет рекламы за период"
 
-    client.query(f"DELETE FROM `{table}` {period}").result()
+    run_query(f"DELETE FROM `{table}` {period}")
 
-    mapped   = [_map_row(r, profile_id, profile["marketplace"], report_type) for r in rows]
-    inserted = 0
-    for i in range(0, len(mapped), BQ_CHUNK):
-        chunk = mapped[i:i + BQ_CHUNK]
-        client.load_table_from_json(
-            chunk, table,
-            job_config=LoadJobConfig(write_disposition="WRITE_APPEND")
-        ).result()
-        inserted += len(chunk)
+    mapped = [_map_row(r, profile_id, profile["marketplace"], report_type) for r in rows]
+    # одним заданием: пачка мелких job упиралась в лимит частоты операций
+    # над таблицей (429 rateLimitExceeded)
+    inserted = load_rows(mapped, table)
     return inserted, None
 
 
