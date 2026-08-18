@@ -99,7 +99,25 @@ app.register_blueprint(placements_bp)
 # не доходит.
 @app.route('/assets/<path:filename>')
 def assets(filename):
-    return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
+    resp = send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
+    # явный MIME: при text/plain или text/html браузер игнорирует стили
+    if filename.endswith('.css'):
+        resp.headers['Content-Type'] = 'text/css; charset=utf-8'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+@app.route('/assets-check')
+def assets_check():
+    """Диагностика: видит ли приложение файл оформления."""
+    path = os.path.join(BASE_DIR, 'static', 'common.css')
+    return {
+        "base_dir":   BASE_DIR,
+        "css_path":   path,
+        "exists":     os.path.exists(path),
+        "size":       os.path.getsize(path) if os.path.exists(path) else None,
+        "static_dir": sorted(os.listdir(os.path.join(BASE_DIR, 'static')))
+                      if os.path.isdir(os.path.join(BASE_DIR, 'static')) else "нет папки static",
+    }
 
 # ── Главная страница ──────────────────────────────────────
 @app.route('/')
