@@ -56,6 +56,7 @@ def pause_asins_data():
     date_to       = request.args.get('date_to', '')
     marketplace   = request.args.get('marketplace', '').upper()
     portfolio_ids = request.args.get('portfolio_ids', '')
+    ttype         = request.args.get('ttype', '').upper()   # AUTO | MANUAL | '' (все)
     try:
         min_clicks = float(request.args.get('min_clicks', 10))
         min_cost   = float(request.args.get('min_cost', 0))
@@ -87,13 +88,25 @@ def pause_asins_data():
             camp_conds.append(f"camp.portfolio_id IN ({','.join(ids)})")
     camp_where = ' AND '.join(camp_conds)
 
-    mkt_cond = f"AND ag.marketplace = '{_q(marketplace)}'" if marketplace else ''
+    mkt_cond = f"AND marketplace = '{_q(marketplace)}'" if marketplace else ''
+    # фильтр по типу кампании: только авто, только ручные или все
+    ttype_cond = (f"AND ct.targeting_type = '{_q(ttype)}'"
+                  if ttype in ('AUTO', 'MANUAL') else '')
 
     sql = f"""
     WITH camp_filter AS (
       SELECT DISTINCT camp.campaign_id, camp.marketplace
       FROM `{camp_table}` camp
       WHERE {camp_where}
+    ),
+    -- тип кампании (AUTO/MANUAL) по последнему состоянию
+    camp_type AS (
+      SELECT campaign_id, marketplace, targeting_type FROM (
+        SELECT campaign_id, marketplace, targeting_type,
+               ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY synced_at DESC) rn
+        FROM `{camp_table}`
+        WHERE entity_type = 'campaign' {mkt_cond}
+      ) WHERE rn = 1
     ),
     stats AS (
       SELECT a.advertised_asin AS asin, a.marketplace,
@@ -118,23 +131,32 @@ def pause_asins_data():
         WHERE entity_type = 'product_ad' AND asin IS NOT NULL
       ) WHERE rn = 1 AND ad_state = 'ENABLED'
     ),
-    groups AS (
+    -- grps, а не groups: GROUPS — зарезервированное слово BigQuery
+    grps AS (
       SELECT ad_group_id, marketplace FROM (
         SELECT ad_group_id, marketplace, ad_group_state,
                ROW_NUMBER() OVER (PARTITION BY ad_group_id ORDER BY synced_at DESC) rn
-        FROM `{camp_table}` ag
+        FROM `{camp_table}`
         WHERE entity_type = 'ad_group' {mkt_cond}
       ) WHERE rn = 1 AND ad_group_state = 'ENABLED'
     ),
     grp_cnt AS (
-      SELECT ads.asin, ads.marketplace, COUNT(DISTINCT ads.ad_group_id) AS active_groups
+      SELECT ads.asin, ads.marketplace,
+             COUNT(DISTINCT ads.ad_group_id) AS active_groups,
+             COUNT(DISTINCT IF(ct.targeting_type = 'AUTO',   ads.ad_group_id, NULL)) AS auto_groups,
+             COUNT(DISTINCT IF(ct.targeting_type = 'MANUAL', ads.ad_group_id, NULL)) AS manual_groups
       FROM ads
-      JOIN groups g ON g.ad_group_id = ads.ad_group_id AND g.marketplace = ads.marketplace
+      JOIN grps g ON g.ad_group_id = ads.ad_group_id AND g.marketplace = ads.marketplace
+      LEFT JOIN camp_type ct
+        ON ct.campaign_id = ads.campaign_id AND ct.marketplace = ads.marketplace
+      WHERE TRUE {ttype_cond}
       GROUP BY ads.asin, ads.marketplace
     )
     SELECT s.asin, s.marketplace, s.impressions, s.clicks, s.cost,
            s.sales_14d, s.purchases_14d,
-           IFNULL(gc.active_groups, 0) AS active_groups,
+           IFNULL(gc.active_groups, 0)  AS active_groups,
+           IFNULL(gc.auto_groups, 0)    AS auto_groups,
+           IFNULL(gc.manual_groups, 0)  AS manual_groups,
            cat.title, cat.image_url,
            ROUND(SAFE_DIVIDE(s.cost, NULLIF(s.sales_14d, 0)) * 100, 1) AS acos
     FROM stats s
@@ -175,6 +197,7 @@ def pause_asins_groups():
     data         = request.get_json() or {}
     account_type = (data.get('account_type') or 'MERCH').upper()
     marketplace  = (data.get('marketplace') or '').upper()
+    ttype        = (data.get('ttype') or '').upper()   # AUTO | MANUAL | '' (все)
     asins        = [str(a).strip().upper() for a in (data.get('asins') or []) if str(a).strip()]
 
     if account_type not in ('MERCH', 'KDP'):
@@ -188,6 +211,8 @@ def pause_asins_groups():
     camp_table = f"{PROJECT_ID}.{DATASET}.campaigns_{suffix}"
     asin_list  = ",".join(f"'{_q(a)}'" for a in asins)
     mkt_cond   = f"AND marketplace = '{_q(marketplace)}'" if marketplace else ''
+    ttype_cond = (f"AND c.targeting_type = '{_q(ttype)}'"
+                  if ttype in ('AUTO', 'MANUAL') else '')
 
     sql = f"""
     WITH ads AS (
@@ -198,7 +223,8 @@ def pause_asins_groups():
         WHERE entity_type = 'product_ad' AND asin IS NOT NULL {mkt_cond}
       ) WHERE rn = 1 AND ad_state = 'ENABLED'
     ),
-    groups AS (
+    -- grps, а не groups: GROUPS — зарезервированное слово BigQuery
+    grps AS (
       SELECT ad_group_id, marketplace, ad_group_name, campaign_id, profile_id FROM (
         SELECT ad_group_id, marketplace, ad_group_name, campaign_id, profile_id,
                ad_group_state,
@@ -208,8 +234,8 @@ def pause_asins_groups():
       ) WHERE rn = 1 AND ad_group_state = 'ENABLED'
     ),
     camps AS (
-      SELECT campaign_id, marketplace, campaign_name FROM (
-        SELECT campaign_id, marketplace, campaign_name,
+      SELECT campaign_id, marketplace, campaign_name, targeting_type FROM (
+        SELECT campaign_id, marketplace, campaign_name, targeting_type,
                ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY synced_at DESC) rn
         FROM `{camp_table}`
         WHERE entity_type = 'campaign' {mkt_cond}
@@ -221,17 +247,16 @@ def pause_asins_groups():
       FROM ads GROUP BY ad_group_id, marketplace
     )
     SELECT g.ad_group_id, g.ad_group_name, g.campaign_id, g.marketplace,
-           g.profile_id, c.campaign_name,
+           g.profile_id, c.campaign_name, c.targeting_type,
            gt.asins_total,
-           COUNT(DISTINCT a.asin) AS asins_selected,
-           STRING_AGG(DISTINCT a.asin ORDER BY a.asin LIMIT 5) AS sample_asins
+           COUNT(DISTINCT a.asin) AS asins_selected
     FROM ads a
-    JOIN groups g    ON g.ad_group_id = a.ad_group_id AND g.marketplace = a.marketplace
+    JOIN grps g      ON g.ad_group_id = a.ad_group_id AND g.marketplace = a.marketplace
     JOIN grp_total gt ON gt.ad_group_id = g.ad_group_id AND gt.marketplace = g.marketplace
     LEFT JOIN camps c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
-    WHERE a.asin IN ({asin_list})
+    WHERE a.asin IN ({asin_list}) {ttype_cond}
     GROUP BY g.ad_group_id, g.ad_group_name, g.campaign_id, g.marketplace,
-             g.profile_id, c.campaign_name, gt.asins_total
+             g.profile_id, c.campaign_name, c.targeting_type, gt.asins_total
     ORDER BY c.campaign_name, g.ad_group_name
     """
     try:
@@ -243,6 +268,8 @@ def pause_asins_groups():
             "groups":     rows,
             "total":      len(rows),
             "with_other": sum(1 for r in rows if r["has_other_asins"]),
+            "auto":       sum(1 for r in rows if (r.get("targeting_type") or '') == 'AUTO'),
+            "manual":     sum(1 for r in rows if (r.get("targeting_type") or '') == 'MANUAL'),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
