@@ -64,7 +64,7 @@ r = c.get('/automation/pause-asins', headers=H)
 html = r.get_data(as_text=True)
 assert r.status_code == 200
 assert 'nav-drop-menu' in html and 'Общее оформление' in html
-assert 'Остановка ASIN без продаж' in html
+assert 'ASIN без продаж' in html and 'Только активные' in html
 assert 'class="nav-link active">Остановка ASIN' in html.replace('\n', ' ') or 'active' in html
 print("  ✓ страница открывается, шапка и стили подставлены")
 
@@ -197,6 +197,13 @@ print(f"  ✓ раскрытие строки: {d4['total']} кампании, {
 r = c.get('/automation/pause-asins/detail?account_type=MERCH&asin=B0TEST0001&ttype=AUTO', headers=H)
 assert "WHERE TRUE AND c.targeting_type = 'AUTO'" in fake.queries[-1]
 print("  ✓ в раскрытии учитывается выбранный тип кампаний")
+
+r = c.get('/automation/pause-asins/detail?account_type=MERCH&asin=B0TEST0001&active_only=1', headers=H)
+sql = fake.queries[-1]
+assert "g.ad_group_state = 'ENABLED'" in sql and "c.campaign_state = 'ENABLED'" in sql
+r = c.get('/automation/pause-asins/detail?account_type=MERCH&asin=B0TEST0001', headers=H)
+assert "g.ad_group_state = 'ENABLED'" not in fake.queries[-1]
+print("  ✓ «Только активные» убирает из раскрытия остановленные группы и кампании")
 
 
 # ── 4. Пакетная постановка пауз в очередь ─────────────────
