@@ -12,27 +12,25 @@
    берётся из /assets/common.css. Здесь только то, что есть лишь на этой странице. */
 body{min-height:100vh}
 header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-main{max-width:1400px;padding:24px 32px}
-.hero{margin-bottom:18px}
-.hero-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:8px}
-.hero-title{font-size:26px;font-weight:600;letter-spacing:-.02em}
-.hero-sub{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
 
-/* Панель критериев: .fp/.fr/.fg/.fl — из common.css, здесь только поля ввода */
-.fg input,.fg select{height:34px;padding:0 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;
-  font-family:'DM Mono',monospace;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
-.fg input:focus,.fg select:focus{border-color:var(--accent-bd)}
+/* Фильтры и кнопки — как на «Аналитике товаров» */
+.fg input,.fg select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--surface);
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 10px;outline:none;transition:border-color .15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
 .fg input.num{width:92px}
-.at{gap:3px}
-.atb{border-radius:6px;background:var(--surface2);transition:all .15s}
-.atb.on{background:var(--accent-bg);border-color:var(--accent-bd);color:var(--accent)}
+.at{gap:4px}
+.atb{border-radius:6px;transition:all .15s}
+.atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover:not(:disabled){background:#a83d10}
+.btn-s:hover{background:var(--surface2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
 
-/* Сводка: карточка .sc — из common.css, здесь только раскладка и текст */
-.sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.sc{min-width:130px;padding:10px 16px}
-.sc-l{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:3px}
-.sc-v{font-size:19px;font-weight:600;letter-spacing:-.01em}
+/* Сводка — общая сетка .sr/.sc/.sl/.sv из common.css */
+.sr{grid-template-columns:repeat(4,1fr)}
+.sv.a{color:var(--accent)}
 
 /* Панель действия */
 .bar{display:none;align-items:center;gap:12px;background:var(--accent-bg);border:1px solid var(--accent-bd);
@@ -85,6 +83,8 @@ tr.det>td{padding:0;background:var(--surface2)}
 .dg{cursor:pointer;transition:background .1s}
 .dg:hover{background:var(--surface2)}
 .dg.dg-open{background:var(--surface2)}
+.cb-g{width:13px;height:13px;flex-shrink:0}
+.cb-g:disabled{cursor:not-allowed;opacity:.4}
 .dg-ar{color:var(--dim);font-size:10px;transition:transform .15s;display:inline-block;margin-left:-12px;width:10px}
 .dg-ar.on{transform:rotate(90deg)}
 .det-load{padding:10px 0;font-size:12px;color:var(--muted)}
@@ -142,42 +142,33 @@ tr.det>td{padding:0;background:var(--surface2)}
 
 <main>
 
-  <div class="hero">
-    <div class="hero-label">Автоматизация</div>
-    <div class="hero-title">Остановка ASIN без продаж</div>
-    <div class="hero-sub">Находит ASIN, которые тратят бюджет без заказов, и ставит в очередь паузу всех их групп объявлений — вместо того чтобы открывать каждый ASIN вручную.</div>
-  </div>
-
   <!-- Критерии -->
   <div class="fp">
     <div class="fr">
       <div class="fg">
-        <span class="fl">Аккаунт</span>
+        <div class="fl">Аккаунт</div>
         <div class="at" id="acctSel">
-          <button class="atb on" onclick="setAcct('MERCH',event)">Merch</button>
+          <button class="atb on" onclick="setAcct('MERCH',event)">MERCH</button>
           <button class="atb" onclick="setAcct('KDP',event)">KDP</button>
         </div>
       </div>
-      <div class="fg">
-        <span class="fl">Маркетплейс</span>
-        <select id="mkt" onchange="load()"><option value="">Все</option></select>
+      <div class="fg"><div class="fl">Дата от</div><input type="date" id="df" style="width:148px"></div>
+      <div class="fg"><div class="fl">Дата до</div><input type="date" id="dt" style="width:148px"></div>
+      <div class="fg"><div class="fl">Маркетплейс</div>
+        <select id="mkt" style="width:100px"><option value="">Все</option></select>
       </div>
-      <div class="fg">
-        <span class="fl">Тип кампаний</span>
-        <select id="ttype" onchange="load()">
+      <div class="fg"><div class="fl">Тип кампаний</div>
+        <select id="ttype" style="width:130px">
           <option value="">Все</option>
           <option value="AUTO">Только авто</option>
           <option value="MANUAL">Только ручные</option>
         </select>
       </div>
-      <div class="fg"><span class="fl">От</span><input type="date" id="df" onchange="load()"></div>
-      <div class="fg"><span class="fl">До</span><input type="date" id="dt" onchange="load()"></div>
-      <div class="fg"><span class="fl">Кликов от</span><input type="number" class="num" id="minClicks" value="10" min="0" step="1" onchange="load()"></div>
-      <div class="fg"><span class="fl">Расход от $</span><input type="number" class="num" id="minCost" value="0" min="0" step="0.5" onchange="load()"></div>
-      <div class="fg"><span class="fl">Заказов не больше</span><input type="number" class="num" id="maxOrders" value="0" min="0" step="1" onchange="load()"></div>
-      <div class="fg">
-        <span class="fl">Показать</span>
-        <select id="lim" onchange="load()">
+      <div class="fg"><div class="fl">Кликов от</div><input type="number" class="num" id="minClicks" value="10" min="0" step="1"></div>
+      <div class="fg"><div class="fl">Расход от $</div><input type="number" class="num" id="minCost" value="0" min="0" step="0.5"></div>
+      <div class="fg"><div class="fl">Заказов не больше</div><input type="number" class="num" id="maxOrders" value="0" min="0" step="1"></div>
+      <div class="fg"><div class="fl">Показать</div>
+        <select id="lim" style="width:90px">
           <option value="200">200</option>
           <option value="500">500</option>
           <option value="1000">1000</option>
@@ -185,12 +176,25 @@ tr.det>td{padding:0;background:var(--surface2)}
           <option value="5000">5000</option>
         </select>
       </div>
-      <button class="btn btn-p" onclick="load()" id="btnLoad">Найти</button>
+      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none">
+          <input type="checkbox" id="activeOnly" checked onchange="reloadDetails()"
+                 style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Только активные
+        </label>
+      </div>
+      <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
+        <button class="btn btn-p" onclick="load()" id="btnLoad">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Применить
+        </button>
+        <button class="btn btn-s" onclick="rst()">Сброс</button>
+      </div>
     </div>
-    <div class="hint">Активной считается группа, у которой активны и объявление, и сама группа, и её кампания. ASIN без таких групп в список не попадают. Стрелка в строке раскрывает кампании и группы, клик по группе — её таргеты, поисковые запросы и минус-слова.</div>
+    <div class="hint">Активной считается группа, у которой активны и объявление, и сама группа, и её кампания — ASIN без таких групп в список не попадают. Стрелка раскрывает кампании и группы, клик по группе — её таргеты, запросы и минус-слова. Галочкой у группы можно исключить её из остановки.</div>
   </div>
 
-  <div class="sum" id="sum"></div>
+  <div class="sr" id="sum" style="display:none"></div>
 
   <!-- Действие над выбранными -->
   <div class="bar" id="bar">
@@ -251,18 +255,19 @@ tr.det>td{padding:0;background:var(--surface2)}
 const MKTS={MERCH:['US','UK','DE','FR','IT','ES'],KDP:['US','CA','UK','DE','FR','IT','ES','AU']};
 const S={acct:'MERCH',rows:[],sel:new Set(),groups:[],
          open:new Set(),detail:{},truncated:false,limit:0,
-         openGrp:new Set(),struct:{},tab:{}};
+         openGrp:new Set(),struct:{},tab:{},skip:new Set()};
 
 fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
 function getProfileId(mkt){ return (window._pm||{})[S.acct+'_'+mkt]||''; }
 
 // период по умолчанию — последние 30 дней
-(function initDates(){
+function initDates(){
   const to=new Date(); to.setDate(to.getDate()-1);
   const from=new Date(); from.setDate(from.getDate()-30);
   document.getElementById('dt').value=to.toISOString().slice(0,10);
   document.getElementById('df').value=from.toISOString().slice(0,10);
-})();
+}
+initDates();
 renderMkts();
 
 function setAcct(a,e){
@@ -279,6 +284,7 @@ function renderMkts(){
 
 async function load(){
   const btn=document.getElementById('btnLoad');
+  const btnHtml=btn.innerHTML;
   btn.disabled=true; btn.textContent='Ищем...';
   document.getElementById('tb').innerHTML='<tr><td colspan="14" class="empty">Загрузка…</td></tr>';
   S.sel.clear(); renderBar();
@@ -297,7 +303,7 @@ async function load(){
     const d=await(await fetch('/automation/pause-asins/data?'+p)).json();
     if(d.error) throw new Error(d.error);
     S.rows=d.rows||[];
-    S.open.clear(); S.detail={}; S.openGrp.clear(); S.struct={}; S.tab={};
+    S.open.clear(); S.detail={}; S.openGrp.clear(); S.struct={}; S.tab={}; S.skip.clear();
     S.truncated=!!d.truncated; S.limit=d.limit||0;
     renderSum(d.summary||{});
     renderRows();
@@ -305,17 +311,31 @@ async function load(){
     document.getElementById('tb').innerHTML=`<tr><td colspan="14" class="empty">Ошибка: ${xe(e.message)}</td></tr>`;
     toast('Ошибка загрузки: '+e.message,false);
   }finally{
-    btn.disabled=false; btn.textContent='Найти';
+    btn.disabled=false; btn.innerHTML=btnHtml;
   }
 }
 
 function renderSum(s){
-  document.getElementById('sum').innerHTML=[
-    ['ASIN найдено', f(s.asins)],
-    ['Активных групп', f(s.groups)],
-    ['Клики', f(s.clicks)],
-    ['Расход впустую', '$'+f(s.cost,2)],
-  ].map(([l,v])=>`<div class="sc"><div class="sc-l">${l}</div><div class="sc-v">${v}</div></div>`).join('');
+  const el=document.getElementById('sum');
+  el.style.display='grid';
+  el.innerHTML=[
+    ['ASIN найдено', f(s.asins), ''],
+    ['Активных групп', f(s.groups), ''],
+    ['Клики', f(s.clicks), ''],
+    ['Расход впустую', '$'+f(s.cost,2), 'a'],
+  ].map(([l,v,c])=>`<div class="sc"><div class="sl">${l}</div><div class="sv ${c}">${v}</div></div>`).join('');
+}
+
+function rst(){
+  document.getElementById('mkt').value='';
+  document.getElementById('ttype').value='';
+  document.getElementById('minClicks').value=10;
+  document.getElementById('minCost').value=0;
+  document.getElementById('maxOrders').value=0;
+  document.getElementById('lim').value='200';
+  document.getElementById('activeOnly').checked=true;
+  initDates();
+  load();
 }
 
 function renderRows(){
@@ -368,7 +388,13 @@ function detailRow(key){
       ${c.groups.map(g=>{
         const gk=c.campaign_id+'/'+g.ad_group_id;
         const go=S.openGrp.has(gk);
+        // остановить можно только то, что сейчас работает
+        const live=g.ad_group_state==='ENABLED'&&c.campaign_state==='ENABLED';
+        const on=live&&!S.skip.has(String(g.ad_group_id));
         return `<div class="dg${go?' dg-open':''}" onclick="toggleGrp('${xe(c.campaign_id)}','${xe(g.ad_group_id)}')">
+        <input type="checkbox" class="cb cb-g" ${on?'checked':''} ${live?'':'disabled'}
+               title="${live?'Снимите галочку, чтобы не останавливать эту группу':'Группа уже не работает — останавливать нечего'}"
+               onclick="event.stopPropagation()" onchange="toggleSkip('${xe(g.ad_group_id)}',this)">
         <span class="dg-ar${go?' on':''}">▸</span>
         <span class="dg-n" title="${xe(g.ad_group_name||'')}">${xe(g.ad_group_name||g.ad_group_id)}</span>
         <span class="st ${g.ad_group_state==='ENABLED'?'st-on':'st-off'}">${xe(g.ad_group_state||'—')}</span>
@@ -434,6 +460,21 @@ function groupBody(cid,gid){
 
 function setTab(gk,i){ S.tab[gk]=i; renderRows(); }
 
+// Снятая галочка = группу не останавливаем
+function toggleSkip(gid,el){
+  if(el.checked) S.skip.delete(String(gid)); else S.skip.add(String(gid));
+  renderBar();
+}
+
+// Переключили «Только активные» — перезапросить уже раскрытое
+function reloadDetails(){
+  const rows=[...S.open], grps=[...S.openGrp];
+  S.detail={}; S.struct={};
+  renderRows();
+  rows.forEach(k=>{ S.open.delete(k); toggleDetail(k); });
+  grps.forEach(gk=>{ const [cid,gid]=gk.split('/'); S.openGrp.delete(gk); toggleGrp(cid,gid); });
+}
+
 async function toggleGrp(cid,gid){
   const gk=cid+'/'+gid;
   if(S.openGrp.has(gk)){ S.openGrp.delete(gk); renderRows(); return; }
@@ -441,7 +482,8 @@ async function toggleGrp(cid,gid){
   if(S.struct[cid]) return;                    // структура кампании уже загружена
   const p=new URLSearchParams({campaign_id:cid,account_type:S.acct,
     date_from:document.getElementById('df').value,
-    date_to:document.getElementById('dt').value});
+    date_to:document.getElementById('dt').value,
+    active_only:document.getElementById('activeOnly').checked?'1':''});
   try{
     const d=await(await fetch('/analytics/campaigns/structure?'+p)).json();
     S.struct[cid]=d.error?{error:d.error}:d;
@@ -457,7 +499,8 @@ async function toggleDetail(key){
   const p=new URLSearchParams({account_type:S.acct,asin:asin,marketplace:mkt,
     date_from:document.getElementById('df').value,
     date_to:document.getElementById('dt').value,
-    ttype:document.getElementById('ttype').value});
+    ttype:document.getElementById('ttype').value,
+    active_only:document.getElementById('activeOnly').checked?'1':''});
   try{
     const d=await(await fetch('/automation/pause-asins/detail?'+p)).json();
     S.detail[key]=d.error?{error:d.error}:{campaigns:d.campaigns||[]};
@@ -486,7 +529,9 @@ function renderBar(){
                      .reduce((s,r)=>s+(r[fld]||0),0);
   document.getElementById('bar').classList.toggle('on',n>0);
   const tl=t==='AUTO'?' (только авто)':(t==='MANUAL'?' (только ручные)':'');
-  document.getElementById('barTxt').textContent=`Выбрано ASIN: ${n} · групп к остановке: ${groups}${tl}`;
+  const ex=S.skip.size?` · исключено вручную: ${S.skip.size}`:'';
+  document.getElementById('barTxt').textContent=
+    `Выбрано ASIN: ${n} · групп к остановке: ${Math.max(0,groups-S.skip.size)}${tl}${ex}`;
 }
 
 // ── Предпросмотр: какие именно группы встанут ─────────────
@@ -508,8 +553,15 @@ async function preview(){
                            asins:chosen.map(x=>x.asin)})});
     const d=await r.json();
     if(!r.ok||d.error) throw new Error(d.error||'Ошибка запроса');
-    S.groups=d.groups||[];
-    showPreview(chosen.length, d.with_other||0, {auto:d.auto, manual:d.manual});
+    const all=d.groups||[];
+    // группы, с которых сняли галочку, в очередь не идут
+    S.groups=all.filter(g=>!S.skip.has(String(g.ad_group_id)));
+    const excl=all.length-S.groups.length;
+    showPreview(chosen.length,
+      S.groups.filter(g=>g.has_other_asins).length,
+      {auto:S.groups.filter(g=>g.targeting_type==='AUTO').length,
+       manual:S.groups.filter(g=>g.targeting_type==='MANUAL').length},
+      excl);
   }catch(e){
     toast('Ошибка: '+e.message,false);
   }finally{
@@ -517,12 +569,13 @@ async function preview(){
   }
 }
 
-function showPreview(asinCount, withOther, byType){
+function showPreview(asinCount, withOther, byType, excluded=0){
   const n=S.groups.length;
   const mix=byType&&(byType.auto||byType.manual)
     ? ` (авто: ${byType.auto||0}, ручных: ${byType.manual||0})` : '';
+  const ex=excluded?` ${excluded} исключено галочками.`:'';
   document.getElementById('pvSub').textContent=
-    `${n} групп${mix} по ${asinCount} ASIN будут поставлены в очередь на паузу. Изменения применятся после одобрения в «Очереди изменений».`;
+    `${n} групп${mix} по ${asinCount} ASIN будут поставлены в очередь на паузу.${ex} Изменения применятся после одобрения в «Очереди изменений».`;
   document.getElementById('pvWarn').innerHTML = withOther
     ? `<div class="warn">В ${withOther} из ${n} групп рекламируются и другие ASIN, которые вы не выбирали — остановка группы затронет и их. Такие группы отмечены в списке.</div>`
     : '';

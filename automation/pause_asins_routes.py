@@ -298,6 +298,7 @@ def pause_asins_detail():
     date_from    = request.args.get('date_from', '')
     date_to      = request.args.get('date_to', '')
     ttype        = request.args.get('ttype', '').upper()
+    active_only  = request.args.get('active_only', '') == '1'
 
     if account_type not in ('MERCH', 'KDP'):
         return jsonify({"error": "Неверный account_type"}), 400
@@ -317,6 +318,9 @@ def pause_asins_detail():
     mkt_cond   = f"AND marketplace = '{_q(marketplace)}'" if marketplace else ''
     ttype_cond = (f"AND c.targeting_type = '{_q(ttype)}'"
                   if ttype in ('AUTO', 'MANUAL') else '')
+    # «Только активные»: показывать лишь то, что сейчас работает
+    active_cond = ("AND g.ad_group_state = 'ENABLED' AND c.campaign_state = 'ENABLED'"
+                   if active_only else '')
 
     sql = f"""
     WITH camps AS (
@@ -354,7 +358,7 @@ def pause_asins_detail():
     FROM st
     LEFT JOIN camps c ON c.campaign_id = st.campaign_id AND c.marketplace = st.marketplace
     LEFT JOIN grps  g ON g.ad_group_id = st.ad_group_id AND g.marketplace = st.marketplace
-    WHERE TRUE {ttype_cond}
+    WHERE TRUE {ttype_cond} {active_cond}
     ORDER BY st.cost DESC
     LIMIT 500
     """
