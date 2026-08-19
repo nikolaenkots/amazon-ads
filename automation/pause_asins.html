@@ -138,7 +138,7 @@ tr.det>td{padding:0;background:var(--surface2)}
 </head>
 <body>
 
-<!--HEADER:Автоматизация-->
+<!--HEADER-->
 
 <main>
 
@@ -178,7 +178,7 @@ tr.det>td{padding:0;background:var(--surface2)}
       </div>
       <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none">
-          <input type="checkbox" id="activeOnly" checked onchange="reloadDetails()"
+          <input type="checkbox" id="activeOnly" checked onchange="load()"
                  style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
           Только активные
         </label>
@@ -298,6 +298,7 @@ async function load(){
     min_cost:document.getElementById('minCost').value||0,
     max_orders:document.getElementById('maxOrders').value||0,
     limit:document.getElementById('lim').value||200,
+    active_only:document.getElementById('activeOnly').checked?'1':'0',
   });
   try{
     const d=await(await fetch('/automation/pause-asins/data?'+p)).json();
@@ -464,15 +465,6 @@ function setTab(gk,i){ S.tab[gk]=i; renderRows(); }
 function toggleSkip(gid,el){
   if(el.checked) S.skip.delete(String(gid)); else S.skip.add(String(gid));
   renderBar();
-}
-
-// Переключили «Только активные» — перезапросить уже раскрытое
-function reloadDetails(){
-  const rows=[...S.open], grps=[...S.openGrp];
-  S.detail={}; S.struct={};
-  renderRows();
-  rows.forEach(k=>{ S.open.delete(k); toggleDetail(k); });
-  grps.forEach(gk=>{ const [cid,gid]=gk.split('/'); S.openGrp.delete(gk); toggleGrp(cid,gid); });
 }
 
 async function toggleGrp(cid,gid){

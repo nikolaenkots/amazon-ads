@@ -156,6 +156,16 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
 .nav-drop-menu{right:0}
 .nav-link{font-weight:500;transition:background .15s}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* Режим массовой остановки */
+.bulk-cb{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.bulk-cb:disabled{opacity:.4;cursor:not-allowed}
+.bulk-bar-fixed{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:9000;display:none;
+  align-items:center;gap:12px;background:var(--surface);border:1px solid var(--accent-bd);border-radius:10px;
+  padding:10px 16px;box-shadow:0 8px 30px rgba(0,0,0,.16)}
+.bb-txt{font-size:13px;white-space:nowrap}
+.btn-d{background:var(--red);color:#fff}
+.btn-d:hover:not(:disabled){background:#c23333}
 </style>
 </head>
 <body>
@@ -189,6 +199,10 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
           <input type="checkbox" id="activeOnly" onchange="S.sc={};go()" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
           Только активные
         </label>
+      </div>
+      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
+        <button class="btn btn-s" id="bulkBtn" onclick="toggleBulk()"
+                title="Показать чекбоксы у групп и таргетов, чтобы остановить их пачкой">⏸ Массовая остановка</button>
       </div>
       <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
         <button class="btn btn-p" id="btnGo" onclick="go()">
@@ -235,12 +249,15 @@ const S = {
   acct:'MERCH', page:1, pp:50, total:0,
   sb:'clicks', sd:'desc',
   rows:[], pfs:[], sel:[],
-  eKey:null,    // expanded ASIN row key (asin|mkt)
+  eKeys:new Set(),  // раскрытые строки ASIN — можно держать открытыми сразу несколько
   eC:{},        // camp expand state {campId: bool}
   sc:{},        // struct cache {campId: data}
   ts:{},        // tab sort state {key: {field, dir}} — per group+tab
   nf:{},        // numeric filters {field: {op,v1,v2}}
   activeOnly: false,
+  bulkMode:false,   // режим массовой остановки: чекбоксы у групп и таргетов
+  bulk:new Map(),   // выбранное: ключ → {entity_type, entity_id, mkt, name}
+  oc:{},            // раскрытые кампании: campId → {asin, mkt, tgtType} (для перерисовки)
 };
 
 // ── Init ──────────────────────────────────────────────────
@@ -446,7 +463,7 @@ function buildTable(){
 
   S.rows.forEach(row=>{
     const key=row.asin+'|'+row.marketplace;
-    const isE=S.eKey===key;
+    const isE=S.eKeys.has(key);
     const acC=row.acos==null?'dv':row.acos<25?'ok':row.acos<50?'hi':'cr';
     const mB=row.marketplace==='US'?'bu':'bm';
     const img=row.image_url?`<img class="ai" src="${xe(row.image_url)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:'';
@@ -481,20 +498,27 @@ function buildTable(){
 
 // ── Row click — no scroll jump ────────────────────────────
 function rowClick(key, asin, mkt){
-  if(S.eKey===key){ closeExpand(); return; }
-  closeExpand();
-  S.eKey=key; S.eC={}; S.sc={};
-
   const tr=document.querySelector(`tr.dr[data-key="${key}"]`);
   if(!tr)return;
+  if(S.eKeys.has(key)){ closeRow(key); return; }   // повторный клик — свернуть
+  S.eKeys.add(key);
   tr.classList.add('exp');
   tr.querySelector('.rchev')?.classList.add('op');
   insertExpand(tr, key);
   loadCamps(asin, mkt);
 }
 
+// Свернуть одну строку, остальные раскрытые не трогать
+function closeRow(key){
+  S.eKeys.delete(key);
+  const sk=key.replace(/[|.]/g,'_');
+  document.getElementById('er_'+sk)?.remove();
+  const tr=document.querySelector(`tr.dr[data-key="${key}"]`);
+  if(tr){ tr.classList.remove('exp'); tr.querySelector('.rchev')?.classList.remove('op'); }
+}
+
 function closeExpand(){
-  S.eKey=null; S.eC={}; S.sc={};
+  S.eKeys.clear(); S.eC={}; S.sc={}; S.oc={};
   document.querySelectorAll('tr.er').forEach(t=>t.remove());
   document.querySelectorAll('tr.dr.exp').forEach(t=>{
     t.classList.remove('exp');
@@ -505,7 +529,7 @@ function closeExpand(){
 function insertExpand(tr, key){
   const sk=key.replace(/[|.]/g,'_');
   const et=document.createElement('tr');
-  et.className='er';
+  et.className='er'; et.id='er_'+sk;
   et.innerHTML=`<td colspan="11"><div class="ei" id="ei_${sk}"><div class="stl"><div class="sp"></div> Загрузка...</div></div></td>`;
   tr.after(et);
 }
@@ -662,6 +686,7 @@ function updateCampStats(cid, structData, filterAsin){
 
 // ── Camp click ────────────────────────────────────────────
 async function campClick(cid, asin, mkt='', tgtType=''){
+  S.oc[cid]={asin, mkt, tgtType};
   const isO=S.eC[cid];
   S.eC[cid]=!isO;
   const cs=document.getElementById('cs_'+cid);
@@ -905,6 +930,9 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
 
     h+=`<div class="gg">
       <div class="ggh" onclick="grpClick(this)">
+        ${S.bulkMode?`<input type="checkbox" class="bulk-cb" ${S.bulk.has('ad_group|'+(g.id||''))?'checked':''}
+           ${enC?'':'disabled title="Группа уже остановлена"'} onclick="event.stopPropagation()"
+           onchange="bulkToggle(event,'ad_group','${je(g.id||'')}','${je(mkt||'')}','${je(g.name||g.id||'')}')">`:''}
         <button class="stog ${enC?'en':'pa'}" title="${enC?'Enabled':'Paused'}"
           onclick="toggleState(event,'ad_group','${je(g.id||'')}','${je(g.state||'ENABLED')}','${je(mkt||'')}','')" data-current="${je(g.state||'ENABLED')}"></button>
         <span id="gn_${g.id||gi}" class="ggn">${g.name||g.id}</span>
@@ -964,6 +992,9 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         const bidVal=it.bid?Number(it.bid).toFixed(2):(g.bid?Number(g.bid).toFixed(2):'');
         const bidIsGroup=!it.bid&&g.bid;  // ставка унаследована от группы
         h+=`<div class="ii">
+          ${S.bulkMode?`<input type="checkbox" class="bulk-cb" ${S.bulk.has(itType+'|'+(it.id||''))?'checked':''}
+             ${itEnC?'':'disabled title="Уже остановлено"'} onclick="event.stopPropagation()"
+             onchange="bulkToggle(event,'${itType}','${je(String(it.id||''))}','${je(mkt||'')}','${je(it.text||it.expression||'')}')">`:''}
           <button class="stog ${itEnC?'en':'pa'}" style="width:24px;height:14px"
             onclick="toggleState(event,'${itType}','${xe(String(it.id||''))}','${itEnC?'ENABLED':'PAUSED'}','${xe(mkt)}','')"></button>
           <span class="it" title="${xe(it.text||it.expression||'')}">${it.text||it.expression||'—'}</span>
@@ -1038,6 +1069,86 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
     h+='</div></div></div>';
   });
   return h;
+}
+
+
+// ── Режим массовой остановки ─────────────────────────────
+// Включает чекбоксы у групп и таргетов: выбранное ставится на паузу пачкой
+// через ту же очередь изменений, что и одиночные переключатели.
+function toggleBulk(){
+  S.bulkMode=!S.bulkMode;
+  const b=document.getElementById('bulkBtn');
+  b.classList.toggle('btn-p',S.bulkMode);
+  b.classList.toggle('btn-s',!S.bulkMode);
+  if(!S.bulkMode) S.bulk.clear();
+  refreshStructs();
+  renderBulkBar();
+}
+
+// Перерисовать уже раскрытые структуры кампаний из кэша
+function refreshStructs(){
+  Object.keys(S.oc).forEach(cid=>{
+    if(!S.eC[cid]||!S.sc[cid])return;
+    const cs=document.getElementById('cs_'+cid); if(!cs)return;
+    const o=S.oc[cid];
+    cs.innerHTML=buildStruct(S.sc[cid], o.asin, cid, o.mkt, o.tgtType);
+  });
+}
+
+function bulkToggle(e, entityType, entityId, mkt, name){
+  e.stopPropagation();
+  const key=entityType+'|'+entityId;
+  if(e.target.checked) S.bulk.set(key,{entity_type:entityType, entity_id:String(entityId), mkt:mkt, name:name});
+  else S.bulk.delete(key);
+  renderBulkBar();
+}
+
+function bulkClear(){ S.bulk.clear(); refreshStructs(); renderBulkBar(); }
+
+function renderBulkBar(){
+  let bar=document.getElementById('bulkBar');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='bulkBar';
+    bar.className='bulk-bar-fixed';
+    document.body.appendChild(bar);
+  }
+  const n=S.bulk.size;
+  if(!n||!S.bulkMode){ bar.style.display='none'; return; }
+  const grp=[...S.bulk.values()].filter(x=>x.entity_type==='ad_group').length;
+  bar.style.display='flex';
+  bar.innerHTML=`<span class="bb-txt">Выбрано: <b>${n}</b> · групп ${grp} · таргетов ${n-grp}</span>
+    <button class="btn btn-s" onclick="bulkClear()">Снять выделение</button>
+    <button class="btn btn-d" id="bulkGo" onclick="bulkPause()">⏸ Поставить на паузу</button>`;
+}
+
+async function bulkPause(){
+  if(!S.bulk.size)return;
+  const items=[...S.bulk.values()].map(x=>({
+    account_type:S.acct, marketplace:x.mkt, profile_id:getProfileId(x.mkt),
+    entity_type:x.entity_type, entity_id:String(x.entity_id),
+    field_name:'state', old_value:'ENABLED', new_value:'PAUSED',
+  }));
+  const mkts=new Set(items.map(i=>i.marketplace));
+  if(mkts.size>1){ toast('Выберите объекты одного маркетплейса: у каждого свой профиль Amazon',false); return; }
+  const btn=document.getElementById('bulkGo');
+  if(btn){ btn.disabled=true; btn.textContent='Ставим в очередь...'; }
+  try{
+    let inserted=0, skipped=0;
+    for(let i=0;i<items.length;i+=500){
+      const r=await fetch('/control/add_batch',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({items:items.slice(i,i+500)})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'Ошибка очереди');
+      inserted+=d.inserted||0; skipped+=d.skipped||0;
+    }
+    toast(`В очередь: ${inserted}`+(skipped?`, уже стояло: ${skipped}`:''), true);
+    S.bulk.clear(); refreshStructs(); renderBulkBar();
+  }catch(e){
+    toast('Ошибка: '+e.message,false);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='⏸ Поставить на паузу'; }
+  }
 }
 
 // ── Group toggle — NO scroll jump ─────────────────────────
@@ -1227,7 +1338,7 @@ async function ctrlAddBatch(payloads){
   if(!r.ok) throw new Error(d.error||'Batch error');
   return d; // {inserted, errors, ids}
 }
- helpers
+// ── Modal helpers ────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('op');}
 function closeModal(id){document.getElementById(id).classList.remove('op');}
 
