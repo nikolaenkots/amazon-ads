@@ -101,10 +101,10 @@ def pause_asins_data():
       FROM `{camp_table}` camp
       WHERE {camp_where}
     ),
-    -- тип кампании (AUTO/MANUAL) по последнему состоянию
+    -- тип и состояние кампании по последней записи синхронизации
     camp_type AS (
-      SELECT campaign_id, marketplace, targeting_type FROM (
-        SELECT campaign_id, marketplace, targeting_type,
+      SELECT campaign_id, marketplace, targeting_type, campaign_state FROM (
+        SELECT campaign_id, marketplace, targeting_type, campaign_state,
                ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY synced_at DESC) rn
         FROM `{camp_table}`
         WHERE entity_type = 'campaign' {mkt_cond}
@@ -149,8 +149,10 @@ def pause_asins_data():
              COUNT(DISTINCT IF(ct.targeting_type = 'MANUAL', ads.ad_group_id, NULL)) AS manual_groups
       FROM ads
       JOIN grps g ON g.ad_group_id = ads.ad_group_id AND g.marketplace = ads.marketplace
-      LEFT JOIN camp_type ct
+      -- JOIN, а не LEFT JOIN: группа считается активной только если активна и её кампания
+      JOIN camp_type ct
         ON ct.campaign_id = ads.campaign_id AND ct.marketplace = ads.marketplace
+       AND ct.campaign_state = 'ENABLED'
       WHERE TRUE {ttype_cond}
       GROUP BY ads.asin, ads.marketplace
     )
@@ -238,13 +240,14 @@ def pause_asins_groups():
         WHERE entity_type = 'ad_group' {mkt_cond}
       ) WHERE rn = 1 AND ad_group_state = 'ENABLED'
     ),
+    -- только активные кампании: в остановленной останавливать нечего
     camps AS (
       SELECT campaign_id, marketplace, campaign_name, targeting_type FROM (
-        SELECT campaign_id, marketplace, campaign_name, targeting_type,
+        SELECT campaign_id, marketplace, campaign_name, targeting_type, campaign_state,
                ROW_NUMBER() OVER (PARTITION BY campaign_id ORDER BY synced_at DESC) rn
         FROM `{camp_table}`
         WHERE entity_type = 'campaign' {mkt_cond}
-      ) WHERE rn = 1
+      ) WHERE rn = 1 AND campaign_state = 'ENABLED'
     ),
     -- сколько всего активных ASIN в каждой группе
     grp_total AS (
@@ -258,7 +261,8 @@ def pause_asins_groups():
     FROM ads a
     JOIN grps g      ON g.ad_group_id = a.ad_group_id AND g.marketplace = a.marketplace
     JOIN grp_total gt ON gt.ad_group_id = g.ad_group_id AND gt.marketplace = g.marketplace
-    LEFT JOIN camps c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
+    -- JOIN, а не LEFT JOIN: группы остановленных кампаний в очередь не идут
+    JOIN camps c ON c.campaign_id = g.campaign_id AND c.marketplace = g.marketplace
     WHERE a.asin IN ({asin_list}) {ttype_cond}
     GROUP BY g.ad_group_id, g.ad_group_name, g.campaign_id, g.marketplace,
              g.profile_id, c.campaign_name, c.targeting_type, gt.asins_total

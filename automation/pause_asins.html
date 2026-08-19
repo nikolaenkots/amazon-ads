@@ -82,7 +82,33 @@ tr.det>td{padding:0;background:var(--surface2)}
 .dg:last-child{border-bottom:none}
 .dg-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
 .dg-m{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.dg{cursor:pointer;transition:background .1s}
+.dg:hover{background:var(--surface2)}
+.dg.dg-open{background:var(--surface2)}
+.dg-ar{color:var(--dim);font-size:10px;transition:transform .15s;display:inline-block;margin-left:-12px;width:10px}
+.dg-ar.on{transform:rotate(90deg)}
 .det-load{padding:10px 0;font-size:12px;color:var(--muted)}
+
+/* Тело группы: таргеты / поисковые запросы / минус-слова */
+.gb{border-bottom:1px solid var(--border);background:var(--bg)}
+.gtabs{display:flex;padding:0 11px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.gtab{padding:6px 9px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.gtab:hover{color:var(--text)}
+.gtab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tbb{display:inline-block;min-width:15px;padding:0 3px;margin-left:4px;border-radius:99px;font-size:9px;
+  background:var(--surface);color:var(--dim);text-align:center}
+.gbody{max-height:290px;overflow-y:auto}
+.gr{display:grid;grid-template-columns:1fr 90px 70px 60px 60px 70px 70px;gap:6px;align-items:center;
+  padding:4px 11px 4px 30px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--muted);text-align:right}
+.gr:last-child{border-bottom:none}
+.gr span:first-child,.gr span:nth-child(2){text-align:left}
+.gr-h{background:var(--surface2);color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-size:9px}
+.gr-t{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gr-n{display:flex;gap:6px}
+.nb{font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;
+  background:var(--surface2);color:var(--dim);border:1px solid var(--border)}
 
 /* Модалка предпросмотра: .modal-bg/.modal/.modal-title/.modal-acts — из common.css */
 .modal-bg.op{display:flex}
@@ -161,7 +187,7 @@ tr.det>td{padding:0;background:var(--surface2)}
       </div>
       <button class="btn btn-p" onclick="load()" id="btnLoad">Найти</button>
     </div>
-    <div class="hint">Показываются только ASIN, у которых есть активные группы объявлений — те, что уже остановлены, в список не попадают.</div>
+    <div class="hint">Активной считается группа, у которой активны и объявление, и сама группа, и её кампания. ASIN без таких групп в список не попадают. Стрелка в строке раскрывает кампании и группы, клик по группе — её таргеты, поисковые запросы и минус-слова.</div>
   </div>
 
   <div class="sum" id="sum"></div>
@@ -224,7 +250,8 @@ tr.det>td{padding:0;background:var(--surface2)}
 <script>
 const MKTS={MERCH:['US','UK','DE','FR','IT','ES'],KDP:['US','CA','UK','DE','FR','IT','ES','AU']};
 const S={acct:'MERCH',rows:[],sel:new Set(),groups:[],
-         open:new Set(),detail:{},truncated:false,limit:0};
+         open:new Set(),detail:{},truncated:false,limit:0,
+         openGrp:new Set(),struct:{},tab:{}};
 
 fetch('/control/profiles').then(r=>r.json()).then(d=>{window._pm=d.profiles||{};}).catch(()=>{window._pm={};});
 function getProfileId(mkt){ return (window._pm||{})[S.acct+'_'+mkt]||''; }
@@ -270,7 +297,7 @@ async function load(){
     const d=await(await fetch('/automation/pause-asins/data?'+p)).json();
     if(d.error) throw new Error(d.error);
     S.rows=d.rows||[];
-    S.open.clear(); S.detail={};
+    S.open.clear(); S.detail={}; S.openGrp.clear(); S.struct={}; S.tab={};
     S.truncated=!!d.truncated; S.limit=d.limit||0;
     renderSum(d.summary||{});
     renderRows();
@@ -338,13 +365,88 @@ function detailRow(key){
         <span class="st ${c.campaign_state==='ENABLED'?'st-on':'st-off'}">${xe(c.campaign_state||'—')}</span>
         <span class="dc-m">${f(c.clicks)} кл · $${f(c.cost,2)} · ${f(c.purchases_14d)} зак.</span>
       </div>
-      ${c.groups.map(g=>`<div class="dg">
+      ${c.groups.map(g=>{
+        const gk=c.campaign_id+'/'+g.ad_group_id;
+        const go=S.openGrp.has(gk);
+        return `<div class="dg${go?' dg-open':''}" onclick="toggleGrp('${xe(c.campaign_id)}','${xe(g.ad_group_id)}')">
+        <span class="dg-ar${go?' on':''}">▸</span>
         <span class="dg-n" title="${xe(g.ad_group_name||'')}">${xe(g.ad_group_name||g.ad_group_id)}</span>
         <span class="st ${g.ad_group_state==='ENABLED'?'st-on':'st-off'}">${xe(g.ad_group_state||'—')}</span>
         <span class="dg-m">${f(g.impressions)} пок · ${f(g.clicks)} кл · $${f(g.cost,2)} · ${f(g.purchases_14d)} зак.</span>
-      </div>`).join('')}
+      </div>`+(go?groupBody(c.campaign_id,g.ad_group_id):'');
+      }).join('')}
     </div>`).join('');
   return `<tr class="det"><td colspan="14"><div class="det-in">${body}</div></td></tr>`;
+}
+
+// ── Раскрытие группы: таргеты / запросы / минус-слова ─────
+// Структура берётся тем же запросом, что и на «Аналитике товаров»
+// (/analytics/campaigns/structure), поэтому содержимое совпадает.
+function groupBody(cid,gid){
+  const gk=cid+'/'+gid, s=S.struct[cid];
+  if(!s)        return `<div class="gb"><div class="det-load">Загрузка структуры…</div></div>`;
+  if(s.error)   return `<div class="gb"><div class="det-load">Ошибка: ${xe(s.error)}</div></div>`;
+  const g=(s.groups||[]).find(x=>String(x.id)===String(gid));
+  if(!g)        return `<div class="gb"><div class="det-load">Группы нет в структуре кампании</div></div>`;
+
+  const tg=[...(g.keywords||[]),...(g.targets||[])];
+  const st=[...(g.search_terms||[]),
+            ...(g.keywords||[]).flatMap(k=>k.search_terms||[]),
+            ...(g.targets||[]).flatMap(t=>t.search_terms||[])];
+  const ng=g.negatives||[];
+  const tab=S.tab[gk]||0;
+
+  const head=(cols)=>`<div class="gr gr-h">${cols.map(c=>`<span>${c}</span>`).join('')}</div>`;
+  const row=(cells)=>`<div class="gr">${cells.map(c=>`<span>${c}</span>`).join('')}</div>`;
+  const money=v=>v==null?'—':'$'+f(v,2);
+
+  let inner;
+  if(tab===0){
+    inner = tg.length
+      ? head(['Ключевое слово / таргет','Тип','Показы','Клики','Заказы','Расход','Продажи'])
+        + tg.map(it=>{const s2=it.stats||{};return row([
+            `<span class="gr-t" title="${xe(it.text||it.expression||'')}">${xe(it.text||it.expression||'—')}</span>`,
+            xe(it.match_type||'target'), f(s2.impressions), f(s2.clicks), f(s2.purchases_14d),
+            money(s2.cost), money(s2.sales_14d)]);}).join('')
+      : '<div class="det-load">Таргетов нет</div>';
+  } else if(tab===1){
+    inner = st.length
+      ? head(['Поисковый запрос','Таргет','Показы','Клики','Заказы','Расход','Продажи'])
+        + st.map(t=>row([
+            `<span class="gr-t" title="${xe(t.term||'')}">${xe(t.term||'—')}</span>`,
+            xe(t.match_type||t.keyword||'—'), f(t.impressions), f(t.clicks), f(t.purchases_14d),
+            money(t.cost), money(t.sales_14d)])).join('')
+      : '<div class="det-load">Поисковых запросов нет</div>';
+  } else {
+    inner = ng.length
+      ? ng.map(n=>`<div class="gr gr-n"><span class="gr-t">${xe(n.text||n.raw||'—')}</span>
+          ${n.match_type?`<span class="nb">${xe(n.match_type)}</span>`:''}
+          ${n.type?`<span class="nb">${xe(n.type)}</span>`:''}</div>`).join('')
+      : '<div class="det-load">Минус-слов нет</div>';
+  }
+
+  const t=(i,label,n)=>`<span class="gtab${tab===i?' on':''}" onclick="event.stopPropagation();setTab('${xe(gk)}',${i})">${label}<span class="tbb">${n}</span></span>`;
+  return `<div class="gb" onclick="event.stopPropagation()">
+    <div class="gtabs">${t(0,'Таргеты',tg.length)}${t(1,'Поисковые запросы',st.length)}${t(2,'Минус-слова',ng.length)}</div>
+    <div class="gbody">${inner}</div>
+  </div>`;
+}
+
+function setTab(gk,i){ S.tab[gk]=i; renderRows(); }
+
+async function toggleGrp(cid,gid){
+  const gk=cid+'/'+gid;
+  if(S.openGrp.has(gk)){ S.openGrp.delete(gk); renderRows(); return; }
+  S.openGrp.add(gk); renderRows();
+  if(S.struct[cid]) return;                    // структура кампании уже загружена
+  const p=new URLSearchParams({campaign_id:cid,account_type:S.acct,
+    date_from:document.getElementById('df').value,
+    date_to:document.getElementById('dt').value});
+  try{
+    const d=await(await fetch('/analytics/campaigns/structure?'+p)).json();
+    S.struct[cid]=d.error?{error:d.error}:d;
+  }catch(e){ S.struct[cid]={error:e.message}; }
+  renderRows();
 }
 
 async function toggleDetail(key){
