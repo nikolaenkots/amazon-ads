@@ -106,6 +106,13 @@ assert "rn = 1 AND campaign_state = 'ENABLED'" in fake.queries[-1]
 assert 'LEFT JOIN camps' not in fake.queries[-1]
 print("  ✓ группы остановленных кампаний не считаются активными и в очередь не идут")
 
+# статистика в строке ASIN считается только по работающим сейчас группам,
+# иначе цифры расходятся с «Аналитикой товаров»
+assert 'JOIN live_grp lg' in sql, "расход остановленных групп попадает в строку ASIN"
+c.get('/automation/pause-asins/data?account_type=MERCH&active_only=0', headers=H)
+assert 'JOIN live_grp lg' not in fake.queries[-1], "без галочки считается весь период"
+print("  ✓ строка ASIN считает только активные группы (совпадает с аналитикой товаров)")
+
 
 # ── 3. Предпросмотр групп + чужие ASIN в группе ───────────
 fake.group_rows = [

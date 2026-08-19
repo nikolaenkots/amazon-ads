@@ -58,6 +58,10 @@ def pause_asins_data():
     marketplace   = request.args.get('marketplace', '').upper()
     portfolio_ids = request.args.get('portfolio_ids', '')
     ttype         = request.args.get('ttype', '').upper()   # AUTO | MANUAL | '' (все)
+    # «Только активные»: считать статистику лишь по группам, которые работают
+    # сейчас. Без этого в строке ASIN виден расход давно остановленных групп, и
+    # цифры расходятся с «Аналитикой товаров».
+    active_only   = request.args.get('active_only', '1') == '1'
     try:
         min_clicks = float(request.args.get('min_clicks', 10))
         min_cost   = float(request.args.get('min_cost', 0))
@@ -94,6 +98,8 @@ def pause_asins_data():
     # фильтр по типу кампании: только авто, только ручные или все
     ttype_cond = (f"AND ct.targeting_type = '{_q(ttype)}'"
                   if ttype in ('AUTO', 'MANUAL') else '')
+    live_join = ("JOIN live_grp lg ON lg.ad_group_id = a.ad_group_id "
+                 "AND lg.marketplace = a.marketplace") if active_only else ''
 
     sql = f"""
     WITH camp_filter AS (
@@ -110,6 +116,17 @@ def pause_asins_data():
         WHERE entity_type = 'campaign' {mkt_cond}
       ) WHERE rn = 1
     ),
+    -- группы, работающие сейчас: активна и сама группа, и её кампания
+    live_grp AS (
+      SELECT g.ad_group_id, g.marketplace FROM (
+        SELECT ad_group_id, marketplace, campaign_id, ad_group_state,
+               ROW_NUMBER() OVER (PARTITION BY ad_group_id ORDER BY synced_at DESC) rn
+        FROM `{camp_table}`
+        WHERE entity_type = 'ad_group' {mkt_cond}
+      ) g
+      JOIN camp_type ct ON ct.campaign_id = g.campaign_id AND ct.marketplace = g.marketplace
+      WHERE g.rn = 1 AND g.ad_group_state = 'ENABLED' AND ct.campaign_state = 'ENABLED'
+    ),
     stats AS (
       SELECT a.advertised_asin AS asin, a.marketplace,
              SUM(a.impressions)   AS impressions,
@@ -120,6 +137,7 @@ def pause_asins_data():
       FROM `{asin_table}` a
       JOIN camp_filter cf
         ON cf.campaign_id = a.campaign_id AND cf.marketplace = a.marketplace
+      {live_join}
       WHERE a.advertised_asin IS NOT NULL AND a.advertised_asin != '' {date_where}
       GROUP BY asin, a.marketplace
     ),
