@@ -157,6 +157,9 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
 .nav-link{font-weight:500;transition:background .15s}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 
+/* В режиме массовой остановки у строк появляется колонка под чекбокс,
+   иначе сетка съезжает и правые колонки уходят за край */
+.ih.bulk,.ii.bulk{grid-template-columns:18px 24px 1fr 60px 80px 80px 70px 65px 88px 85px 72px}
 /* Режим массовой остановки */
 .bulk-cb{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .bulk-cb:disabled{opacity:.4;cursor:not-allowed}
@@ -200,16 +203,21 @@ textarea.modal-inp{height:80px;padding:8px 10px;resize:vertical;font-size:12px;f
           Только активные
         </label>
       </div>
-      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
-        <button class="btn btn-s" id="bulkBtn" onclick="toggleBulk()"
-                title="Показать чекбоксы у групп и таргетов, чтобы остановить их пачкой">⏸ Массовая остановка</button>
-      </div>
+
       <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end">
         <button class="btn btn-p" id="btnGo" onclick="go()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Применить
         </button>
         <button class="btn btn-s" onclick="rst()">Сброс</button>
+      </div>
+      <div class="fg" style="flex-direction:row;gap:6px;align-items:center;padding-top:18px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;user-select:none"
+               title="Показать чекбоксы у ASIN, групп и таргетов, чтобы остановить их пачкой">
+          <input type="checkbox" id="bulkBtn" onchange="toggleBulk()"
+                 style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Массовая остановка
+        </label>
       </div>
     </div>
   </div>
@@ -257,6 +265,8 @@ const S = {
   activeOnly: false,
   bulkMode:false,   // режим массовой остановки: чекбоксы у групп и таргетов
   bulk:new Map(),   // выбранное: ключ → {entity_type, entity_id, mkt, name}
+  bulkAsins:new Set(),   // ASIN, выбранные целиком
+  asinGrp:{},            // ASIN → id его активных групп (чтобы снять выделение)
   oc:{},            // раскрытые кампании: campId → {asin, mkt, tgtType} (для перерисовки)
 };
 
@@ -473,7 +483,9 @@ function buildTable(){
     const pr=row.price?`<span class="b bm">$${row.price}</span>`:'';
     const sk2=key.replace(/[|.]/g,'_');
     h+=`<tr class="dr${isE?' exp':''}" data-key="${key}" onclick="rowClick('${je(key)}','${je(row.asin)}','${je(row.marketplace)}')">
-      <td><div class="ac">${img}${ph}<div><div class="ak">${row.asin}</div><div class="at2">${row.title||'—'}</div><div class="abs">${pub}${typ}${pr}</div></div></div></td>
+      <td><div class="ac">${S.bulkMode?`<input type="checkbox" class="bulk-cb" ${S.bulkAsins.has(key)?'checked':''}
+             title="Остановить все активные группы этого ASIN" onclick="event.stopPropagation()"
+             onchange="bulkAsin(event,'${je(key)}','${je(row.asin)}','${je(row.marketplace)}')">`:''}${img}${ph}<div><div class="ak">${row.asin}</div><div class="at2">${row.title||'—'}</div><div class="abs">${pub}${typ}${pr}</div></div></div></td>
       <td><span class="b ${mB}">${row.marketplace}</span></td>
       <td class="r"><span class="n bn">${row.campaign_count||0}</span></td>
       <td class="r"><span id="rst_imp_${sk2}" class="n bn">${f(row.impressions)}</span></td>
@@ -977,8 +989,8 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         const arr=on?(kwS.dir==='desc'?'↓':'↑'):'↕';
         return `<span class="shdr${on?' son':''}" ${extra} onclick="tabSortClick(event,'${kwKey}',this)"  data-field="${field}">${label}<span class="sar">${arr}</span></span>`;
       };
-      h+=`<div class="ih">
-        <span></span><span>Ключевое слово / Таргет</span><span>Тип</span><span>Ставка</span>
+      h+=`<div class="ih${S.bulkMode?' bulk':''}">
+        ${S.bulkMode?'<span></span>':''}<span></span><span>Ключевое слово / Таргет</span><span>Тип</span><span>Ставка</span>
         ${kwH('impressions','Показы')}${kwH('clicks','Клики')}${kwH('purchases_14d','Заказы')}
         ${kwH('cost','Расходы')}${kwH('sales_14d','Продажи')}${kwH('acos','ACOS')}
       </div>`;
@@ -991,7 +1003,7 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
         const bidId='bid_'+((it.id||it.text||'x').toString().replace(/[^a-z0-9]/gi,'_').slice(0,20));
         const bidVal=it.bid?Number(it.bid).toFixed(2):(g.bid?Number(g.bid).toFixed(2):'');
         const bidIsGroup=!it.bid&&g.bid;  // ставка унаследована от группы
-        h+=`<div class="ii">
+        h+=`<div class="ii${S.bulkMode?' bulk':''}">
           ${S.bulkMode?`<input type="checkbox" class="bulk-cb" ${S.bulk.has(itType+'|'+(it.id||''))?'checked':''}
              ${itEnC?'':'disabled title="Уже остановлено"'} onclick="event.stopPropagation()"
              onchange="bulkToggle(event,'${itType}','${je(String(it.id||''))}','${je(mkt||'')}','${je(it.text||it.expression||'')}')">`:''}
@@ -1076,12 +1088,10 @@ function buildStruct(data, filterAsin, campId='', mkt='', tgtTypeFallback=''){
 // Включает чекбоксы у групп и таргетов: выбранное ставится на паузу пачкой
 // через ту же очередь изменений, что и одиночные переключатели.
 function toggleBulk(){
-  S.bulkMode=!S.bulkMode;
-  const b=document.getElementById('bulkBtn');
-  b.classList.toggle('btn-p',S.bulkMode);
-  b.classList.toggle('btn-s',!S.bulkMode);
-  if(!S.bulkMode) S.bulk.clear();
+  S.bulkMode=document.getElementById('bulkBtn').checked;
+  if(!S.bulkMode){ S.bulk.clear(); S.bulkAsins.clear(); }
   refreshStructs();
+  refreshAsinCbs();        // чекбоксы у ASIN появляются/исчезают
   renderBulkBar();
 }
 
@@ -1091,7 +1101,16 @@ function refreshStructs(){
     if(!S.eC[cid]||!S.sc[cid])return;
     const cs=document.getElementById('cs_'+cid); if(!cs)return;
     const o=S.oc[cid];
+    // запомнить, какие группы были раскрыты, чтобы перерисовка их не схлопнула
+    const open=[...cs.querySelectorAll('.gg')]
+      .filter(g=>g.querySelector('.ggb')?.classList.contains('op'))
+      .map(g=>g.querySelector('.ggn')?.textContent||'');
     cs.innerHTML=buildStruct(S.sc[cid], o.asin, cid, o.mkt, o.tgtType);
+    cs.querySelectorAll('.gg').forEach(g=>{
+      if(!open.includes(g.querySelector('.ggn')?.textContent||''))return;
+      g.querySelector('.ggb')?.classList.add('op');
+      g.querySelector('.gga')?.classList.add('op');
+    });
   });
 }
 
@@ -1103,7 +1122,63 @@ function bulkToggle(e, entityType, entityId, mkt, name){
   renderBulkBar();
 }
 
-function bulkClear(){ S.bulk.clear(); refreshStructs(); renderBulkBar(); }
+// Чекбокс у ASIN — выбрать/снять все его активные группы. Список групп берётся
+// тем же запросом, что и на странице «Остановка ASIN».
+async function bulkAsin(e, key, asin, mkt){
+  e.stopPropagation();
+  const cb=e.target;
+  if(!cb.checked){
+    S.bulkAsins.delete(key);
+    (S.asinGrp[key]||[]).forEach(id=>S.bulk.delete('ad_group|'+id));
+    refreshStructs(); renderBulkBar();
+    return;
+  }
+  S.bulkAsins.add(key);
+  cb.disabled=true;
+  try{
+    const r=await fetch('/automation/pause-asins/groups',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({account_type:S.acct, marketplace:mkt, asins:[asin]})});
+    const d=await r.json();
+    if(!r.ok||d.error) throw new Error(d.error||'Ошибка запроса');
+    const ids=[];
+    (d.groups||[]).forEach(g=>{
+      ids.push(String(g.ad_group_id));
+      S.bulk.set('ad_group|'+g.ad_group_id,{entity_type:'ad_group', entity_id:String(g.ad_group_id),
+        mkt:g.marketplace||mkt, name:g.ad_group_name||g.ad_group_id});
+    });
+    S.asinGrp[key]=ids;
+    if(!ids.length) toast('У ASIN нет активных групп',false);
+  }catch(err){
+    S.bulkAsins.delete(key); cb.checked=false;
+    toast('Ошибка: '+err.message,false);
+  }finally{
+    cb.disabled=false;
+    refreshStructs(); renderBulkBar();
+  }
+}
+
+// Чекбоксы у ASIN добавляются/убираются на месте: перерисовка всей таблицы
+// свернула бы уже раскрытые строки.
+function refreshAsinCbs(){
+  document.querySelectorAll('tr.dr').forEach(tr=>{
+    const key=tr.dataset.key, ac=tr.querySelector('.ac');
+    if(!ac)return;
+    const cur=ac.querySelector('.bulk-cb');
+    if(!S.bulkMode){ cur?.remove(); return; }
+    if(cur){ cur.checked=S.bulkAsins.has(key); return; }
+    const [asin,mkt]=key.split('|');
+    const cb=document.createElement('input');
+    cb.type='checkbox'; cb.className='bulk-cb';
+    cb.title='Остановить все активные группы этого ASIN';
+    cb.checked=S.bulkAsins.has(key);
+    cb.onclick=e=>e.stopPropagation();
+    cb.onchange=e=>bulkAsin(e,key,asin,mkt);
+    ac.prepend(cb);
+  });
+}
+
+function bulkClear(){ S.bulk.clear(); S.bulkAsins.clear(); S.asinGrp={}; refreshStructs(); refreshAsinCbs(); renderBulkBar(); }
 
 function renderBulkBar(){
   let bar=document.getElementById('bulkBar');
@@ -1143,7 +1218,7 @@ async function bulkPause(){
       inserted+=d.inserted||0; skipped+=d.skipped||0;
     }
     toast(`В очередь: ${inserted}`+(skipped?`, уже стояло: ${skipped}`:''), true);
-    S.bulk.clear(); refreshStructs(); renderBulkBar();
+    S.bulk.clear(); S.bulkAsins.clear(); S.asinGrp={}; refreshStructs(); refreshAsinCbs(); renderBulkBar();
   }catch(e){
     toast('Ошибка: '+e.message,false);
   }finally{
