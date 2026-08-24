@@ -50,7 +50,13 @@ main{max-width:1720px}
 .sr{grid-template-columns:repeat(8,1fr)}
 .sv.b{color:var(--blue)}
 /* table */
-table{width:100%;border-collapse:collapse;font-size:13px}
+/* Колонок много: даём таблице минимальную ширину и скроллим обёртку по
+   горизонтали, иначе названия групп и кампаний обрезаются */
+table{width:100%;min-width:1500px;border-collapse:collapse;font-size:13px}
+.tsx{overflow-x:auto}
+.tw{overflow:visible}
+thead th{position:sticky;top:0;z-index:5}
+.name-cell{min-width:0}
 thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
 thead th:hover{color:var(--text)}
 thead th.s{color:var(--accent)}
@@ -181,8 +187,8 @@ body.bulk-active .toast-wrap{bottom:70px}
       </div>
     </div>
     <div class="fg"><div class="fl">Поиск</div><input type="text" id="srch" placeholder="Название…" style="width:180px" onkeydown="if(event.key==='Enter')load(1)"></div>
-    <div class="fg"><div class="fl">Статус</div>
-      <select id="stateF" style="width:110px">
+    <div class="fg"><div class="fl" id="stateFLbl">Статус группы</div>
+      <select id="stateF" style="width:110px" onchange="syncStateBtns()">
         <option value="">Все</option>
         <option value="ENABLED">Активные</option>
         <option value="PAUSED">Паузные</option>
@@ -344,7 +350,7 @@ body.bulk-active .toast-wrap{bottom:70px}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-let S={acct:'MERCH',mode:'groups',ttype:'',groupTgtType:'',groupState:'',tgtGroupState:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null};
+let S={acct:'MERCH',mode:'groups',ttype:'',groupTgtType:'',groupState:'',tgtGroupState:'',df:'',dt:'',mkt:'',portfolios:[],pfs:[],name:'',state:'',campState:'',sort:'clicks',dir:'desc',page:1,perPage:50,total:0,numFilters:{},openGroupId:null,openGroupMkt:null,openGroups:new Set()};
 
 (function(){
   const now=new Date();
@@ -391,6 +397,7 @@ function setMode(m){
   ['typeSep','ttypeLbl','ttypeBtns','tgtGrpSep','tgtGrpStateLbl','tgtGrpStateBtns'].forEach(id=>{
     document.getElementById(id).style.display=isT?'':'none';
   });
+  setStateLabel();
   document.getElementById('tblTitle').textContent=isG?'Группы объявлений':'Таргеты';
   document.getElementById('sumLbl').textContent=isG?'Групп':'Таргетов';
   load(1);
@@ -404,8 +411,25 @@ function setGroupTgtType(t){
   load(1);
 }
 
+// Селект и кнопки статуса — про одно и то же, держим их согласованными
+function syncStateBtns(){
+  const v=document.getElementById('stateF').value;
+  if(S.mode==='groups'){
+    S.groupState = (v==='ENABLED'||v==='PAUSED') ? v : '';
+    document.querySelectorAll('#grpStateBtns .ttype-btn').forEach((b,i)=>{
+      b.classList.toggle('on',['','ENABLED','PAUSED'][i]===S.groupState);
+    });
+  }
+}
+
+function setStateLabel(){
+  document.getElementById('stateFLbl').textContent =
+    S.mode==='groups' ? 'Статус группы' : 'Статус таргета';
+}
+
 function setGroupState(s){
   S.groupState=s;
+  document.getElementById('stateF').value=s;
   document.querySelectorAll('#grpStateBtns .ttype-btn').forEach((b,i)=>{
     b.classList.toggle('on',['','ENABLED','PAUSED'][i]===s);
   });
@@ -503,7 +527,9 @@ function load(pg){
   S.name=document.getElementById('srch').value.trim();
   S.state=document.getElementById('stateF').value;
   S.campState=document.getElementById('campStateF').value;
-  const stateVal=S.mode==='groups'?S.groupState:S.state;
+  // в режиме групп статус группы задаётся и кнопками, и селектом:
+  // кнопки приоритетнее, селект работает, когда в кнопках выбрано «Все»
+  const stateVal=S.mode==='groups'?(S.groupState||S.state):S.state;
   const params=new URLSearchParams({
     account_type:S.acct,mode:S.mode,date_from:S.df,date_to:S.dt,
     marketplace:S.mkt,portfolio_ids:S.portfolios.join(','),
@@ -694,25 +720,20 @@ function toggleGroup(gid,mkt){
   const chev=document.getElementById('chev_'+gid);
   const ei=document.getElementById('ei_'+gid);
   const isOpen=er.style.display!=='none';
-  if(S.openGroupId&&S.openGroupId!==gid){
-    const oer=document.getElementById('er_'+S.openGroupId);
-    const otr=document.getElementById('gr_'+S.openGroupId);
-    const och=document.getElementById('chev_'+S.openGroupId);
-    if(oer)oer.style.display='none';
-    if(otr)otr.classList.remove('exp');
-    if(och)och.classList.remove('op');
-  }
+  // раскрытых групп может быть сразу несколько: соседние не трогаем
   if(isOpen){
     er.style.display='none';
     tr.classList.remove('exp');
     chev.classList.remove('op');
+    S.openGroups.delete(gid);
     S.openGroupId=null;S.openGroupMkt=null;
   }else{
     const sy=window.scrollY;
     er.style.display='';
     tr.classList.add('exp');
     chev.classList.add('op');
-    S.openGroupId=gid;S.openGroupMkt=mkt;
+    S.openGroups.add(gid);
+    S.openGroupId=gid;S.openGroupMkt=mkt;   // последняя раскрытая — для действий над группой
     loadGroupDetail(gid,mkt,ei);
     requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,sy)));
   }
