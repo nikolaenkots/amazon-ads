@@ -1177,6 +1177,23 @@ python3 send.py --all                # MERCH + KDP
 python3 send.py --dry-run            # показать без отправки
 ```
 
+### Запись результата в campaigns_* (август 2026)
+
+`update_campaigns_bq` пишет **один UPDATE на колонку** (`SET col = CASE key
+WHEN ... END`), а не по запросу на каждое изменение. Причина: BigQuery
+выполняет DML по одной таблице последовательно, и сотня отдельных заданий
+(например, массовая пауза групп) отбивалась ошибкой
+
+```
+400 Could not serialize access to table ...campaigns_merch due to concurrent update
+```
+
+Соответствие «сущность + поле → колонка» вынесено в `BQ_FIELD_MAP`, удаления
+(`negative_delete`, `campaign_delete`) идут одним `DELETE ... IN (...)` на тип.
+Все UPDATE (включая статусы в `pending_changes`) проходят через `with_retry`
+из `bq_client`, который теперь повторяет не только 429, но и конфликт записи —
+он возникает, когда параллельно идёт синхронизация кампаний.
+
 ### Схема статусов pending_changes
 
 ```

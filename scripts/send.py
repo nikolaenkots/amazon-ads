@@ -13,6 +13,7 @@ send.py — отправка одобренных изменений в Amazon A
 """
 
 import os
+import sys
 import json
 import uuid
 import time
@@ -23,6 +24,7 @@ from google.cloud import bigquery
 
 # ── Конфиг ───────────────────────────────────────────────
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)          # общий клиент BigQuery лежит в корне проекта
 PROJECT_ID = "amazon-ads-api-494412"
 DATASET    = "amazon_ads"
 
@@ -33,6 +35,8 @@ with open(os.path.join(BASE_DIR, "config", "amazon_secrets.json")) as f:
     _AMZ = json.load(f)
 
 PROFILES = {p["type"] + "_" + p["marketplace"]: p for p in _AMZ["profiles"]}
+
+from bq_client import with_retry   # повторы при лимите частоты и конфликте записи
 
 PENDING_TABLES = {
     "MERCH": f"{PROJECT_ID}.{DATASET}.pending_changes_merch",
@@ -126,34 +130,40 @@ def fetch_pending(bq, account_type, marketplace_filter=None):
     return [dict(r) for r in rows]
 
 
+def _run_update(bq, sql):
+    """UPDATE с повторами: BigQuery отбивает запись, если таблицу параллельно
+    меняет другое задание («concurrent update»)."""
+    return with_retry(lambda: bq.query(sql).result(), on_retry=lambda m: print(f"  {m}"))
+
+
 def reset_stale_sending(bq, account_type):
     """Сбрасывает застрявшие SENDING → APPROVED если нет записи SUCCESS в логе.
     Вызывается в начале send_changes чтобы они попали в следующий запуск.
     """
     table     = PENDING_TABLES[account_type]
     log_table = CHANGELOG_TABLES[account_type]
-    bq.query(f"""
+    _run_update(bq, f"""
         UPDATE `{table}`
         SET status = 'APPROVED'
         WHERE status = 'SENDING'
         AND id NOT IN (
             SELECT pending_id FROM `{log_table}` WHERE result = 'SUCCESS'
         )
-    """).result()
+    """)
 
 
 def mark_sending(bq, account_type, ids):
     if not ids: return
     table = PENDING_TABLES[account_type]
     id_list = ','.join(f"'{i}'" for i in ids)
-    bq.query(f"UPDATE `{table}` SET status='SENDING' WHERE id IN ({id_list})").result()
+    _run_update(bq, f"UPDATE `{table}` SET status='SENDING' WHERE id IN ({id_list})")
 
 
 def mark_done(bq, account_type, ids, status):
     if not ids: return
     table = PENDING_TABLES[account_type]
     id_list = ','.join(f"'{i}'" for i in ids)
-    bq.query(f"UPDATE `{table}` SET status='{status}' WHERE id IN ({id_list})").result()
+    _run_update(bq, f"UPDATE `{table}` SET status='{status}' WHERE id IN ({id_list})")
 
 
 def mark_failed(bq, account_type, ids, error_msg):
@@ -161,12 +171,12 @@ def mark_failed(bq, account_type, ids, error_msg):
     table = PENDING_TABLES[account_type]
     safe_err = error_msg.replace("'", "''")[:500]
     id_list = ','.join(f"'{i}'" for i in ids)
-    bq.query(f"""
+    _run_update(bq, f"""
         UPDATE `{table}`
         SET status='FAILED', error_msg='{safe_err}',
             retry_count = COALESCE(retry_count, 0) + 1
         WHERE id IN ({id_list})
-    """).result()
+    """)
 
 
 def write_changelog(bq, account_type, entries):
@@ -179,58 +189,94 @@ def write_changelog(bq, account_type, entries):
     job.result()
 
 
+# entity_type + field → (колонка, ключевая колонка, числовое ли значение)
+BQ_FIELD_MAP = {
+    ("campaign",   "state"):        ("campaign_state",       "campaign_id", False),
+    ("campaign",   "name"):         ("campaign_name",        "campaign_id", False),
+    ("campaign",   "daily_budget"): ("daily_budget",         "campaign_id", True),
+    ("campaign",   "portfolio_id"): ("portfolio_id",         "campaign_id", False),
+    ("campaign",   "end_date"):     ("end_date",             "campaign_id", False),
+    ("ad_group",   "state"):        ("ad_group_state",       "ad_group_id", False),
+    ("ad_group",   "name"):         ("ad_group_name",        "ad_group_id", False),
+    ("ad_group",   "default_bid"):  ("ad_group_default_bid", "ad_group_id", True),
+    ("keyword",    "bid"):          ("keyword_bid",          "keyword_id",  True),
+    ("keyword",    "state"):        ("keyword_state",        "keyword_id",  False),
+    ("target",     "bid"):          ("target_bid",           "target_id",   True),
+    ("target",     "state"):        ("target_state",         "target_id",   False),
+    ("product_ad", "state"):        ("ad_state",             "ad_id",       False),
+}
+
+
+def _lit(val, numeric):
+    """Значение для подстановки в SQL."""
+    if val is None or (not numeric and val == "" ):
+        return "NULL"
+    if numeric:
+        return str(float(val))
+    return "'" + str(val).replace("'", "''") + "'"
+
+
 def update_campaigns_bq(bq, account_type, marketplace, updates):
-    """
-    Применяет успешные изменения в campaigns_merch/kdp.
+    """Применяет успешные изменения в campaigns_merch/kdp.
+
     updates: list of {entity_type, entity_id, field_name, new_value, campaign_id}
+
+    Пишем ОДНИМ запросом на колонку (CASE ... WHEN), а не по запросу на каждое
+    изменение: BigQuery выполняет UPDATE по одной таблице последовательно, и
+    сотня отдельных заданий (например, массовая пауза групп) упирается в
+    «Could not serialize access ... due to concurrent update». Один запрос на
+    колонку — одна операция, а конфликт с параллельной синхронизацией
+    переживается повторами в with_retry.
     """
     table = CAMPAIGNS_TABLES[account_type]
+    mkt   = marketplace
+
+    batches = {}          # (колонка, ключ, числовое) → {entity_id: значение}
+    del_neg, del_camp = [], []
+
     for u in updates:
-        et     = u["entity_type"]
-        eid    = u["entity_id"]
-        field  = u["field_name"]
-        val    = u["new_value"]
-        mkt    = marketplace
+        et, eid = u["entity_type"], u["entity_id"]
+        field, val = u["field_name"], u["new_value"]
 
-        # Определяем SQL UPDATE
-        if et == "campaign" and field == "state":
-            sql = f"UPDATE `{table}` SET campaign_state='{val}' WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "campaign" and field == "name":
-            safe_val = val.replace("'", "''")
-            sql = f"UPDATE `{table}` SET campaign_name='{safe_val}' WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "campaign" and field == "daily_budget":
-            sql = f"UPDATE `{table}` SET daily_budget={float(val)} WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "ad_group" and field == "state":
-            sql = f"UPDATE `{table}` SET ad_group_state='{val}' WHERE ad_group_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "ad_group" and field == "name":
-            safe_val = val.replace("'", "''")
-            sql = f"UPDATE `{table}` SET ad_group_name='{safe_val}' WHERE ad_group_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "keyword" and field == "bid":
-            sql = f"UPDATE `{table}` SET keyword_bid={float(val)} WHERE keyword_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "keyword" and field == "state":
-            sql = f"UPDATE `{table}` SET keyword_state='{val}' WHERE keyword_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "campaign" and field == "portfolio_id":
-            sql = f"UPDATE `{table}` SET portfolio_id='{val}' WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "campaign" and field == "end_date":
-            null_or_val = f"'{val}'" if val else "NULL"
-            sql = f"UPDATE `{table}` SET end_date={null_or_val} WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "ad_group" and field == "default_bid":
-            sql = f"UPDATE `{table}` SET ad_group_default_bid={float(val)} WHERE ad_group_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "target" and field == "bid":
-            sql = f"UPDATE `{table}` SET target_bid={float(val)} WHERE target_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "target" and field == "state":
-            sql = f"UPDATE `{table}` SET target_state='{val}' WHERE target_id='{eid}' AND marketplace='{mkt}'"
-        elif et == "product_ad" and field == "state":
-            sql = f"UPDATE `{table}` SET ad_state='{val}' WHERE ad_id='{eid}' AND marketplace='{mkt}'"
-        elif et in ("negative_delete",):
-            sql = f"DELETE FROM `{table}` WHERE keyword_id='{eid}' AND marketplace='{mkt}' AND entity_type='negative_keyword'"
-        elif et == "campaign_delete":
-            sql = f"DELETE FROM `{table}` WHERE campaign_id='{eid}' AND marketplace='{mkt}'"
-        else:
-            continue  # keyword_add, negative_add — вставка, не обновление
+        if et == "negative_delete":
+            del_neg.append(eid); continue
+        if et == "campaign_delete":
+            del_camp.append(eid); continue
 
+        spec = BQ_FIELD_MAP.get((et, field))
+        if not spec:
+            continue      # keyword_add, negative_add — вставка, не обновление
+        col, key, numeric = spec
+        batches.setdefault((col, key, numeric), {})[str(eid)] = val
+
+    def ids_in(ids):
+        return ",".join("'" + str(i).replace("'", "''") + "'" for i in ids)
+
+    statements = []
+    for (col, key, numeric), pairs in batches.items():
+        cases = " ".join(
+            f"WHEN '{str(eid).replace(chr(39), chr(39) * 2)}' THEN {_lit(val, numeric)}"
+            for eid, val in pairs.items()
+        )
+        statements.append(
+            f"UPDATE `{table}` SET {col} = CASE {key} {cases} ELSE {col} END "
+            f"WHERE {key} IN ({ids_in(pairs)}) AND marketplace='{mkt}'"
+        )
+    if del_neg:
+        statements.append(
+            f"DELETE FROM `{table}` WHERE keyword_id IN ({ids_in(del_neg)}) "
+            f"AND marketplace='{mkt}' AND entity_type='negative_keyword'"
+        )
+    if del_camp:
+        statements.append(
+            f"DELETE FROM `{table}` WHERE campaign_id IN ({ids_in(del_camp)}) "
+            f"AND marketplace='{mkt}'"
+        )
+
+    for sql in statements:
         try:
-            bq.query(sql).result()
+            with_retry(lambda sql=sql: bq.query(sql).result(),
+                       on_retry=lambda m: print(f"  {m}"))
         except Exception as e:
             print(f"  BQ update warning: {e}")
 
