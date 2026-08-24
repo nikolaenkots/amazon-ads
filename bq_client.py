@@ -22,7 +22,7 @@ def get_client():
 # NDJSON-файл и загружаются ОДНИМ job — одна операция вместо десятка,
 # а память не удваивается копией JSON в RAM.
 
-RETRY_PAUSES = (10, 30, 60, 120)   # паузы между попытками при 429
+RETRY_PAUSES = (10, 30, 60, 120)   # паузы между попытками
 
 
 def _is_rate_limit(err):
@@ -30,19 +30,30 @@ def _is_rate_limit(err):
     return '429' in text or 'ratelimitexceeded' in text or 'rate limits' in text
 
 
+def _is_conflict(err):
+    """Параллельная запись в ту же таблицу.
+
+    BigQuery выполняет UPDATE/DELETE по одной таблице последовательно и, если
+    другое задание успело изменить её, отвечает «Could not serialize access ...
+    due to concurrent update». Это не ошибка данных — операцию нужно повторить.
+    """
+    text = str(err).lower()
+    return 'concurrent update' in text or 'could not serialize' in text
+
+
 def with_retry(fn, on_retry=None):
-    """Выполнить операцию BigQuery, переживая 429 (лимит частоты)."""
+    """Выполнить операцию BigQuery, переживая лимит частоты и конфликт записи."""
     last = None
     for attempt, pause in enumerate((0,) + RETRY_PAUSES):
         if pause:
             if on_retry:
-                on_retry(f"BigQuery занят (лимит операций), пауза {pause}с и повтор...")
+                on_retry(f"BigQuery занят, пауза {pause}с и повтор...")
             time.sleep(pause)
         try:
             return fn()
         except Exception as e:
             last = e
-            if not _is_rate_limit(e) or attempt == len(RETRY_PAUSES):
+            if not (_is_rate_limit(e) or _is_conflict(e)) or attempt == len(RETRY_PAUSES):
                 raise
     raise last
 
