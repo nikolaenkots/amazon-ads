@@ -965,19 +965,27 @@ S = {
   acct, mode, ttype, groupTgtType, groupState, tgtGroupState,
   df, dt, mkt, portfolios, pfs, name, state, campState,
   sort, dir, page, perPage, total, numFilters,
-  openGroupId, openGroupMkt
+  openGroupId, openGroupMkt,   // последняя раскрытая — для действий над группой
+  openGroups                   // Set: раскрытых групп может быть сразу несколько
 }
 ```
 
 ### targets.html — Режимы и фильтры
-- **Режим Группы**: фильтры тип AUTO/MANUAL + статус ALL/ACTIVE/PAUSED
+- **Режим Группы**: фильтры тип AUTO/MANUAL + статус ALL/ACTIVE/PAUSED. Статус
+  группы задаётся и кнопками, и верхним селектом (`syncStateBtns()` держит их
+  согласованными; кнопки приоритетнее, селект работает при «Все»). Подпись
+  селекта меняется по режиму: «Статус группы» / «Статус таргета».
 - **Режим Таргеты**: фильтры тип таргета + статус группы
 - Портфолио dropdown (как в products): фильтрует по account_type + geo
 
 ### targets.html — renderGroups()
 Таблица групп. Колонки: Группа / Кампания / Маркетплейс / Ставка / Показы / Клики / Расходы / Продажи / Заказы / ACOS.
 - Inline редактирование ставки группы (`openBidEdit` / `saveBid`)
-- Разворачивание группы по клику на шевроне → `loadGroupDetail(groupId, mkt)`
+- Разворачивание группы по клику на шевроне → `loadGroupDetail(groupId, mkt)`.
+  Раскрытых групп может быть сразу несколько — соседние не сворачиваются.
+- Таблице задан `min-width: 1500px`, обёртка `.tsx` скроллится по горизонтали,
+  а `.tw` больше не режет содержимое (`overflow: visible`): раньше длинные
+  названия групп и кампаний обрезались.
 
 ### targets.html — renderTargets()
 Таблица таргетов с колонкой toggle слева.
