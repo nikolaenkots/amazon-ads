@@ -59,6 +59,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 .name-cell{min-width:0}
 .name-main,.name-sub{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pf-cell{display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* в режиме таргетов текстовых колонок три (таргет, группа, кампания) — уже */
+#tbl.tgt-mode .name-main,#tbl.tgt-mode .name-sub{max-width:155px}
 thead th{text-align:left;padding:8px 7px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
 thead th:hover{color:var(--text)}
 thead th.s{color:var(--accent)}
@@ -576,6 +578,7 @@ function renderSummary(s){
 
 // ── Groups table ──────────────────────────────────────────
 function renderGroups(rows){
+  document.getElementById('tbl').classList.remove('tgt-mode');
   const thead=document.getElementById('thead');
   const tbody=document.getElementById('tbody');
   thead.innerHTML=`<tr>
@@ -644,6 +647,7 @@ function renderGroups(rows){
 
 // ── Targets table ─────────────────────────────────────────
 function renderTargets(rows){
+  document.getElementById('tbl').classList.add('tgt-mode');
   const thead=document.getElementById('thead');
   const tbody=document.getElementById('tbody');
   thead.innerHTML=`<tr>
@@ -695,12 +699,12 @@ function renderTargets(rows){
         onclick="event.stopPropagation()" onchange="updateBulkBar()"></td>
       <td><button class="stog ${isEn?'en':'pa'}"
         onclick="event.stopPropagation();toggleState(event,'${itType}','${eid}','${curState}','${mkt}')"></button></td>
-      <td style="max-width:260px"><div class="name-cell"><span class="name-main" style="word-break:break-all">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
+      <td><div class="name-cell"><span class="name-main" title="${esc(r.kw_text||r.keyword||r.targeting||'')}">${esc(r.kw_text||r.keyword||r.targeting||'—')}</span></div></td>
       <td>${kwTypeBadge(r.keyword_type)}</td>
-      <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.ad_group_name||'—')}</span>
+      <td><div class="name-cell"><span class="name-sub" style="font-size:12px;color:var(--muted)" title="${esc(r.ad_group_name||'')}">${esc(r.ad_group_name||'—')}</span>
         <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.group_state)}</div>
       </div></td>
-      <td><div class="name-cell"><span style="font-size:12px;color:var(--muted)">${esc(r.campaign_name||'—')}</span>
+      <td><div class="name-cell"><span class="name-sub" style="font-size:12px;color:var(--muted)" title="${esc(r.campaign_name||'')}">${esc(r.campaign_name||'—')}</span>
         <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
       </div></td>
       <td class="r">${bidCell}</td>
