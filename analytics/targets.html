@@ -50,14 +50,16 @@ main{max-width:1720px}
 .sr{grid-template-columns:repeat(8,1fr)}
 .sv.b{color:var(--blue)}
 /* table */
-/* Колонок много: даём таблице минимальную ширину и скроллим обёртку по
-   горизонтали, иначе названия групп и кампаний обрезаются */
-table{width:100%;min-width:1500px;border-collapse:collapse;font-size:13px}
+/* Колонок много, поэтому таблица укладывается в ширину экрана: длинные
+   названия групп, кампаний и портфолио обрезаются многоточием (полное видно
+   в подсказке), а горизонтальной прокрутки нет */
+table{width:100%;border-collapse:collapse;font-size:13px}
 .tsx{overflow-x:auto}
-.tw{overflow:visible}
-thead th{position:sticky;top:0;z-index:5}
+.tw{overflow:hidden}
 .name-cell{min-width:0}
-thead th{text-align:left;padding:8px 11px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.name-main,.name-sub{display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-cell{display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+thead th{text-align:left;padding:8px 7px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
 thead th:hover{color:var(--text)}
 thead th.s{color:var(--accent)}
 thead th.ns{cursor:default}
@@ -66,7 +68,7 @@ tr.dr{border-bottom:1px solid var(--border);cursor:pointer;transition:background
 tr.dr:last-child{border-bottom:none}
 tr.dr:hover{background:#fafafa}
 tr.dr.exp{background:var(--accent-bg)}
-td{padding:9px 11px;vertical-align:middle}
+td{padding:9px 7px;vertical-align:middle}
 tr.er td{padding:0}
 /* expand inner – groups style like products */
 .gg{overflow:visible}
@@ -617,11 +619,11 @@ function renderGroups(rows){
         data-id="${gid}" data-type="ad_group" data-mkt="${mkt}"
         data-state="${curState}" data-bid="${bidVal||'0'}"
         onchange="updateBulkBar()"></td>
-      <td><div class="name-cell"><span class="name-main">${esc(r.ad_group_name||'—')}</span></div></td>
-      <td><div class="name-cell"><span class="name-sub">${esc(r.campaign_name||'—')}</span>
+      <td><div class="name-cell"><span class="name-main" title="${esc(r.ad_group_name||'')}">${esc(r.ad_group_name||'—')}</span></div></td>
+      <td><div class="name-cell"><span class="name-sub" title="${esc(r.campaign_name||'')}">${esc(r.campaign_name||'—')}</span>
         <div style="display:flex;gap:3px;margin-top:2px">${stateBadge(r.campaign_state)}${typeBadge(r.targeting_type)}</div>
       </div></td>
-      <td><span class="n" style="font-size:11px;color:var(--muted)">${esc(r.portfolio_name||'—')}</span></td>
+      <td><span class="n pf-cell" style="font-size:11px;color:var(--muted)" title="${esc(r.portfolio_name||'')}">${esc(r.portfolio_name||'—')}</span></td>
       <td><span class="b bm">${esc(r.marketplace||'—')}</span></td>
       <td class="r">${bidCell}</td>
       <td>${stateBadge(r.ad_group_state)}</td>
