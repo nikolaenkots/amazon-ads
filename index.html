@@ -14,7 +14,7 @@ body{min-height:100vh}
 header{justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .header-right{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:99px}
 /* Layout */
-main{max-width:900px;padding:40px 32px}
+main{max-width:1240px;padding:32px}
 /* Hero */
 .hero{margin-bottom:36px}
 .hero-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:10px}
@@ -66,6 +66,46 @@ main{max-width:900px;padding:40px 32px}
 .nav-drop-menu{right:0}
 .nav-link{font-weight:500;transition:background .15s}
 .nav-link.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ── Сводка по портфолио ─────────────────────────────────
+   Дашборд на главной: сколько каждое портфолио тратит и зарабатывает
+   за период, со сравнением с предыдущим таким же периодом. */
+.dash{margin-bottom:32px}
+.dash-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.dash-title{font-size:15px;font-weight:600;margin-right:auto}
+.dash-head .at{display:flex;gap:4px}
+.dash-head .atb{height:30px;padding:0 12px;border-radius:6px;font-size:12px;transition:all .15s}
+.dash-head .atb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dash-sel{height:30px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;cursor:pointer}
+.dash-sel:focus{border-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 13px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.kpi-l{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--dim);margin-bottom:4px}
+.kpi-v{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.kpi-d{font-family:'DM Mono',monospace;font-size:11px;margin-top:3px}
+.up{color:var(--green)}.down{color:var(--red)}.flat{color:var(--dim)}
+.dash-tw{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.dash-tw table{width:100%;border-collapse:collapse;font-size:12px}
+.dash-tw th{text-align:right;padding:7px 9px;font-family:'DM Mono',monospace;font-size:9px;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--surface2);
+  border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.dash-tw th:first-child,.dash-tw th.l{text-align:left}
+.dash-tw th.on{color:var(--accent)}
+.dash-tw td{padding:7px 9px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap;
+  border-bottom:1px solid var(--border)}
+.dash-tw td.l{text-align:left;font-family:'DM Sans',sans-serif}
+.dash-tw tbody tr:hover{background:#fafafa}
+.dash-tw tbody tr:last-child td{border-bottom:none}
+.dash-tw tfoot td{background:var(--surface2);font-weight:600;border-top:1px solid var(--border);border-bottom:none}
+.pf-name{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.mk{font-family:'DM Mono',monospace;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surface2);
+  border:1px solid var(--border);color:var(--muted)}
+.dash-empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.dash-note{font-size:11px;color:var(--dim);margin-top:8px;font-family:'DM Mono',monospace}
 </style>
 </head>
 <body>
@@ -78,6 +118,39 @@ main{max-width:900px;padding:40px 32px}
     <div class="hero-label">Merch by Amazon · KDP</div>
     <div class="hero-title">Автоматизация рекламы</div>
     <div class="hero-sub">Аналитика, управление ставками и синхронизация кампаний через Amazon SP API</div>
+  </div>
+
+
+  <!-- Сводка по портфолио -->
+  <div class="dash">
+    <div class="dash-head">
+      <span class="dash-title">Сводка по портфолио</span>
+      <div class="at" id="dAcct">
+        <button class="atb on" onclick="dSetAcct('MERCH',event)">MERCH</button>
+        <button class="atb" onclick="dSetAcct('KDP',event)">KDP</button>
+      </div>
+      <select class="dash-sel" id="dGeo" onchange="dLoad()">
+        <option value="">Все страны</option>
+        <option value="by">Разбить по странам</option>
+      </select>
+      <select class="dash-sel" id="dPeriod" onchange="dLoad()">
+        <option value="7">7 дней</option>
+        <option value="14">14 дней</option>
+        <option value="30" selected>30 дней</option>
+        <option value="90">90 дней</option>
+      </select>
+    </div>
+
+    <div class="kpis" id="dKpis"></div>
+
+    <div class="dash-tw">
+      <table>
+        <thead><tr id="dHead"></tr></thead>
+        <tbody id="dBody"><tr><td class="dash-empty" colspan="10">Загрузка…</td></tr></tbody>
+        <tfoot id="dFoot"></tfoot>
+      </table>
+    </div>
+    <div class="dash-note" id="dNote"></div>
   </div>
 
   <!-- Analytics -->
@@ -425,5 +498,147 @@ document.addEventListener('click',function(e){
   });
 });
 </script>
+
+<script>
+// ── Сводка по портфолио на главной ────────────────────────
+const D={acct:'MERCH',rows:[],total:{},sort:'cost',dir:'desc',byCountry:false};
+
+function dSetAcct(a,e){
+  D.acct=a;
+  document.querySelectorAll('#dAcct .atb').forEach(b=>b.classList.remove('on'));
+  e.target.classList.add('on');
+  dLoad();
+}
+
+function dFmt(v,d=0){
+  if(v==null||v==='')return '—';
+  return Number(v).toLocaleString('ru',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function dEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// изменение к предыдущему периоду; для расхода рост — это плохо
+function dDelta(now,prev,goodUp=true){
+  now=Number(now||0); prev=Number(prev||0);
+  if(!prev) return now? '<span class="flat">нов.</span>' : '<span class="flat">—</span>';
+  const p=(now-prev)/prev*100;
+  if(Math.abs(p)<0.5) return '<span class="flat">≈ 0%</span>';
+  const cls=(p>0)===goodUp?'up':'down';
+  return `<span class="${cls}">${p>0?'+':''}${p.toFixed(0)}%</span>`;
+}
+
+async function dLoad(){
+  const geo=document.getElementById('dGeo').value;
+  D.byCountry = geo==='by';
+  const days=Number(document.getElementById('dPeriod').value||30);
+  const to=new Date(); to.setDate(to.getDate()-1);
+  const from=new Date(to); from.setDate(from.getDate()-days+1);
+  const iso=d=>d.toISOString().slice(0,10);
+  const p=new URLSearchParams({account_type:D.acct, marketplace:'', by_country:D.byCountry?'1':'',
+    date_from:iso(from), date_to:iso(to)});
+  document.getElementById('dBody').innerHTML='<tr><td class="dash-empty" colspan="10">Загрузка…</td></tr>';
+  try{
+    const d=await(await fetch('/dashboard/portfolios?'+p)).json();
+    if(d.error) throw new Error(d.error);
+    D.rows=d.rows||[]; D.total=d.total||{};
+    dRenderKpis(d);
+    dRender();
+    dNote(d);
+  }catch(e){
+    document.getElementById('dBody').innerHTML=
+      `<tr><td class="dash-empty" colspan="10">Ошибка: ${dEsc(e.message)}</td></tr>`;
+  }
+}
+
+function dRenderKpis(d){
+  const t=D.total;
+  document.getElementById('dKpis').innerHTML=[
+    ['Расход', '$'+dFmt(t.cost,2), dDelta(t.cost,t.prev_cost,false)],
+    ['Продажи 14d', '$'+dFmt(t.sales,2), dDelta(t.sales,t.prev_sales,true)],
+    ['Заказы', dFmt(t.orders), dDelta(t.orders,t.prev_orders,true)],
+    ['ACoS', t.acos!=null?t.acos.toFixed(1)+'%':'—',
+      `<span class="flat">${dFmt(t.campaigns)} активных кампаний</span>`],
+  ].map(([l,v,dd])=>`<div class="kpi"><div class="kpi-l">${l}</div><div class="kpi-v">${v}</div>
+      <div class="kpi-d">${dd}</div></div>`).join('');
+}
+
+const D_COLS=[
+  ['portfolio','Портфолио','l'],
+  ['campaigns','Кампаний',''],
+  ['clicks','Клики',''],
+  ['cost','Расход',''],
+  ['sales','Продажи',''],
+  ['orders','Заказы',''],
+  ['acos','ACoS',''],
+  ['profit','Прибыль',''],
+];
+
+function dSort(col){
+  if(D.sort===col) D.dir = D.dir==='desc'?'asc':'desc';
+  else { D.sort=col; D.dir='desc'; }
+  dRender();
+}
+
+function dRender(){
+  const cols = D.byCountry
+    ? [D_COLS[0], ['marketplace','Страна','l'], ...D_COLS.slice(1)]
+    : D_COLS;
+  document.getElementById('dHead').innerHTML = cols.map(([k,l,c])=>
+    `<th class="${c}${D.sort===k?' on':''}" onclick="dSort('${k}')">${l}${D.sort===k?(D.dir==='desc'?' ↓':' ↑'):''}</th>`
+  ).join('');
+
+  const rows=[...D.rows].sort((a,b)=>{
+    const va=a[D.sort], vb=b[D.sort];
+    if(typeof va==='string'||typeof vb==='string')
+      return (D.dir==='desc'?-1:1)*String(va||'').localeCompare(String(vb||''));
+    return (D.dir==='desc'?-1:1)*((Number(va)||0)-(Number(vb)||0));
+  });
+
+  const body=document.getElementById('dBody');
+  if(!rows.length){
+    body.innerHTML=`<tr><td class="dash-empty" colspan="${cols.length}">За период данных нет</td></tr>`;
+    document.getElementById('dFoot').innerHTML=''; return;
+  }
+  body.innerHTML=rows.map(r=>{
+    const acos=r.acos==null?'—':r.acos.toFixed(1)+'%';
+    const prof=r.profit>=0?`<span class="up">$${dFmt(r.profit,2)}</span>`
+                          :`<span class="down">−$${dFmt(Math.abs(r.profit),2)}</span>`;
+    return `<tr>
+      <td class="l"><span class="pf-name" title="${dEsc(r.portfolio)}">${dEsc(r.portfolio)}</span></td>
+      ${D.byCountry?`<td class="l"><span class="mk">${dEsc(r.marketplace||'—')}</span></td>`:''}
+      <td>${dFmt(r.campaigns)}</td>
+      <td>${dFmt(r.clicks)}</td>
+      <td>$${dFmt(r.cost,2)} ${dDelta(r.cost,r.prev_cost,false)}</td>
+      <td>$${dFmt(r.sales,2)} ${dDelta(r.sales,r.prev_sales,true)}</td>
+      <td>${dFmt(r.orders)}</td>
+      <td>${acos}</td>
+      <td>${prof}</td>
+    </tr>`;
+  }).join('');
+
+  const t=D.total;
+  document.getElementById('dFoot').innerHTML=`<tr>
+    <td class="l">Итого</td>
+    ${D.byCountry?'<td></td>':''}
+    <td>${dFmt(t.campaigns)}</td>
+    <td>${dFmt(t.clicks)}</td>
+    <td>$${dFmt(t.cost,2)}</td>
+    <td>$${dFmt(t.sales,2)}</td>
+    <td>${dFmt(t.orders)}</td>
+    <td>${t.acos!=null?t.acos.toFixed(1)+'%':'—'}</td>
+    <td>${t.profit>=0?'$'+dFmt(t.profit,2):'−$'+dFmt(Math.abs(t.profit),2)}</td>
+  </tr>`;
+}
+
+function dNote(d){
+  const p=d.period||{}, j=d.jobs||{};
+  const parts=[`период ${p.from} — ${p.to}, сравнение с ${p.prev_from} — ${p.prev_to}`];
+  if(j.stats&&j.stats.at) parts.push(`статистика обновлена ${String(j.stats.at).slice(0,16).replace('T',' ')}`);
+  if(j.sync&&j.sync.at)   parts.push(`структура ${String(j.sync.at).slice(0,16).replace('T',' ')}`);
+  document.getElementById('dNote').textContent=parts.join(' · ');
+}
+
+dLoad();
+</script>
+
 </body>
 </html>
