@@ -945,7 +945,8 @@ async function saveBid(id,entityType,entityId,oldBid,mkt){
   if(isNaN(newBid)||newBid<0.02){toast('Минимальная ставка $0.02',false);return;}
   try{
     const d=await ctrlAdd({account_type:S.acct,marketplace:mkt,profile_id:getProfileId(mkt),
-      entity_type:entityType,entity_id:entityId,field_name:'bid',
+      entity_type:entityType,entity_id:entityId,
+      field_name:entityType==='ad_group'?'default_bid':'bid',
       old_value:String(oldBid),new_value:String(newBid)});
     if(d){
       wrap.querySelector('.bid-btn').textContent='$'+newBid.toFixed(2)+' ✓';
@@ -1221,7 +1222,9 @@ async function submitBulkBid(){
     newBid=Math.max(0.02,newBid);
     return{account_type:S.acct,marketplace:cb.dataset.mkt,profile_id:getProfileId(cb.dataset.mkt),
       entity_type:cb.dataset.type,entity_id:cb.dataset.id,
-      field_name:'bid',old_value:String(curBid),new_value:String(newBid)};
+      // у группы объявлений ставка называется default_bid
+      field_name:cb.dataset.type==='ad_group'?'default_bid':'bid',
+      old_value:String(curBid),new_value:String(newBid)};
   });
   try{
     const res=await ctrlUpdateBatch(payloads);

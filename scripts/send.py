@@ -305,6 +305,10 @@ def group_changes(changes):
     for c in changes:
         et = c["entity_type"]
         fn = c.get("field_name", "")
+        # ставка группы у Amazon называется defaultBid: часть записей в очереди
+        # лежит со старым именем поля "bid" — приводим к каноничному
+        if et == "ad_group" and fn == "bid":
+            fn = c["field_name"] = "default_bid"
         if et == "campaign" and fn in ("state", "name", "daily_budget", "portfolio_id", "end_date"):
             groups["update_campaigns"].append(c)
         elif et == "bidding_adjustment":

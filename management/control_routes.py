@@ -64,6 +64,20 @@ ALLOWED_OPS = {
     "bidding_adjustment": ["—"],   # entity_id = campaign_id, new_value = JSON {PLACEMENT: percentage}
 }
 
+
+# Ставка группы объявлений называется default_bid: страницы какое-то время
+# слали её как "bid", такие записи очередь принимала, а send.py не понимал —
+# в логе шло «Неизвестный тип: ad_group/bid, пропускаем», и ставка до Amazon
+# не доходила. Приводим имя поля к каноничному на входе в очередь.
+FIELD_ALIASES = {
+    ("ad_group", "bid"): "default_bid",
+}
+
+
+def _canon_field(entity_type, field_name):
+    return FIELD_ALIASES.get((entity_type, field_name), field_name)
+
+
 LABELS = {
     ("campaign",  "state"):        lambda nv: "▶ Запуск" if nv == "ENABLED" else "⏸ Пауза",
     ("campaign",  "name"):         lambda nv: f'✏️ Переименовать → "{nv}"',
@@ -157,7 +171,7 @@ def add_change():
     profile_id   = str(data.get('profile_id') or '')
     entity_type  = data.get('entity_type', '')
     entity_id    = str(data.get('entity_id') or '')
-    field_name   = data.get('field_name', '—')
+    field_name   = _canon_field(entity_type, data.get('field_name', '—'))
     old_value    = str(data.get('old_value') or '')
     new_value    = str(data.get('new_value') or '')
 
@@ -166,6 +180,10 @@ def add_change():
         return jsonify({"error": "Неверный account_type"}), 400
     if entity_type not in ALLOWED_OPS:
         return jsonify({"error": f"Неизвестный entity_type: {entity_type}"}), 400
+    if field_name not in ALLOWED_OPS[entity_type]:
+        # раньше такие записи молча ложились в очередь и зависали в ней навсегда
+        return jsonify({"error": f"Для {entity_type} нельзя менять «{field_name}»; "
+                                 f"доступно: {', '.join(ALLOWED_OPS[entity_type])}"}), 400
     if not entity_id:
         return jsonify({"error": "entity_id обязателен"}), 400
     # Для end_date пустое значение = удалить дату, это допустимо
@@ -267,7 +285,7 @@ def add_change_batch():
         eid = str(item.get('entity_id') or '')
         pid = str(item.get('profile_id') or '')
         mkt = (item.get('marketplace') or '').upper()
-        fn  = item.get('field_name', '—')
+        fn  = _canon_field(et, item.get('field_name', '—'))
         ov  = str(item.get('old_value') or '')
         nv  = str(item.get('new_value') or '')
 
@@ -400,7 +418,7 @@ def add_change_batch_update():
         eid = str(item.get('entity_id') or '')
         pid = str(item.get('profile_id') or '')
         mkt = (item.get('marketplace') or '').upper()
-        fn  = item.get('field_name', '—')
+        fn  = _canon_field(et, item.get('field_name', '—'))
         ov  = str(item.get('old_value') or '')
         nv  = str(item.get('new_value') or '')
 
@@ -409,6 +427,10 @@ def add_change_batch_update():
             continue
         if et not in ALLOWED_OPS:
             errors.append({"index": i, "error": f"Неизвестный entity_type: {et}"})
+            continue
+        if fn not in ALLOWED_OPS[et]:
+            errors.append({"index": i,
+                           "error": f"Для {et} нельзя менять «{fn}»"})
             continue
         if not eid or not nv:
             errors.append({"index": i, "error": "entity_id и new_value обязательны"})
