@@ -102,8 +102,33 @@ cd "$DEST"
 }
 
 # ── 7. Перезапуск ────────────────────────────────────────
-sudo systemctl restart "$SERVICE"
-sleep 2
-systemctl is-active --quiet "$SERVICE" \
-  && echo "OK: обновлено и перезапущено" \
-  || { echo "Сервис не поднялся: journalctl -u $SERVICE -n 50"; exit 1; }
+# sudo на машине может быть запрещён, поэтому сначала пробуем его без запроса
+# пароля, а если нельзя — перезагружаем gunicorn сигналом HUP: мастер-процесс
+# принадлежит тому же пользователю, поднимает новых воркеров с новым кодом и
+# не роняет сервис.
+restarted=""
+if sudo -n systemctl restart "$SERVICE" 2>/dev/null; then
+  restarted="systemd"
+else
+  MASTER="$(pgrep -u "$(id -un)" -f "gunicorn.*app:app" | head -1 || true)"
+  if [ -n "$MASTER" ]; then
+    kill -HUP "$MASTER"
+    restarted="gunicorn HUP (pid $MASTER)"
+  fi
+fi
+
+if [ -z "$restarted" ]; then
+  echo "Код обновлён, но перезапустить сервис не удалось: нет ни sudo, ни процесса gunicorn."
+  echo "Перезапустите вручную: sudo systemctl restart $SERVICE"
+  exit 1
+fi
+
+sleep 3
+if curl -sf -o /dev/null --max-time 10 http://127.0.0.1:8000/assets-check \
+     -u "$("$PY" -c "import json;d=json.load(open('$CFG'))['auth'];print(d['username']+':'+d['password'])")"; then
+  echo "OK: обновлено и перезапущено ($restarted), приложение отвечает"
+else
+  echo "Перезапуск выполнен ($restarted), но приложение не ответило на 127.0.0.1:8000."
+  echo "Смотрите журнал: journalctl -u $SERVICE -n 50 --no-pager"
+  exit 1
+fi
