@@ -1,15 +1,21 @@
 # Расписание второй установки. Пути под VM margoads
 # (/home/nikolaenko_ts/margoads); для другой машины поправьте путь.
 # Ставится так:  crontab ~/margoads/deploy/crontab.txt
-# Время в UTC (проверить: timedatectl). 07:00 UTC = 09:00 в Варшаве зимой.
 #
-# Синхронизация структуры кампаний — раньше сбора статистики,
-# чтобы отчёты ложились на актуальные кампании и группы.
-0 6 * * * cd $HOME/margoads && venv/bin/python scripts/auto_sync_campaigns.py >> $HOME/margoads/logs/sync.log 2>&1
+# Время указано по Варшаве: CRON_TZ снимает вопрос перехода на зимнее время,
+# иначе запуск пришлось бы дважды в год сдвигать вручную. Проверить, что cron
+# понял часовой пояс, можно по логу первого запуска.
+CRON_TZ=Europe/Warsaw
 
-# Сбор статистики за последние 14 дней по всем гео и типам отчётов
-0 7 * * * cd $HOME/margoads && venv/bin/python scripts/auto_collect.py >> $HOME/margoads/logs/collect.log 2>&1
+# 10:00 — синхронизация структуры кампаний. Идёт первой, чтобы статистика
+# легла на актуальный список кампаний и групп.
+0 10 * * * cd $HOME/margoads && venv/bin/python scripts/auto_sync_campaigns.py >> $HOME/margoads/logs/sync.log 2>&1
 
-# Отправка одобренных изменений в Amazon — каждый час
-30 * * * * cd $HOME/margoads && venv/bin/python scripts/send.py --account MERCH >> $HOME/margoads/logs/send.log 2>&1
-35 * * * * cd $HOME/margoads && venv/bin/python scripts/send.py --account KDP   >> $HOME/margoads/logs/send.log 2>&1
+# 11:00 — сбор статистики за последние 14 дней по всем гео и типам отчётов.
+# Час разрыва: синхронизация 14 профилей занимает заметное время.
+0 11 * * * cd $HOME/margoads && venv/bin/python scripts/auto_collect.py >> $HOME/margoads/logs/collect.log 2>&1
+
+# Отправка изменений в Amazon по расписанию НЕ запускается — вручную со
+# страницы «Очередь изменений» или командой:
+#   cd ~/margoads && venv/bin/python scripts/send.py --account MERCH
+#   cd ~/margoads && venv/bin/python scripts/send.py --account KDP
