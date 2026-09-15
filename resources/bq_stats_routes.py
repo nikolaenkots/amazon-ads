@@ -1,14 +1,13 @@
 from bq_client import get_client
 import os
 from flask import Blueprint, jsonify, send_from_directory, request, Response
+from settings import PROJECT_ID, DATASET
 
 bq_stats_bp = Blueprint('bq_stats', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
-
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 @bq_stats_bp.route('/bq-stats')
 def bq_stats_page():

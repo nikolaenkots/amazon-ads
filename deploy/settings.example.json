@@ -1,0 +1,6 @@
+{
+  "project_id": "margoads-ads-api",
+  "dataset": "amazon_ads",
+  "site_name": "Margo Ads",
+  "auth": {"username": "Margo", "password": "смените-пароль"}
+}

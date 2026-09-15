@@ -15,14 +15,15 @@ collect_placements.py — сбор статистики по плейсмент�
 import json, gzip, time, os, sys, requests
 from datetime import date, timedelta, datetime, timezone
 from google.cloud import bigquery
+from settings import PROJECT_ID, DATASET
 
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 with open(f"{BASE_DIR}/config/amazon_secrets.json") as f:
     AMZ = json.load(f)
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f"{BASE_DIR}/config/bigquery_key.json"
+sys.path.insert(0, BASE_DIR)
+import settings                      # ставит GOOGLE_APPLICATION_CREDENTIALS, если ключ есть
 
 
 def token():

@@ -1,13 +1,12 @@
 from bq_client import get_client
 import os
 from flask import Blueprint, jsonify, request, send_from_directory
+from settings import PROJECT_ID, DATASET
 
 campaign_copy_bp = Blueprint('campaign_copy', __name__)
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
-
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 @campaign_copy_bp.route('/campaign-copy')
 def campaign_copy_page():

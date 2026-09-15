@@ -22,13 +22,13 @@ import subprocess
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from google.cloud import bigquery
+from settings import PROJECT_ID, DATASET
 
 control_bp = Blueprint('control', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 AMZ_SECRETS_PATH = os.path.join(BASE_DIR, 'config', 'amazon_secrets.json')
 with open(AMZ_SECRETS_PATH) as _f:

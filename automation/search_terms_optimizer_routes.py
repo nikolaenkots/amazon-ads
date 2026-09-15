@@ -2,6 +2,7 @@ from bq_client import get_client
 import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
+from settings import PROJECT_ID, DATASET
 
 try:
     from google.cloud import bigquery
@@ -14,9 +15,7 @@ st_optimizer_bp = Blueprint('st_optimizer', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
-
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 def _cvt(v):
     return float(v) if isinstance(v, decimal.Decimal) else v

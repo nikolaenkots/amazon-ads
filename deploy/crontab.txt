@@ -1,0 +1,14 @@
+# Расписание второй установки. Ставится под пользователем app:
+#   crontab -u app /opt/amazon-ads/deploy/crontab.txt
+# Время в UTC (проверить: timedatectl). 07:00 UTC = 09:00 в Варшаве зимой.
+#
+# Синхронизация структуры кампаний — раньше сбора статистики,
+# чтобы отчёты ложились на актуальные кампании и группы.
+0 6 * * * cd /opt/amazon-ads && venv/bin/python scripts/auto_sync_campaigns.py >> logs/sync.log 2>&1
+
+# Сбор статистики за последние 14 дней по всем гео и типам отчётов
+0 7 * * * cd /opt/amazon-ads && venv/bin/python scripts/auto_collect.py >> logs/collect.log 2>&1
+
+# Отправка одобренных изменений в Amazon — каждый час
+30 * * * * cd /opt/amazon-ads && venv/bin/python scripts/send.py --account MERCH >> logs/send.log 2>&1
+35 * * * * cd /opt/amazon-ads && venv/bin/python scripts/send.py --account KDP   >> logs/send.log 2>&1

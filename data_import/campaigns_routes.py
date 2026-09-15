@@ -9,13 +9,14 @@ from flask import Blueprint, request, jsonify, send_from_directory
 from google.cloud import bigquery
 import requests as req_lib
 from bq_client import get_client, load_rows, run_query
+from settings import PROJECT_ID, DATASET
 
 campaigns_bp = Blueprint('campaigns', __name__)
 
 PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR      = os.path.dirname(PAGE_DIR)
-PROJECT_ID    = "amazon-ads-api-494412"
-DATASET       = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
+
 CHUNK_SIZE    = 1000
 AD_PRODUCT    = "SPONSORED_PRODUCTS"
 
