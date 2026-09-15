@@ -152,3 +152,50 @@ for e in entries:
     print(f"  {e['profile_name']} → status={e['status']} error={str(e['error'])[:50]} finished={e['finished_at']}")
 stuck = [e for e in entries if e["status"] == "PENDING"]
 print(f"  → зависших в PENDING: {len(stuck)}")
+
+# ── 5. Последовательный режим: --batch 1 ──────────────────
+# Заказываем следующий отчёт только после того, как загрузили предыдущий:
+# на установке с 14 профилями иначе разом создаётся 56 отчётов.
+order = []
+_orig_create = auto_collect.create_report
+_orig_load   = auto_collect.load_to_bq
+
+
+def trace_create(token, profile, rt, d1, d2):
+    order.append(("create", profile["type"]))
+    return _orig_create(token, profile, rt, d1, d2)
+
+
+def trace_load(rows, profile, rt, d1, d2):
+    order.append(("load", profile["type"]))
+    return _orig_load(rows, profile, rt, d1, d2)
+
+
+auto_collect.create_report = trace_create
+auto_collect.load_to_bq    = trace_load
+
+scenario.update({"create_fails": False, "download_fails": False})
+state["checks"].clear(); state["rid2prof"].clear()
+bq_client._client = FakeBQ()
+if os.path.exists(auto_collect.AUTO_LOG):
+    os.remove(auto_collect.AUTO_LOG)
+print(f"\n{'='*60}\n  СЦЕНАРИЙ 5: --batch 1 — строго по одному\n{'='*60}")
+auto_collect.main(days=14, only_types=["spTargeting"], batch=1)
+
+print("  порядок операций:", " → ".join(f"{a} {b}" for a, b in order))
+# create, load, create, load — а не create, create, load, load
+assert [a for a, _ in order] == ["create", "load", "create", "load"], order
+assert len(auto_collect._read_log()) == 2
+print("  ✓ следующий отчёт заказывается только после загрузки предыдущего")
+
+order.clear()
+state["checks"].clear(); state["rid2prof"].clear()
+bq_client._client = FakeBQ()
+os.remove(auto_collect.AUTO_LOG)
+auto_collect.main(days=14, only_types=["spTargeting"])
+assert [a for a, _ in order] == ["create", "create", "load", "load"], order
+print("  ✓ без --batch поведение прежнее: все отчёты заказываются сразу")
+
+auto_collect.create_report = _orig_create
+auto_collect.load_to_bq    = _orig_load
+
