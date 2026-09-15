@@ -4,14 +4,13 @@ from google.cloud import bigquery
 from google.cloud.bigquery import LoadJobConfig
 from bq_client import get_client
 import json, requests
+from settings import PROJECT_ID, DATASET
 
 portfolios_bp = Blueprint('portfolios', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
-
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 @portfolios_bp.route('/portfolios')
 def portfolios_page():

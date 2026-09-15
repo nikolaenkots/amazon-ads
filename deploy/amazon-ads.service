@@ -1,0 +1,22 @@
+# systemd-юнит для Google Cloud VM: /etc/systemd/system/amazon-ads.service
+# После правки: sudo systemctl daemon-reload && sudo systemctl restart amazon-ads
+[Unit]
+Description=Amazon Ads Automation (Flask)
+After=network.target
+
+[Service]
+Type=simple
+User=app
+WorkingDirectory=/opt/amazon-ads
+Environment="PYTHONUNBUFFERED=1"
+# Проект BigQuery и доступ можно задать здесь вместо config/settings.json:
+# Environment="AMZADS_PROJECT_ID=margoads-ads"
+# Environment="AMZADS_USER=Margo"
+# Environment="AMZADS_PASSWORD=..."
+ExecStart=/opt/amazon-ads/venv/bin/gunicorn --workers 3 --threads 4 \
+          --timeout 600 --bind 127.0.0.1:8000 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

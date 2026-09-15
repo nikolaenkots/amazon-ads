@@ -18,13 +18,13 @@ from datetime import date, timedelta
 from flask import Blueprint, request, jsonify
 
 from bq_client import get_client
+from settings import PROJECT_ID, DATASET
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 AUTO_LOG = os.path.join(BASE_DIR, 'auto_collect_log.json')
 SYNC_LOG = os.path.join(BASE_DIR, 'campaigns_sync_log.json')

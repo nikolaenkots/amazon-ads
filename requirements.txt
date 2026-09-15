@@ -1,0 +1,7 @@
+# Зависимости приложения. Установка: pip install -r requirements.txt
+Flask>=3.0
+google-cloud-bigquery>=3.17
+requests>=2.31
+pandas>=2.0
+openpyxl>=3.1          # чтение .xlsx из отчётов Amazon
+gunicorn>=21.2         # боевой запуск (systemd на Google Cloud VM)

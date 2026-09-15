@@ -13,8 +13,10 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 МБ
 import base64
 from flask import Response, request
 
-AUTH_USERNAME = "Artem"
-AUTH_PASSWORD = "KjubcN*123"
+# Логин/пароль и проект BigQuery — в settings.py (config/settings.json),
+# чтобы вторую установку можно было поднять без правки кода.
+from settings import (AUTH_USERNAME, AUTH_PASSWORD, PROJECT_ID, DATASET,
+                      KEY_FILE, SITE_NAME)
 
 def check_auth(auth_header):
     if not auth_header or not auth_header.startswith('Basic '):
@@ -41,11 +43,7 @@ BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-PROJECT_ID = "amazon-ads-api-494412"
-KEY_FILE   = os.path.join(BASE_DIR, "config", "bigquery_key.json")
-DATASET    = "amazon_ads"
-
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = KEY_FILE
+# PROJECT_ID, DATASET, KEY_FILE и доступ — из settings.py (config/settings.json)
 
 # Хранилище прогресса (shared между blueprints)
 progress_store = {}
@@ -59,6 +57,7 @@ from management.portfolios       import portfolios_bp
 from analytics.analytics_routes import analytics_bp
 from management.control_routes import control_bp
 from analytics.products_routes  import products_bp
+from settings import PROJECT_ID, DATASET
 from data_import.kdp_earnings_routes import kdp_earnings_bp
 from management.campaign_builder_routes import campaign_builder_bp
 from analytics.targets_routes import targets_bp
@@ -148,7 +147,9 @@ def _nav_html():
         return ""
     if _nav_cache["mtime"] != mtime:
         with open(NAV_PATH, encoding='utf-8') as f:
-            _nav_cache["text"] = f.read()
+            text = f.read()
+        # название установки берётся из настроек: у второй копии оно своё
+        _nav_cache["text"] = text.replace('Amazon Ads Automation', SITE_NAME)
         _nav_cache["mtime"] = mtime
     return _nav_cache["text"]
 

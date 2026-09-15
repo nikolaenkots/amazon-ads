@@ -27,8 +27,7 @@ import requests
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
-os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
-                      os.path.join(BASE_DIR, "config", "bigquery_key.json"))
+import settings                      # ставит GOOGLE_APPLICATION_CREDENTIALS, если ключ есть
 
 from data_import.ads_routes import REPORT_CONFIGS, _AMZ, _amz_headers, _amz_token, _get_table, _map_row
 from bq_client import get_client, load_rows, run_query

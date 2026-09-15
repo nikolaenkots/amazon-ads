@@ -24,8 +24,7 @@ from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
-os.environ.setdefault("GOOGLE_APPLICATION_CREDENTIALS",
-                      os.path.join(BASE_DIR, "config", "bigquery_key.json"))
+import settings                      # ставит GOOGLE_APPLICATION_CREDENTIALS, если ключ есть
 
 from data_import.campaigns_routes import _AMZ, _read_sync_log, _run_campaigns_sync
 

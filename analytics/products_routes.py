@@ -3,14 +3,13 @@ import os
 import decimal
 from flask import Blueprint, request, jsonify, send_from_directory
 from google.cloud import bigquery
+from settings import PROJECT_ID, DATASET
 
 products_bp = Blueprint('products', __name__)
 
 PAGE_DIR   = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR   = os.path.dirname(PAGE_DIR)
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
-
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
 
 # ── HTML страница ─────────────────────────────────────────
 @products_bp.route('/analytics/products')

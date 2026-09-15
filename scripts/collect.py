@@ -5,6 +5,7 @@ import requests
 import os
 from datetime import datetime, timezone
 from google.cloud import bigquery
+from settings import PROJECT_ID, DATASET
 
 # ── Конфиги ──────────────────────────────────────────────
 BASE_DIR = "/home/nikolaenkots/amazon-ads"
@@ -12,11 +13,12 @@ BASE_DIR = "/home/nikolaenkots/amazon-ads"
 with open(f"{BASE_DIR}/config/amazon_secrets.json") as f:
     AMZ = json.load(f)
 
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
+
 CHUNK_SIZE = 1000
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f"{BASE_DIR}/config/bigquery_key.json"
+sys.path.insert(0, BASE_DIR)
+import settings                      # ставит GOOGLE_APPLICATION_CREDENTIALS, если ключ есть
 
 # ── Получить профиль ──────────────────────────────────────
 def get_profile(account_type="MERCH", marketplace="US"):

@@ -8,14 +8,15 @@ from flask import Blueprint, request, jsonify, send_from_directory
 from google.cloud import bigquery
 from google.cloud.bigquery import LoadJobConfig
 import requests as req_lib
+from settings import PROJECT_ID, DATASET
 
 ads_bp = Blueprint('ads', __name__)
 
 PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR      = os.path.dirname(PAGE_DIR)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-PROJECT_ID    = "amazon-ads-api-494412"
-DATASET       = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
+
 CHUNK_SIZE    = 1000
 REPORTS_LOG   = os.path.join(BASE_DIR, 'reports_log.json')
 AUTO_LOG      = os.path.join(BASE_DIR, 'auto_collect_log.json')

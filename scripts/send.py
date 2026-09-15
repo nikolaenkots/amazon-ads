@@ -25,18 +25,16 @@ from google.cloud import bigquery
 # ── Конфиг ───────────────────────────────────────────────
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)          # общий клиент BigQuery лежит в корне проекта
-PROJECT_ID = "amazon-ads-api-494412"
-DATASET    = "amazon_ads"
+# PROJECT_ID, DATASET и путь к ключу — из settings.py (config/settings.json)
+from settings import SECRETS_FILE
 
-KEY_FILE = os.path.join(BASE_DIR, "config", "bigquery_key.json")
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = KEY_FILE
-
-with open(os.path.join(BASE_DIR, "config", "amazon_secrets.json")) as f:
+with open(SECRETS_FILE) as f:
     _AMZ = json.load(f)
 
 PROFILES = {p["type"] + "_" + p["marketplace"]: p for p in _AMZ["profiles"]}
 
 from bq_client import with_retry   # повторы при лимите частоты и конфликте записи
+from settings import PROJECT_ID, DATASET
 
 PENDING_TABLES = {
     "MERCH": f"{PROJECT_ID}.{DATASET}.pending_changes_merch",

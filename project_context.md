@@ -3387,6 +3387,40 @@ raise/lower → коридор [min_bid, max_bid]
 
 ---
 
+## Настройки установки (settings.py + config/settings.json)
+
+Проект BigQuery, датасет, пути к ключам, логин/пароль и название берутся из
+`settings.py`. Раньше `PROJECT_ID = "amazon-ads-api-494412"` был продублирован
+в 28 файлах, из-за чего вторую копию системы нельзя было поднять без правки
+кода.
+
+Порядок приоритетов: переменные окружения (`AMZADS_PROJECT_ID`, `AMZADS_DATASET`,
+`AMZADS_USER`, `AMZADS_PASSWORD`, `AMZADS_KEY_FILE`, `AMZADS_SECRETS_FILE`,
+`AMZADS_SITE_NAME`) → `config/settings.json` → значения по умолчанию (текущий
+рабочий проект). Без конфига поведение прежнее, поэтому основной сервер
+обновляется без дополнительных действий.
+
+`config/` не в git: у каждой установки свои `settings.json`, `amazon_secrets.json`
+и, если нужен, `bigquery_key.json`. На Google Cloud VM ключ не нужен —
+работает сервис-аккаунт машины, и `settings.py` не выставляет
+`GOOGLE_APPLICATION_CREDENTIALS`, если файла нет.
+
+Название из `site_name` подставляется в шапку вместо «Amazon Ads Automation».
+
+## Вторая установка на Google Cloud VM (deploy/)
+
+- `deploy/README.md` — пошаговая инструкция: проект и права, код на машину,
+  `config/`, таблицы, systemd, nginx, cron, обновление, проверка после установки.
+- `deploy/amazon-ads.service` — gunicorn под systemd, `deploy/nginx.conf` —
+  прокси с лимитом тела 500 МБ и таймаутами 600 с (импорт каталога долгий),
+  `deploy/crontab.txt` — синхронизация, сбор статистики и отправка изменений.
+- `scripts/init_bigquery.py` — создаёт датасет и пустые таблицы в новом проекте
+  по схемам рабочего (`--from`), опционально переносит справочники (`--copy`),
+  умеет `--dry-run`.
+- `requirements.txt` — зависимости приложения.
+
+---
+
 ## Сводка на главной (analytics/dashboard_routes.py + index.html)
 
 Главная открывается со сводной таблицей по портфолио: сколько каждое портфолио

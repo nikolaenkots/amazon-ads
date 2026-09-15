@@ -17,14 +17,15 @@ import pandas as pd
 from flask import Blueprint, request, jsonify
 from google.cloud import bigquery
 from google.cloud.bigquery import LoadJobConfig, SchemaField, SchemaUpdateOption
+from settings import PROJECT_ID, DATASET
 
 kdp_earnings_bp = Blueprint('kdp_earnings', __name__)
 
 PAGE_DIR      = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR      = os.path.dirname(PAGE_DIR)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-PROJECT_ID    = "amazon-ads-api-494412"
-DATASET       = "amazon_ads"
+# PROJECT_ID и DATASET берутся из settings.py (config/settings.json)
+
 TABLE         = "earnings_kdp"
 CHUNK_SIZE    = 1000
 
