@@ -223,6 +223,52 @@ python3 scripts/check_install.py
 настройка, на месте ли ключи Amazon и ключевые таблицы. Запускайте сразу после
 обновления: строка `проект` должна показывать проект **этой** копии.
 
+
+### Копия margoads (Google Cloud VM)
+
+У этой копии **тот же проект** `amazon-ads-api-494412`, а данные разделены
+**датасетом**: прежний `update_margoads.sh` заменял в коде `"amazon_ads"` на
+`"margoads"` через `sed`, а заодно вписывал логин и пароль в `app.py`. Новый код
+таких замен не требует — всё это лежит в `config/settings.json`, и `sed`-строки
+из старого скрипта надо выбросить: по новой структуре (папки `analytics/`,
+`management/`, …) они всё равно не отработают.
+
+Порядок обновления:
+
+```bash
+# 1. Настройки — ОДИН раз, до заливки нового кода
+cat > ~/margoads/config/settings.json <<'JSON'
+{
+  "project_id": "amazon-ads-api-494412",
+  "dataset":    "margoads",
+  "site_name":  "Margo Ads",
+  "auth": {"username": "Margo", "password": "<пароль>"}
+}
+JSON
+
+# 2. Новый код: архив или папка
+./deploy/update_margoads.sh ~/code_update.tar.gz
+```
+
+`deploy/update_margoads.sh` проверяет наличие `settings.json` (без него
+останавливается: иначе копия писала бы в датасет `amazon_ads` основного
+аккаунта), делает архив `config/`, переносит файлы мимо `config/`, `uploads/`,
+`logs/` и `venv/`, ставит зависимости, запускает `scripts/check_install.py` и
+перезапускает `margoads.service` только после успешной проверки.
+
+Файл ключа `config/bigquery_key.json` на этой машине уже есть и продолжает
+использоваться — `settings.py` подхватывает его автоматически.
+
+**Задачи по расписанию.** На margoads `crontab -l` пуст: синхронизация, сбор
+статистики и отправка изменений не запускаются автоматически. Готовое
+расписание — `deploy/crontab.txt` (пути уже под `~/margoads`):
+
+```bash
+mkdir -p ~/margoads/logs
+crontab ~/margoads/deploy/crontab.txt
+crontab -l
+```
+
 ### Если копия не под git
 
 ```bash
