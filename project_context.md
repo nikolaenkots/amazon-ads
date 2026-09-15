@@ -3406,7 +3406,7 @@ raise/lower → коридор [min_bid, max_bid]
 | Датасет | `amazon_ads` | `margoads` |
 | Запуск | uwsgi, кнопка Reload | gunicorn на 127.0.0.1:8000, сервис `margoads` |
 | Настройки | `config/settings.json` не нужен (значения по умолчанию) | `config/settings.json` обязателен |
-| Расписание | Scheduled Tasks | cron, `CRON_TZ=Europe/Warsaw`, 10:00 и 11:00 |
+| Расписание | Scheduled Tasks, обе команды в одной строке через `;` | cron, `CRON_TZ=Europe/Warsaw`, 10:00 — так же одной строкой |
 
 ### Золотое правило
 
