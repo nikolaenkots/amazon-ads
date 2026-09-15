@@ -8,9 +8,14 @@
 
 Для всех профилей из config/amazon_secrets.json и всех типов отчётов
 (spTargeting, spAdvertisedProduct, spSearchTerm, spCampaigns):
-  1. создаёт отчёты за последние 14 дней (все сразу),
-  2. ждёт готовности (общий поллинг),
+  1. создаёт отчёты за последние 14 дней,
+  2. ждёт готовности (поллинг),
   3. скачивает и загружает в BigQuery (DELETE за период + APPEND).
+
+По умолчанию все отчёты заказываются сразу — так быстрее. Ключ --batch N
+обрабатывает их пачками по N: заказали, дождались, загрузили, взяли следующие.
+--batch 1 = строго по одному. Это медленнее, зато щадит лимиты Amazon и память
+(актуально на установке с 14 профилями: иначе 56 отчётов заказываются разом).
 
 История пишется в auto_collect_log.json (последние записи сверху),
 веб-страница /ads показывает последние 50 строк через /ads/auto_log.
@@ -165,62 +170,48 @@ def load_to_bq(rows, profile, report_type, start_date, end_date):
 
 
 # ── Основной цикл ─────────────────────────────────────────
-def main(days=DAYS_BACK, only_types=None, only_profile=None):
-    run_id     = datetime.now().strftime("%Y%m%d%H%M%S")
-    end_date   = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    profiles   = _AMZ.get("profiles", [])
-    types      = [t for t in REPORT_CONFIGS if not only_types or t in only_types]
-    if only_profile:  # ("MERCH", "US")
-        acct, mkt = only_profile
-        profiles = [p for p in profiles
-                    if p["type"] == acct and (not mkt or p["marketplace"] == mkt)]
-    if not profiles or not types:
-        print("Нет профилей/типов под заданный фильтр")
-        return
+def _create_tasks(token, pairs, run_id, start_date, end_date):
+    """Заказать отчёты у Amazon; вернуть задачи для ожидания."""
+    tasks = []
+    for profile, rt in pairs:
+        entry_id = f"{run_id}_{profile['type']}_{profile['marketplace']}_{rt}"
+        entry = {
+            "id":           entry_id,
+            "run_id":       run_id,
+            "source":       "auto",
+            "account_type": profile["type"],
+            "marketplace":  profile["marketplace"],
+            "profile_name": profile.get("name", f"{profile['type']} {profile['marketplace']}"),
+            "report_type":  rt,
+            "start_date":   start_date,
+            "end_date":     end_date,
+            "status":       "PENDING",
+            "report_id":    None,
+            "rows":         None,
+            "inserted":     None,
+            "error":        None,
+            "note":         None,
+            "created_at":   _now_iso(),
+            "finished_at":  None,
+            "duration_sec": None,
+        }
+        log_add(entry)
+        try:
+            report_id = create_report(token, profile, rt, start_date, end_date)
+            log_update(entry_id, {"report_id": report_id})
+            tasks.append({"entry_id": entry_id, "profile": profile, "report_type": rt,
+                          "report_id": report_id, "t0": time.time()})
+            print(f"  + {entry['profile_name']} {rt}: {report_id}")
+        except Exception as e:
+            log_update(entry_id, {"status": "FAILED", "error": f"create: {e}",
+                                  "finished_at": _now_iso()})
+            print(f"  ✗ {entry['profile_name']} {rt}: {e}")
+        time.sleep(1)  # бережём rate limit
+    return tasks
 
-    print(f"=== Автосбор {start_date} → {end_date} | {len(profiles)} профилей × {len(types)} типов ===")
-    token = _amz_token()
 
-    # Фаза 1: создаём все отчёты
-    tasks = []  # {entry_id, profile, report_type, report_id, status}
-    for profile in profiles:
-        for rt in types:
-            entry_id = f"{run_id}_{profile['type']}_{profile['marketplace']}_{rt}"
-            entry = {
-                "id":           entry_id,
-                "run_id":       run_id,
-                "source":       "auto",
-                "account_type": profile["type"],
-                "marketplace":  profile["marketplace"],
-                "profile_name": profile.get("name", f"{profile['type']} {profile['marketplace']}"),
-                "report_type":  rt,
-                "start_date":   start_date,
-                "end_date":     end_date,
-                "status":       "PENDING",
-                "report_id":    None,
-                "rows":         None,
-                "inserted":     None,
-                "error":        None,
-                "note":         None,
-                "created_at":   _now_iso(),
-                "finished_at":  None,
-                "duration_sec": None,
-            }
-            log_add(entry)
-            try:
-                report_id = create_report(token, profile, rt, start_date, end_date)
-                log_update(entry_id, {"report_id": report_id})
-                tasks.append({"entry_id": entry_id, "profile": profile, "report_type": rt,
-                              "report_id": report_id, "t0": time.time()})
-                print(f"  + {entry['profile_name']} {rt}: {report_id}")
-            except Exception as e:
-                log_update(entry_id, {"status": "FAILED", "error": f"create: {e}",
-                                      "finished_at": _now_iso()})
-                print(f"  ✗ {entry['profile_name']} {rt}: {e}")
-            time.sleep(1)  # бережём rate limit
-
-    # Фаза 2: поллинг + скачивание + загрузка
+def _wait_and_load(token, tasks, start_date, end_date):
+    """Дождаться готовности отчётов, скачать и загрузить в BigQuery."""
     waited = 0
     total_tasks = len(tasks)
     while tasks and waited < MAX_WAIT:
@@ -289,6 +280,39 @@ def main(days=DAYS_BACK, only_types=None, only_profile=None):
             "duration_sec": int(time.time() - task["t0"]),
         })
         print(f"  ✗ {task['profile'].get('name')} {task['report_type']}: TIMEOUT")
+    return token
+
+
+def main(days=DAYS_BACK, only_types=None, only_profile=None, batch=0):
+    run_id     = datetime.now().strftime("%Y%m%d%H%M%S")
+    end_date   = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    profiles   = _AMZ.get("profiles", [])
+    types      = [t for t in REPORT_CONFIGS if not only_types or t in only_types]
+    if only_profile:  # ("MERCH", "US")
+        acct, mkt = only_profile
+        profiles = [p for p in profiles
+                    if p["type"] == acct and (not mkt or p["marketplace"] == mkt)]
+    if not profiles or not types:
+        print("Нет профилей/типов под заданный фильтр")
+        return
+
+    pairs = [(p, rt) for p in profiles for rt in types]
+    # batch=0 — все сразу (быстрее), batch=N — пачками по N (щадит лимиты Amazon)
+    size  = batch if batch and batch > 0 else len(pairs)
+    chunks = [pairs[i:i + size] for i in range(0, len(pairs), size)]
+
+    print(f"=== Автосбор {start_date} → {end_date} | {len(profiles)} профилей × "
+          f"{len(types)} типов = {len(pairs)} отчётов"
+          + (f", пачками по {size}" if len(chunks) > 1 else "") + " ===")
+    token = _amz_token()
+
+    for i, chunk in enumerate(chunks, 1):
+        if len(chunks) > 1:
+            print(f"\n--- Пачка {i}/{len(chunks)} ---")
+        tasks = _create_tasks(token, chunk, run_id, start_date, end_date)
+        if tasks:
+            token = _wait_and_load(token, tasks, start_date, end_date) or token
 
     # Итог
     entries = [e for e in _read_log() if e.get("run_id") == run_id]
@@ -310,10 +334,15 @@ if __name__ == "__main__":
                     choices=list(REPORT_CONFIGS.keys()), help="только этот тип (можно несколько раз)")
     ap.add_argument("--profile", nargs=2, metavar=("ACCT", "MKT"),
                     help="только этот профиль, напр.: --profile MERCH US")
+    ap.add_argument("--batch", type=int, default=0, metavar="N",
+                    help="обрабатывать пачками по N отчётов: заказали, дождались, "
+                         "загрузили, следующие. 1 = строго по одному. "
+                         "По умолчанию 0 — все сразу")
     args = ap.parse_args()
 
     if args.test:
         main(days=2, only_types=["spTargeting"], only_profile=("MERCH", "US"))
     else:
         main(days=args.days, only_types=args.types,
-             only_profile=tuple(args.profile) if args.profile else None)
+             only_profile=tuple(args.profile) if args.profile else None,
+             batch=args.batch)
